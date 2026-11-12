@@ -582,7 +582,7 @@ test("the vault is never touched nor backed up", (t) => {
 
   assert.equal(backups(box).length, 2, `backups: ${backups(box)}`);
   for (const path of backedUpFiles(box)) {
-    assert.ok(path.split("/").pop() !== "vault.json", `${path} is in a backup`);
+    assert.ok(!path.includes("vault"), `${path} is in a backup`);
   }
   const backedUp = Object.values(snapshot(join(box.herdr, "backups")));
   assert.ok(
