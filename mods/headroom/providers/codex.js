@@ -1,5 +1,6 @@
-// Codex (a ChatGPT subscription): signs in with OpenAI's device code and
-// reads the account's usage windows.
+// Codex (a ChatGPT subscription): signs in with OpenAI's device code,
+// refreshes its access token and reads the account's usage windows.
+// The method and the constants follow oh-my-pi's Codex provider (MIT).
 
 export const id = "codex";
 export const name = "Codex";
@@ -21,19 +22,45 @@ const DEFAULT_INTERVAL_S = 5;
 const AUTH_CLAIM = "https://api.openai.com/auth";
 const PROFILE_CLAIM = "https://api.openai.com/profile";
 
-// Window lengths in seconds, and the windows they are.
-const WINDOWS = {
-  18000: { id: "5h", label: "5-hour", durationMs: 18000000 },
-  604800: { id: "7d", label: "Weekly", durationMs: 604800000 },
+// Window lengths in seconds with a name of their own.
+const NAMED_LENGTHS = {
+  18000: { id: "5h", label: "5-hour" },
+  604800: { id: "7d", label: "Weekly" },
 };
-// Weekly first.
-const ORDER = ["7d", "5h"];
+// Other lengths are named in the largest of these units that divides them.
+const UNITS = [
+  { seconds: 86400, id: "d", label: "day" },
+  { seconds: 3600, id: "h", label: "hour" },
+  { seconds: 60, id: "m", label: "minute" },
+  { seconds: 1, id: "s", label: "second" },
+];
 
 // A failure of a known kind, so no message ever carries a response body.
 class Failure {
   constructor(kind) {
     this.kind = kind;
   }
+}
+
+const failed = (error) => ({
+  ok: false,
+  kind: error instanceof Failure ? error.kind : "unexpected",
+});
+
+const isObject = (value) =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+const isText = (value) => typeof value === "string" && value !== "";
+
+// `value` as a finite number, or null.
+function numberOf(value) {
+  if (value == null || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function ensure(condition) {
+  if (!condition) throw new Failure("unexpected");
 }
 
 async function request(io, url, options) {
@@ -52,15 +79,24 @@ function postJson(io, url, body) {
   });
 }
 
-async function jsonOf(response) {
-  if (!response.ok) throw new Failure("unexpected");
-  return response.json();
+function postForm(io, url, fields) {
+  return request(io, url, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(fields).toString(),
+  });
+}
+
+// The body of a successful response as an object.
+async function objectOf(response) {
+  ensure(response.ok);
+  const body = await response.json();
+  ensure(isObject(body));
+  return body;
 }
 
 const capitalized = (text) =>
-  typeof text === "string" && text !== ""
-    ? text[0].toUpperCase() + text.slice(1)
-    : null;
+  isText(text) ? text[0].toUpperCase() + text.slice(1) : null;
 
 // The payload of a JWT, unverified, or null.
 function claimsOf(token) {
@@ -69,21 +105,24 @@ function claimsOf(token) {
   try {
     const base64 = part.replace(/-/g, "+").replace(/_/g, "/");
     const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
-    return JSON.parse(Buffer.from(padded, "base64").toString("utf8"));
+    const claims = JSON.parse(Buffer.from(padded, "base64").toString("utf8"));
+    return isObject(claims) ? claims : null;
   } catch {
     return null;
   }
 }
 
+// Who signed in, from the access token's claims, else the id token's.
 function identityOf(tokens) {
   for (const token of [tokens.access_token, tokens.id_token]) {
     const claims = claimsOf(token);
     const auth = claims?.[AUTH_CLAIM];
-    if (!auth?.chatgpt_account_id) continue;
+    if (!isText(auth?.chatgpt_account_id)) continue;
+    const email = claims[PROFILE_CLAIM]?.email;
     return {
       accountId: auth.chatgpt_account_id,
       organizationId: auth.chatgpt_account_id,
-      email: claims[PROFILE_CLAIM]?.email ?? null,
+      email: isText(email) ? email : null,
       organization: null,
       plan: capitalized(auth.chatgpt_plan_type),
     };
@@ -91,14 +130,11 @@ function identityOf(tokens) {
   throw new Failure("unexpected");
 }
 
-// Waits for the person to approve `code` on OpenAI's page, polling as often
-// as OpenAI asks; the approval's authorization code, or a failure.
+// Waits for the person to approve the device code on OpenAI's page, polling
+// as often as OpenAI asks; the approval, or a failure.
 async function approval(io, device) {
-  const interval = Number(device.interval ?? DEFAULT_INTERVAL_S);
-  const waitMs =
-    (Number.isFinite(interval) && interval > 0
-      ? interval
-      : DEFAULT_INTERVAL_S) * 1000;
+  const interval = numberOf(device.interval);
+  const waitMs = (interval > 0 ? interval : DEFAULT_INTERVAL_S) * 1000;
   const deadline = io.now() + LOGIN_MS;
   io.present({ url: DEVICE_URL, code: device.user_code, deadline });
   await io.openUrl(DEVICE_URL);
@@ -111,62 +147,132 @@ async function approval(io, device) {
       user_code: device.user_code,
     });
     if (response.status === 403 || response.status === 404) continue;
-    return jsonOf(response);
+    const approved = await objectOf(response);
+    ensure(isText(approved.authorization_code));
+    ensure(isText(approved.code_verifier));
+    return approved;
   }
 }
 
 export async function login(io) {
   try {
-    const device = await jsonOf(
+    const device = await objectOf(
       await postJson(io, USERCODE_URL, { client_id: CLIENT_ID }),
     );
+    ensure(isText(device.device_auth_id) && isText(device.user_code));
     const approved = await approval(io, device);
-    const form = new URLSearchParams({
+    const response = await postForm(io, TOKEN_URL, {
       grant_type: "authorization_code",
       client_id: CLIENT_ID,
       code: approved.authorization_code,
       code_verifier: approved.code_verifier,
       redirect_uri: REDIRECT_URI,
     });
-    const tokens = await jsonOf(
-      await request(io, TOKEN_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: form.toString(),
-      }),
-    );
+    if (response.status >= 400 && response.status < 500) {
+      throw new Failure("rejected");
+    }
+    const tokens = await objectOf(response);
+    const expiresIn = numberOf(tokens.expires_in);
+    ensure(isText(tokens.access_token) && isText(tokens.refresh_token));
+    ensure(expiresIn !== null);
+    const identity = identityOf(tokens);
     const signedInAt = io.now();
     return {
       ok: true,
       credentials: {
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
-        expiresAt: signedInAt + Number(tokens.expires_in) * 1000,
+        expiresAt: signedInAt + expiresIn * 1000,
         signedInAt,
-        identity: identityOf(tokens),
+        identity,
       },
     };
   } catch (error) {
-    return {
-      ok: false,
-      kind: error instanceof Failure ? error.kind : "unexpected",
-    };
+    return failed(error);
   }
 }
 
-export async function refresh() {
-  return { ok: false, kind: "unexpected" };
+export async function refresh(credentials, io) {
+  try {
+    const response = await postForm(io, TOKEN_URL, {
+      grant_type: "refresh_token",
+      refresh_token: credentials.refreshToken,
+      client_id: CLIENT_ID,
+    });
+    if ([400, 401, 403].includes(response.status)) {
+      return { ok: false, kind: "auth" };
+    }
+    const tokens = await objectOf(response);
+    const expiresIn = numberOf(tokens.expires_in);
+    ensure(isText(tokens.access_token) && expiresIn !== null);
+    return {
+      ok: true,
+      credentials: {
+        accessToken: tokens.access_token,
+        refreshToken: isText(tokens.refresh_token)
+          ? tokens.refresh_token
+          : credentials.refreshToken,
+        expiresAt: io.now() + expiresIn * 1000,
+      },
+    };
+  } catch (error) {
+    return failed(error);
+  }
 }
 
-function windowOf(slot) {
-  const known = WINDOWS[slot?.limit_window_seconds];
-  if (!known) return null;
-  return {
-    ...known,
-    usedFraction: Number(slot.used_percent) / 100,
-    resetsAt: slot.reset_at == null ? null : slot.reset_at * 1000,
-    atLimit: false,
-  };
+// The id and label of a window `seconds` long.
+function lengthName(seconds) {
+  const named = NAMED_LENGTHS[seconds];
+  if (named) return named;
+  const unit = UNITS.find((unit) => seconds % unit.seconds === 0);
+  const count = seconds / unit.seconds;
+  return { id: `${count}${unit.id}`, label: `${count}-${unit.label}` };
+}
+
+// The windows of one rate limit, longest first, named by `naming(length)`;
+// a reached limit marks the fullest window and any at 100 %.
+function windowsOf(limit, now, naming) {
+  if (!isObject(limit)) return [];
+  const slots = [limit.primary_window, limit.secondary_window].filter(
+    (slot) =>
+      isObject(slot) &&
+      Number.isInteger(numberOf(slot.limit_window_seconds)) &&
+      slot.limit_window_seconds > 0,
+  );
+  const percents = slots.map((slot) => numberOf(slot.used_percent) ?? 0);
+  const fullest = Math.max(...percents);
+  return slots
+    .map((slot, index) => {
+      const seconds = numberOf(slot.limit_window_seconds);
+      const percent = percents[index];
+      const resetAt = numberOf(slot.reset_at);
+      const resetAfter = numberOf(slot.reset_after_seconds);
+      return {
+        ...naming(lengthName(seconds)),
+        durationMs: seconds * 1000,
+        usedFraction: Math.min(1, Math.max(0, percent / 100)),
+        resetsAt:
+          resetAt !== null
+            ? resetAt * 1000
+            : resetAfter !== null
+              ? now + resetAfter * 1000
+              : null,
+        atLimit:
+          limit.limit_reached === true &&
+          (percent === fullest || percent >= 100),
+      };
+    })
+    .sort((a, b) => b.durationMs - a.durationMs);
+}
+
+// The windows of a named additional rate limit, for the detail view.
+function additionalWindows(entry, now) {
+  if (!isObject(entry) || !isText(entry.limit_name)) return [];
+  const slug = entry.limit_name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  return windowsOf(entry.rate_limit, now, (length) => ({
+    id: `extra:${slug}:${length.id}`,
+    label: `${entry.limit_name} · ${length.label}`,
+  }));
 }
 
 export async function read(credentials, io) {
@@ -179,17 +285,17 @@ export async function read(credentials, io) {
       },
     });
     if (response.status === 401) return { ok: false, kind: "auth" };
-    const usage = await jsonOf(response);
-    const limits = usage.rate_limit ?? {};
-    const windows = [limits.primary_window, limits.secondary_window]
-      .map(windowOf)
-      .filter(Boolean)
-      .sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
+    const usage = await objectOf(response);
+    const now = io.now();
+    const additional = Array.isArray(usage.additional_rate_limits)
+      ? usage.additional_rate_limits
+      : [];
+    const windows = [
+      ...windowsOf(usage.rate_limit, now, (length) => length),
+      ...additional.flatMap((entry) => additionalWindows(entry, now)),
+    ];
     return { ok: true, windows, plan: capitalized(usage.plan_type) };
   } catch (error) {
-    return {
-      ok: false,
-      kind: error instanceof Failure ? error.kind : "unexpected",
-    };
+    return failed(error);
   }
 }
