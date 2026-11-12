@@ -79,8 +79,9 @@ export function openHeight(readings, accounts = []) {
         sum + HEIGHTS.window + (isThin(window) ? HEIGHTS.thin : HEIGHTS.full),
       0,
     );
+    const first = reading.status === "stale" && reading.fetchedAt == null;
     const fact =
-      reading.loginEndsAt != null || reading.status === "signed-out"
+      reading.status === "signed-out" || (!first && reading.loginEndsAt != null)
         ? HEIGHTS.fact
         : 0;
     const account = accounts.find((entry) => entry.id === reading.id);

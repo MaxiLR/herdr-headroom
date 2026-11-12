@@ -275,13 +275,14 @@ function windowView(window, id, view, { dimmed, wide, narrow }) {
 }
 
 // `Login ends Dec 5`, in the high colour in its last 3 days; `Login ended
-// Nov 9` for an account that must sign in again.
+// Nov 9` for an account that must sign in again; nothing before the first
+// read, which draws the account's header lines only.
 function loginLine(reading, row, view) {
   const t = view.theme;
   const text =
     row.state === "signed-out"
       ? loginText(reading, view.now)
-      : reading.loginEndsAt != null
+      : row.state !== "first" && reading.loginEndsAt != null
         ? `Login ends ${shortDate(reading.loginEndsAt)}`
         : null;
   if (text === null) return null;
