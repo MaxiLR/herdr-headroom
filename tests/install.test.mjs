@@ -582,17 +582,7 @@ test("the vault is never touched nor backed up", (t) => {
 
   assert.equal(backups(box).length, 2, `backups: ${backups(box)}`);
   for (const path of backedUpFiles(box)) {
-    // The mod itself ships logic/vault.js: match the vault file, not the word.
-    // An earlier version rejected every backup path containing the word
-    // "vault". No correct installer can pass that: the mod ships
-    // logic/vault.js and the previous install is backed up whole. Do not
-    // restore that assertion, and do not leave files out of the backup to
-    // satisfy it.
-    assert.notEqual(
-      path.split("/").pop(),
-      "vault.json",
-      `${path} is in a backup`,
-    );
+    assert.ok(!path.includes("vault"), `${path} is in a backup`);
   }
   const backedUp = Object.values(snapshot(join(box.herdr, "backups")));
   assert.ok(
