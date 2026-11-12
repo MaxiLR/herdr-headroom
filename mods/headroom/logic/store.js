@@ -1,6 +1,14 @@
 // The accounts, their logins and their readings: signs in, reads each account
 // when its reading is old and publishes what it read.
 import { providers as allProviders } from "../providers/index.js";
+import {
+  accountId,
+  defaultLabel,
+  move,
+  remove,
+  rename,
+  upsert,
+} from "./accounts.js";
 import { publish, published } from "./publish.js";
 import { firstReading, readingOf } from "./readings.js";
 import { createVault } from "./vault.js";
@@ -16,19 +24,51 @@ export function createStore(host, { providers = allProviders } = {}) {
   // Reads running, by account id.
   const running = new Map();
   let started = null;
+  // The last vault change; the next one waits for it.
+  let changing = Promise.resolve();
 
   const show = () =>
     publish(
       host,
-      accounts.map((account) => readings.get(account.id)),
+      accounts.map((account) => ({
+        ...readings.get(account.id),
+        label: account.label,
+      })),
       host.now(),
     );
 
+  // Runs `step(accounts)` → the next accounts after every change before it,
+  // saves them and, once saved, keeps and publishes them.
+  function change(step) {
+    const job = changing.then(async () => {
+      await start();
+      const next = step(accounts);
+      const saved = await vault.save(next);
+      if (!saved.ok) return { ok: false, kind: saved.kind };
+      accounts = next;
+      for (const id of readings.keys()) {
+        if (!accounts.some((account) => account.id === id)) readings.delete(id);
+      }
+      for (const account of accounts) {
+        if (!readings.has(account.id)) {
+          readings.set(
+            account.id,
+            firstReading(account, providers[account.provider]),
+          );
+        }
+      }
+      show();
+      return { ok: true };
+    });
+    changing = job.catch(() => undefined);
+    return job;
+  }
+
   function start() {
     started ??= (async () => {
-      accounts = (await vault.load()).filter(
-        (account) => providers[account.provider],
-      );
+      accounts = (await vault.load())
+        .filter((account) => providers[account.provider])
+        .sort((a, b) => a.position - b.position);
       const before = published(host);
       for (const account of accounts) {
         readings.set(
@@ -104,33 +144,34 @@ export function createStore(host, { providers = allProviders } = {}) {
       });
       if (!result.ok) return { ok: false, kind: result.kind };
       const { identity } = result.credentials;
-      const id = `${providerId}:${identity.accountId}:${identity.organizationId}`;
-      const index = accounts.findIndex((account) => account.id === id);
-      const previous = accounts[index];
-      const account = {
-        id,
-        provider: providerId,
-        label:
-          previous?.label ?? (identity.email?.split("@")[0] || provider.name),
-        position: previous?.position ?? accounts.length,
-        accessToken: result.credentials.accessToken,
-        refreshToken: result.credentials.refreshToken,
-        expiresAt: result.credentials.expiresAt,
-        signedInAt: result.credentials.signedInAt,
-        identity,
-      };
-      const next =
-        index === -1
-          ? [...accounts, account]
-          : accounts.map((item, at) => (at === index ? account : item));
-      const saved = await vault.save(next);
-      if (!saved.ok) return { ok: false, kind: saved.kind };
-      accounts = next;
-      if (!readings.has(id)) readings.set(id, firstReading(account, provider));
-      show();
+      const id = accountId(providerId, identity);
+      const saved = await change((current) =>
+        upsert(current, {
+          id,
+          provider: providerId,
+          label: defaultLabel(
+            identity,
+            current.map((account) => account.label),
+          ),
+          position: current.length,
+          accessToken: result.credentials.accessToken,
+          refreshToken: result.credentials.refreshToken,
+          expiresAt: result.credentials.expiresAt,
+          signedInAt: result.credentials.signedInAt,
+          identity,
+        }),
+      );
+      if (!saved.ok) return saved;
       await readOne(id);
       return { ok: true, id };
     },
+
+    rename: (id, label) => change((current) => rename(current, id, label)),
+
+    move: (id, delta) => change((current) => move(current, id, delta)),
+
+    // Deletes the account's stored login and its reading.
+    remove: (id) => change((current) => remove(current, id)),
 
     tick() {
       const now = host.now();
