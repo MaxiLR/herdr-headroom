@@ -109,6 +109,37 @@ test(
 );
 
 test(
+  "an operation abandoned while saving rotated tokens does not block the next refresh or account change",
+  { timeout: 5000 },
+  async () => {
+    const { host, store } = setup({
+      accounts: [login(1, { expiresAt: NOW + MINUTE })],
+      token: () => tokenOk(host, 1),
+    });
+    const writeText = host.writeText;
+    let writes = 0;
+    host.writeText = (...args) =>
+      ++writes === 1 ? deferred().promise : writeText(...args);
+    await store.start();
+    store.refresh(ID1);
+    await settle();
+    assert.equal(tokenRequests(host).length, 1);
+    assert.equal(usageRequests(host).length, 0);
+    host.clock.now += 2 * MINUTE + 1;
+    await store.refresh(ID1);
+    assert.equal(tokenRequests(host).length, 2);
+    assert.deepEqual(usageRequests(host).map(bearerOf), [
+      "access-secret-1-new",
+    ]);
+    assert.equal(vaultAccounts(host)[0].refreshToken, "refresh-secret-1-new");
+    assert.equal(readingOf(host, ID1).status, "ok");
+    assert.deepEqual(await store.rename(ID1, "work"), { ok: true });
+    assert.equal(readingOf(host, ID1).label, "work");
+    assertNoToken(host);
+  },
+);
+
+test(
   "an abandoned operation that ends late does not overwrite the newer reading",
   { timeout: 5000 },
   async () => {
