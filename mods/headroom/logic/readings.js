@@ -28,15 +28,36 @@ export function firstReading(account, provider) {
   );
 }
 
-// The reading `result` (a provider's `read` answer) gives at `now`.
+// The reading `result` (a provider's `read` answer, or a failed refresh)
+// gives at `now`. A failure keeps the windows and time of the last read that
+// worked, as a stale reading; with none, it is an error.
 export function readingOf(account, provider, result, previous, now) {
-  const reading = result.ok
-    ? {
+  if (result.ok) {
+    return withLogin(
+      {
         ...base(account, provider),
         plan: result.plan ?? account.identity.plan,
         status: "ok",
         fetchedAt: now,
         windows: result.windows,
+      },
+      account,
+      provider,
+    );
+  }
+  const earlier =
+    (previous?.status === "ok" || previous?.status === "stale") &&
+    previous.fetchedAt != null
+      ? previous
+      : null;
+  const reading = earlier
+    ? {
+        ...base(account, provider),
+        plan: earlier.plan ?? account.identity.plan,
+        status: "stale",
+        error: result.kind,
+        fetchedAt: earlier.fetchedAt,
+        windows: earlier.windows,
       }
     : {
         ...base(account, provider),
@@ -46,4 +67,18 @@ export function readingOf(account, provider, result, previous, now) {
         windows: [],
       };
   return withLogin(reading, account, provider);
+}
+
+// An account whose login ended, as found at `now`.
+export function signedOutReading(account, provider, now) {
+  return withLogin(
+    {
+      ...base(account, provider),
+      status: "signed-out",
+      fetchedAt: now,
+      windows: [],
+    },
+    account,
+    provider,
+  );
 }

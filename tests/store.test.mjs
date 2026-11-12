@@ -348,6 +348,8 @@ test("tick reads again once the reading is older than 5 minutes, not before", as
 
 test("a read already running is not started twice", async () => {
   const { host, store } = await connected();
+  // Past the 30 seconds in which a manual refresh reads nothing again.
+  host.clock.now += 30000;
   await Promise.all([store.refresh(), store.refresh("codex:acct-1:acct-1")]);
   assert.equal(usageRequests(host).length, 2);
 });

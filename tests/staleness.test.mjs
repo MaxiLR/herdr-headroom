@@ -170,3 +170,43 @@ test("a second manual refresh within 30 seconds makes no request, one after does
   assert.equal(usageRequests(host).length, 2);
   assertNoToken(host);
 });
+
+test("a signed-out account is read again once connect replaces its login", async () => {
+  const fresh = login(1, {
+    accessToken: "access-secret-9",
+    refreshToken: "refresh-secret-9",
+    signedInAt: NOW,
+  });
+  const { host, store } = setup({
+    accounts: [login(1, { expiresAt: NOW + MINUTE })],
+    token: () => ({ status: 400 }),
+    logins: [
+      {
+        ok: true,
+        credentials: {
+          accessToken: fresh.accessToken,
+          refreshToken: fresh.refreshToken,
+          expiresAt: fresh.expiresAt,
+          signedInAt: fresh.signedInAt,
+          identity: fresh.identity,
+        },
+      },
+    ],
+  });
+  await store.start();
+  await store.tick();
+  assert.equal(readingOf(host, ID).status, "signed-out");
+  assert.deepEqual(await store.connect("acme", {}), { ok: true, id: ID });
+  assert.deepEqual(
+    usageRequests(host).map((request) => request.headers.Authorization),
+    ["Bearer access-secret-9"],
+  );
+  const reading = readingOf(host, ID);
+  assert.equal(reading.status, "ok");
+  assert.deepEqual(reading.windows, WINDOWS);
+  assert.equal(reading.loginEndsAt, NOW + LOGIN_TTL_MS);
+  host.clock.now += 5 * MINUTE;
+  await store.tick();
+  assert.equal(usageRequests(host).length, 2);
+  assertNoToken(host);
+});

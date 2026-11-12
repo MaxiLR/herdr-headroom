@@ -56,9 +56,9 @@ export const tokenOk = (host, n) => ({
   },
 });
 
-// The provider: `read` asks USAGE_URL with the access token, `refresh` posts
-// the refresh token to TOKEN_URL.
-function acme() {
+// The provider: `login` answers `logins` in turn, `read` asks USAGE_URL with
+// the access token, `refresh` posts the refresh token to TOKEN_URL.
+function acme(logins) {
   async function call(io, url, options) {
     try {
       return { response: await io.fetch(url, options) };
@@ -70,7 +70,7 @@ function acme() {
     id: "acme",
     name: "Acme",
     loginTtlMs: LOGIN_TTL_MS,
-    login: async () => ({ ok: false, kind: "cancelled" }),
+    login: async () => logins.shift() ?? { ok: false, kind: "cancelled" },
     async read(credentials, io) {
       const { response, failed } = await call(io, USAGE_URL, {
         headers: { Authorization: `Bearer ${credentials.accessToken}` },
@@ -105,8 +105,13 @@ function acme() {
 // A store over a fake host whose vault holds `accounts`. `usage(request)`
 // and `token(request)` answer the endpoints (`{ status, body }`, a promise of
 // one, or a throw); the usage endpoint answers 200 with WINDOWS and the token
-// endpoint 500 without them.
-export function setup({ accounts = [login(1)], usage, token } = {}) {
+// endpoint 500 without them. `logins` are the sign-ins `connect` gets.
+export function setup({
+  accounts = [login(1)],
+  usage,
+  token,
+  logins = [],
+} = {}) {
   const host = fakeHost({
     respond(request) {
       if (request.url === USAGE_URL) return usage ? usage(request) : usageOk();
@@ -117,7 +122,7 @@ export function setup({ accounts = [login(1)], usage, token } = {}) {
     },
   });
   host.files[VAULT] = JSON.stringify({ version: 1, accounts }, null, 2);
-  const store = createStore(host, { providers: { acme: acme() } });
+  const store = createStore(host, { providers: { acme: acme(logins) } });
   return { host, store };
 }
 
