@@ -22,6 +22,12 @@ import {
 } from "../logic/words.js";
 import { open as openConnect } from "./connect.js";
 import { bar, levelText, mark, spinner } from "./kit.js";
+import {
+  command as menuCommand,
+  init as menuInit,
+  menuControl,
+  renameField,
+} from "./menu.js";
 
 const REFRESH = "mods/headroom/icons/refresh.svg";
 const PLUS = "mods/workspace-chrome/plus.svg";
@@ -37,6 +43,15 @@ const NOTIFY = "Notify at 90% and at the limit";
 
 // The switch's knob slides across natively.
 const SLIDE = { duration: 160, easing: "ease-out" };
+
+export function init(view, cx) {
+  menuInit(view, cx);
+}
+
+/** `headroom.<name>`: the account menu's confirmed Remove. */
+export function command(name, view, cx) {
+  menuCommand(name, view, cx);
+}
 
 export function open(view) {
   view.host.openOverlay({
@@ -118,31 +133,34 @@ function header(view) {
     );
 }
 
-// The account's first line: the mark, the label, the plan and, on the right,
-// why the last read failed or the Sign in again control.
+// The account's first line: the mark, the label (its field while it is
+// renamed), the plan and, on the right, why the last read failed or the Sign
+// in again control, then the account menu's control.
 function labelLine(reading, row, index, view) {
   const t = view.theme;
   const signedOut = row.state === "signed-out";
+  const field = renameField(reading, view);
   return h_flex()
     .h(24)
     .gap(8)
     .items_center()
     .child(mark(reading.provider, 16))
     .child(
-      div()
-        .min_w(0)
-        .truncate()
-        .text_size(13)
-        .font_medium()
-        .text_color(signedOut ? t.muted : t.foreground)
-        .child(reading.label),
+      field ??
+        div()
+          .min_w(0)
+          .truncate()
+          .text_size(13)
+          .font_medium()
+          .text_color(signedOut ? t.muted : t.foreground)
+          .child(reading.label),
     )
-    .when(Boolean(reading.plan), (el) =>
+    .when(Boolean(reading.plan) && field === null, (el) =>
       el.child(
         div().flex_none().text_size(12).text_color(t.muted).child(reading.plan),
       ),
     )
-    .child(div().flex_1())
+    .when(field === null, (el) => el.child(div().flex_1()))
     .when(row.state === "failed", (el) =>
       el.child(
         div()
@@ -172,7 +190,8 @@ function labelLine(reading, row, index, view) {
           )
           .child("Sign in again"),
       ),
-    );
+    )
+    .child(menuControl(reading, index, view));
 }
 
 // `maxi@terac.example · Terac`, under the label.
@@ -453,5 +472,3 @@ export function render(view, cx) {
     )
     .child(footer(view));
 }
-
-export function command(_name, _view, _cx) {}
