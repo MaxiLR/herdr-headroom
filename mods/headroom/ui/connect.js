@@ -147,3 +147,5 @@ export function render(view, cx) {
         ),
     );
 }
+
+export function choose(view, provider, cx) {}
