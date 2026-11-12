@@ -241,7 +241,7 @@ test("while reading, the refresh control is Herdr's spinner", (t) => {
   if (!lines) return;
   const drawn = inside(lines, "refresh").join("\n");
   assert.match(drawn, /spinner\.svg/, show(lines));
-  assert.match(drawn, /\.spin\[/);
+  assert.match(drawn, /:spin\[/);
   assert.doesNotMatch(drawn, /refresh\.svg/);
   assert.match(
     withId(lines, "refresh") ?? "",
@@ -320,7 +320,12 @@ test("sign in again: the control, when the login ended, no windows", (t) => {
   assert.ok(drawn.includes("Sign in again"), show(lines));
   assert.ok(drawn.includes("Login ended Nov 9"), show(lines));
   assert.ok(drawn.includes("maxi@example.com"), show(lines));
-  assert.doesNotMatch(sentence(lines), /%|resets/, show(lines));
+  // The footer's own words hold a %; the account holds none.
+  assert.doesNotMatch(
+    sentence(inside(lines, "account-0")),
+    /%|resets/,
+    show(lines),
+  );
   assert.ok(!ids(lines).some((id) => id.includes("-window-")), show(lines));
   const control = withId(lines, "account-0-sign-in") ?? "";
   assert.match(control, /:role\[Str\("button"\)\]/, show(lines));
