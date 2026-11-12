@@ -1,5 +1,2 @@
-import { div } from "gpui-kit";
-
-export function render(view, cx) {
-  return div();
-}
+// The strip draws as the list for now.
+export { render } from "./list.js";
