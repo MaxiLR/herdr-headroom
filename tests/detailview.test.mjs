@@ -428,3 +428,23 @@ test("with no accounts: the header, No accounts yet and the footer", (t) => {
   assert.match(withId(lines, "connect-account") ?? "", /:on_click/);
   assert.equal(withId(lines, "account-0"), undefined);
 });
+
+test("a Claude account's first read, its login end known, draws its header lines only", (t) => {
+  // A first read of a Claude account carries the end of its login.
+  const lines = draw(t, {
+    readings: [
+      maxi({
+        status: "stale",
+        fetchedAt: null,
+        loginEndsAt: new Date(2026, 10, 14, 9, 0).getTime(),
+        windows: [],
+      }),
+    ],
+  });
+  if (!lines) return;
+  assert.deepEqual(texts(inside(lines, "account-0")), [
+    "maxi",
+    "Max",
+    "maxi@example.com",
+  ]);
+});

@@ -127,3 +127,11 @@ test("openHeight grows with the accounts and stops at the most a popup takes", (
   );
   assert.equal(openHeight(many), 640);
 });
+
+test("openHeight leaves out the login line of an account not read yet", () => {
+  const first = { status: "stale", fetchedAt: null, windows: [] };
+  assert.equal(
+    openHeight([reading({ ...first, loginEndsAt: NOW + 2 * DAY })]),
+    openHeight([reading({ ...first, loginEndsAt: null })]),
+  );
+});
