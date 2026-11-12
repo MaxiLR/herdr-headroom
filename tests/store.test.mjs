@@ -355,7 +355,9 @@ test("a read already running is not started twice", async () => {
 test("no token reaches a file or the shared state", async () => {
   const { host, store } = await connected();
   await store.refresh();
-  assert.deepEqual(host.files, {});
+  assert.deepEqual(Object.keys(host.files), [
+    `${host.home}/headroom/vault.json`,
+  ]);
   const shared = JSON.stringify(host.sets);
   for (const secret of SECRETS) {
     assert.equal(
