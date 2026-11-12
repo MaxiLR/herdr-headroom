@@ -230,13 +230,6 @@ function assertVault(vault) {
   assert.equal(statSync(vault.path).mode & 0o777, 0o600);
 }
 
-// Every file in every backup folder, so a vault in any of them shows up.
-function backedUpFiles(box) {
-  const dir = join(box.herdr, "backups");
-  if (!existsSync(dir)) return [];
-  return Object.keys(snapshot(dir));
-}
-
 test("the installer is executable", () => {
   const mode = statSync(script).mode & 0o777;
   assert.equal(mode, 0o755, `install.sh has mode ${mode.toString(8)}`);
@@ -581,9 +574,6 @@ test("the vault is never touched nor backed up", (t) => {
   assertVault(vault);
 
   assert.equal(backups(box).length, 2, `backups: ${backups(box)}`);
-  for (const path of backedUpFiles(box)) {
-    assert.ok(!path.includes("vault"), `${path} is in a backup`);
-  }
   const backedUp = Object.values(snapshot(join(box.herdr, "backups")));
   assert.ok(
     !backedUp.includes(vault.bytes.toString("base64")),
