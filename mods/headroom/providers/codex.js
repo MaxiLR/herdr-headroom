@@ -154,6 +154,10 @@ export async function login(io) {
   }
 }
 
+export async function refresh() {
+  return { ok: false, kind: "unexpected" };
+}
+
 function windowOf(slot) {
   const known = WINDOWS[slot?.limit_window_seconds];
   if (!known) return null;

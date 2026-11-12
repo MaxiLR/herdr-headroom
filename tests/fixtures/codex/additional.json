@@ -1,0 +1,65 @@
+{
+  "plan_type": "pro",
+  "rate_limit": {
+    "allowed": true,
+    "limit_reached": false,
+    "primary_window": {
+      "used_percent": 20,
+      "limit_window_seconds": 18000,
+      "reset_at": 1794480000
+    },
+    "secondary_window": {
+      "used_percent": 10,
+      "limit_window_seconds": 604800,
+      "reset_at": 1794900000
+    }
+  },
+  "additional_rate_limits": [
+    {
+      "limit_name": "GPT-5.3-Codex-Spark",
+      "metered_feature": "codex_bengalfox",
+      "rate_limit": {
+        "allowed": false,
+        "limit_reached": true,
+        "primary_window": {
+          "used_percent": 100,
+          "limit_window_seconds": 18000,
+          "reset_at": 1794477600
+        },
+        "secondary_window": {
+          "used_percent": 30,
+          "limit_window_seconds": 604800,
+          "reset_at": 1794900000
+        }
+      }
+    },
+    {
+      "limit_name": "Review Tasks",
+      "rate_limit": {
+        "allowed": true,
+        "limit_reached": false,
+        "primary_window": {
+          "used_percent": 12,
+          "limit_window_seconds": 5400,
+          "reset_after_seconds": 600
+        },
+        "secondary_window": {
+          "used_percent": 5
+        }
+      }
+    },
+    {
+      "limit_name": "Broken"
+    },
+    {
+      "rate_limit": {
+        "limit_reached": false,
+        "primary_window": {
+          "used_percent": 1,
+          "limit_window_seconds": 18000
+        }
+      }
+    },
+    "not an entry"
+  ]
+}
