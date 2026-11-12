@@ -44,8 +44,8 @@ export function createStore(host, { providers = allProviders } = {}) {
   // When each account's last operation started, by id.
   const attempts = new Map();
   let started = null;
-  // The last vault change; the next one waits for it.
-  let changing = Promise.resolve();
+  // The vault change running, `{ since, done }`, or null.
+  let changing = null;
 
   const show = () =>
     publish(
@@ -57,10 +57,31 @@ export function createStore(host, { providers = allProviders } = {}) {
       host.now(),
     );
 
+  // Runs `work()` once no other vault change is running, or the one running
+  // was abandoned: its copy closed while it waited on the vault.
+  async function exclusively(work) {
+    while (changing && host.now() - changing.since <= ABANDONED_AFTER_MS) {
+      await changing.done;
+    }
+    const job = Promise.resolve().then(work);
+    const entry = {
+      since: host.now(),
+      done: job.then(
+        () => undefined,
+        () => undefined,
+      ),
+    };
+    changing = entry;
+    entry.done.then(() => {
+      if (changing === entry) changing = null;
+    });
+    return job;
+  }
+
   // Runs `step(accounts)` → the next accounts after every change before it,
   // saves them and, once saved, keeps and publishes them.
   function change(step) {
-    const job = changing.then(async () => {
+    return exclusively(async () => {
       await start();
       const next = step(accounts);
       const saved = await vault.save(next);
@@ -80,8 +101,6 @@ export function createStore(host, { providers = allProviders } = {}) {
       show();
       return { ok: true };
     });
-    changing = job.catch(() => undefined);
-    return job;
   }
 
   function start() {
@@ -108,7 +127,7 @@ export function createStore(host, { providers = allProviders } = {}) {
   // was `spent`, saved before they are used; when the vault cannot save them
   // they are kept in memory all the same. A login replaced meanwhile stays.
   function keepTokens(id, spent, { accessToken, refreshToken, expiresAt }) {
-    const job = changing.then(async () => {
+    return exclusively(async () => {
       if (!accounts.some((a) => a.id === id && a.refreshToken === spent)) {
         return;
       }
@@ -120,8 +139,6 @@ export function createStore(host, { providers = allProviders } = {}) {
       await vault.save(next);
       accounts = next;
     });
-    changing = job.catch(() => undefined);
-    return job;
   }
 
   // One read of account `id`, refreshing its token first when it expires
