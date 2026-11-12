@@ -669,3 +669,82 @@ for (const [name, fixture] of Object.entries(FIXTURES)) {
     }
   });
 }
+
+// Every text written to the vault, with the programs run before it.
+function recordWrites(host) {
+  const writes = [];
+  const write = host.writeText;
+  host.writeText = async (path, text, expected) => {
+    writes.push({ text, programs: host.commands.slice() });
+    return write(path, text, expected);
+  };
+  return writes;
+}
+
+const hasToken = (text) => /(access|refresh)-secret-/.test(text);
+
+test("after a refused vault no later save writes a token into an unchecked file", async () => {
+  const host = fakeHost({
+    exec: (command) =>
+      command === "stat"
+        ? { code: 0, stdout: "644\n", stderr: "" }
+        : { code: 0, stdout: "", stderr: "" },
+  });
+  const writes = recordWrites(host);
+  const store = createStore(host, {
+    providers: acme([signIn(1), signIn(2)]),
+  });
+  await store.start();
+  for (let n = 0; n < 2; n += 1) {
+    assert.deepEqual(await store.connect("acme", {}), {
+      ok: false,
+      kind: "vault",
+    });
+  }
+  assert.deepEqual(
+    writes.filter(({ text }) => hasToken(text)),
+    [],
+  );
+});
+
+test("a file already at the path that is not a vault is made private before any token", async () => {
+  for (const text of ["not json", ""]) {
+    const host = fakeHost({ exec: privateExec });
+    host.files[VAULT] = text;
+    const writes = recordWrites(host);
+    const store = createStore(host, { providers: acme([signIn(1)]) });
+    await store.start();
+    assert.deepEqual(await store.connect("acme", {}), {
+      ok: true,
+      id: MAXI_ID,
+    });
+    const first = writes.find(({ text }) => hasToken(text));
+    assert.deepEqual(first.programs, [
+      ["mkdir", ["-p", FOLDER]],
+      ["chmod", ["700", FOLDER]],
+      ["chmod", ["600", VAULT]],
+      ["stat", ["-f", "%Lp", VAULT]],
+    ]);
+  }
+});
+
+test("a file that cannot be made 0600 already at the path keeps no token", async () => {
+  const host = fakeHost({
+    exec: (command) =>
+      command === "stat"
+        ? { code: 0, stdout: "644\n", stderr: "" }
+        : { code: 0, stdout: "", stderr: "" },
+  });
+  host.files[VAULT] = "not json";
+  const writes = recordWrites(host);
+  const store = createStore(host, { providers: acme([signIn(1)]) });
+  await store.start();
+  assert.deepEqual(await store.connect("acme", {}), {
+    ok: false,
+    kind: "vault",
+  });
+  assert.deepEqual(
+    writes.filter(({ text }) => hasToken(text)),
+    [],
+  );
+});

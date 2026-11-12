@@ -30,6 +30,9 @@ export function createVault(host) {
   // The file's text as last read or written: null when it is absent,
   // undefined before it was first read.
   let snapshot;
+  // Whether this vault has made sure the folder is 0700 and the file 0600
+  // since it was created or last refused; until then no token is written.
+  let confirmed = false;
 
   async function read() {
     snapshot = await host.readText(path);
@@ -76,11 +79,12 @@ export function createVault(host) {
     snapshot = text;
   }
 
-  // The folder 0700 and an empty file 0600, before any token is written.
-  async function create() {
+  // The folder 0700 and the file, created empty when absent, 0600, before
+  // any token is written.
+  async function confirm() {
     if (!(await ran("mkdir", ["-p", folder]))) return false;
     if (!(await ran("chmod", ["700", folder]))) return false;
-    await write("");
+    if (snapshot === null) await write("");
     return (await ran("chmod", ["600", path])) && (await isPrivate());
   }
 
@@ -98,16 +102,19 @@ export function createVault(host) {
     async save(accounts) {
       try {
         if (snapshot === undefined) await read();
-        if (snapshot === null && !(await create())) {
+        if (!confirmed && !(await confirm())) {
           // Whatever the file holds, it keeps no token.
           if (snapshot) await write("");
           return REFUSED;
         }
+        confirmed = true;
         await write(JSON.stringify({ version: VERSION, accounts }, null, 2));
         if (await repair()) return { ok: true };
+        confirmed = false;
         await write("");
         return REFUSED;
       } catch {
+        confirmed = false;
         return REFUSED;
       }
     },
