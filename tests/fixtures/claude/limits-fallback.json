@@ -1,0 +1,17 @@
+{
+  "five_hour": { "utilization": 10, "resets_at": "2026-11-12T11:30:00+00:00" },
+  "seven_day": null,
+  "limits": [
+    {
+      "kind": "session",
+      "percent": 50,
+      "resets_at": "2026-11-12T12:00:00+00:00"
+    },
+    {
+      "kind": "weekly_all",
+      "percent": 70,
+      "resets_at": "2026-11-18T08:00:00+00:00",
+      "is_active": false
+    }
+  ]
+}
