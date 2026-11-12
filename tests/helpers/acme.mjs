@@ -56,9 +56,9 @@ export const tokenOk = (host, n) => ({
   },
 });
 
-// The provider: `login` answers `logins` in turn, `read` asks USAGE_URL with
-// the access token, `refresh` posts the refresh token to TOKEN_URL.
-function acme(logins) {
+// The provider: `read` asks USAGE_URL with the access token, `refresh` posts
+// the refresh token to TOKEN_URL.
+function acme() {
   async function call(io, url, options) {
     try {
       return { response: await io.fetch(url, options) };
@@ -70,7 +70,7 @@ function acme(logins) {
     id: "acme",
     name: "Acme",
     loginTtlMs: LOGIN_TTL_MS,
-    login: async () => logins.shift() ?? { ok: false, kind: "cancelled" },
+    login: async () => ({ ok: false, kind: "cancelled" }),
     async read(credentials, io) {
       const { response, failed } = await call(io, USAGE_URL, {
         headers: { Authorization: `Bearer ${credentials.accessToken}` },
@@ -105,13 +105,8 @@ function acme(logins) {
 // A store over a fake host whose vault holds `accounts`. `usage(request)`
 // and `token(request)` answer the endpoints (`{ status, body }`, a promise of
 // one, or a throw); the usage endpoint answers 200 with WINDOWS and the token
-// endpoint 500 without them. `logins` are the sign-ins `connect` gets.
-export function setup({
-  accounts = [login(1)],
-  usage,
-  token,
-  logins = [],
-} = {}) {
+// endpoint 500 without them.
+export function setup({ accounts = [login(1)], usage, token } = {}) {
   const host = fakeHost({
     respond(request) {
       if (request.url === USAGE_URL) return usage ? usage(request) : usageOk();
@@ -122,7 +117,7 @@ export function setup({
     },
   });
   host.files[VAULT] = JSON.stringify({ version: 1, accounts }, null, 2);
-  const store = createStore(host, { providers: { acme: acme(logins) } });
+  const store = createStore(host, { providers: { acme: acme() } });
   return { host, store };
 }
 
@@ -158,4 +153,15 @@ export function deferred() {
 export function assertNoToken(host) {
   const given = JSON.stringify([host.sets, host.toasts]);
   assert.doesNotMatch(given, /(access|refresh)-secret/, "a token is shared");
+}
+
+// A store like `setup`'s whose provider's `login` answers `logins` in turn:
+// the sign-ins `connect` gets.
+export function setupSigningIn({ logins = [], ...options } = {}) {
+  const { host } = setup(options);
+  const provider = {
+    ...acme(),
+    login: async () => logins.shift() ?? { ok: false, kind: "cancelled" },
+  };
+  return { host, store: createStore(host, { providers: { acme: provider } }) };
 }

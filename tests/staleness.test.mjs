@@ -9,6 +9,7 @@ import {
   login,
   readingOf,
   setup,
+  setupSigningIn,
   usageOk,
   usageRequests,
 } from "./helpers/acme.mjs";
@@ -177,7 +178,7 @@ test("a signed-out account is read again once connect replaces its login", async
     refreshToken: "refresh-secret-9",
     signedInAt: NOW,
   });
-  const { host, store } = setup({
+  const { host, store } = setupSigningIn({
     accounts: [login(1, { expiresAt: NOW + MINUTE })],
     token: () => ({ status: 400 }),
     logins: [
