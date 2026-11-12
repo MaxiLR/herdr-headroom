@@ -273,7 +273,7 @@ test("windows are told by their length, weekly first", async () => {
   ]);
 });
 
-test("a window of another length is left out", async () => {
+test("a window of another length is named by its length", async () => {
   const { host } = await connected({
     usage: {
       status: 200,
@@ -296,7 +296,17 @@ test("a window of another length is left out", async () => {
   });
   const [only] = published(host).accounts;
   assert.equal(only.plan, "Pro");
-  assert.deepEqual(only.windows, [WEEKLY]);
+  assert.deepEqual(only.windows, [
+    WEEKLY,
+    {
+      id: "1d",
+      label: "1-day",
+      durationMs: 86400000,
+      usedFraction: 0.1,
+      resetsAt: 1794486480000,
+      atLimit: false,
+    },
+  ]);
 });
 
 test("a cancelled sign-in adds no account", async () => {
