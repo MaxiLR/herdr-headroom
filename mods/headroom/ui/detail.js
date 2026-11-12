@@ -453,3 +453,5 @@ export function render(view, cx) {
     )
     .child(footer(view));
 }
+
+export function command(_name, _view, _cx) {}
