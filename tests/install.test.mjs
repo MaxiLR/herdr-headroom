@@ -582,8 +582,18 @@ test("the vault is never touched nor backed up", (t) => {
 
   assert.equal(backups(box).length, 2, `backups: ${backups(box)}`);
   for (const path of backedUpFiles(box)) {
-    assert.ok(!path.includes("vault"), `${path} is in a backup`);
+    // The mod itself ships logic/vault.js: match the vault file, not the word.
+    assert.notEqual(
+      path.split("/").pop(),
+      "vault.json",
+      `${path} is in a backup`,
+    );
   }
+  const backedUp = Object.values(snapshot(join(box.herdr, "backups")));
+  assert.ok(
+    !backedUp.includes(vault.bytes.toString("base64")),
+    "the vault's bytes are in a backup",
+  );
   assert.deepEqual(readdirSync(join(box.herdr, "headroom")), ["vault.json"]);
 });
 
