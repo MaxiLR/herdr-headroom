@@ -451,3 +451,70 @@ test("a Claude account's first read, its login end known, draws its header lines
     "maxi@example.com",
   ]);
 });
+
+test("each account's up and down arrows: buttons named Move up and Move down", (t) => {
+  const lines = draw(t, { readings: [maxi(), terac(), maxilr()] });
+  if (!lines) return;
+  const within = inside(lines, "account-1").join("\n");
+  for (const [id, name] of [
+    ["account-1-up", "Move up"],
+    ["account-1-down", "Move down"],
+  ]) {
+    const control = withId(lines, id) ?? "";
+    assert.ok(within.includes(control) && control !== "", show(lines));
+    assert.match(control, /:role\[Str\("button"\)\]/, show(lines));
+    assert.match(control, /:on_click\(fn\)/);
+    assert.match(control, new RegExp(`:tooltip\\[Str\\("${name}"\\)\\]`));
+    assert.match(
+      control,
+      new RegExp(`:accessibility_label\\[Str\\("${name}"\\)\\]`),
+    );
+  }
+  assert.match(
+    inside(lines, "account-1-up").join("\n"),
+    /svg "mods\/headroom\/icons\/arrow-up\.svg"/,
+    show(lines),
+  );
+  assert.match(
+    inside(lines, "account-1-down").join("\n"),
+    /svg "mods\/headroom\/icons\/arrow-down\.svg"/,
+    show(lines),
+  );
+});
+
+test("the first account's up and the last account's down are dimmed", (t) => {
+  const lines = draw(t, { readings: [maxi(), terac(), maxilr()] });
+  if (!lines) return;
+  const dimmed = /\.opacity\[Number\(0\.35\)\]/;
+  assert.match(withId(lines, "account-0-up") ?? "", dimmed, show(lines));
+  assert.match(withId(lines, "account-2-down") ?? "", dimmed, show(lines));
+  assert.doesNotMatch(withId(lines, "account-1-up") ?? "", dimmed);
+  assert.ok(withId(lines, "account-1-up"), show(lines));
+});
+
+test("with one account there are no arrows", (t) => {
+  const lines = draw(t, { readings: [maxi()] });
+  if (!lines) return;
+  assert.ok(withId(lines, "account-0"), show(lines));
+  assert.ok(
+    !ids(lines).some((id) => id.endsWith("-up") || id.endsWith("-down")),
+    show(lines),
+  );
+});
+
+test("a signed-out account's Sign in again comes before its arrows", (t) => {
+  const lines = draw(t, {
+    readings: [
+      maxi(),
+      terac({
+        status: "signed-out",
+        loginEndsAt: new Date(2026, 10, 9, 15, 0).getTime(),
+        windows: [],
+      }),
+    ],
+  });
+  if (!lines) return;
+  const signIn = at(lines, { id: "account-1-sign-in" });
+  assert.ok(signIn >= 0, show(lines));
+  assert.ok(at(lines, { id: "account-1-up" }) > signIn, show(lines));
+});

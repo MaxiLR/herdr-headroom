@@ -94,3 +94,9 @@ export function openHeight(readings, accounts = []) {
       : sections.reduce((sum, px) => sum + px, 0);
   return Math.min(OPEN_MAX, HEIGHTS.header + body + HEIGHTS.footer + 2);
 }
+
+export function arrowsOf(_readings, _id) {
+  return undefined;
+}
+
+export async function moveAccount(_view, _id, _delta) {}
