@@ -181,6 +181,8 @@ if [[ $want_layout -eq 1 ]]; then
   elif ! jq -se 'length == 1' "$MAIN" >/dev/null 2>&1; then
     layout_state=invalid
   else
+    # Prints whether a status block was found, then the new layout; nothing
+    # when sidebar-lists is missing.
     layout_json="$(jq --argjson block "$BLOCK" --argjson strip "$STRIP" '
       def fits:
         type == "object" and .id == "sidebar-lists"
@@ -191,20 +193,22 @@ if [[ $want_layout -eq 1 ]]; then
         else ($found[0] + ["children"]) as $at
           | setpath($at; getpath($at) + [$block])
           | [path(.. | select(status))] as $status
-          | if ($status | length) == 0 then .
-            else getpath($status[0]) as $old
-              | setpath($status[0];
-                  {id: "status-row", type: "row"}
-                  + (if $old | has("size") then {size: $old.size} else {} end)
-                  + {children: [$old + {size: {weight: 3}}, $strip]})
-            end
+          | ($status | length > 0),
+            (if ($status | length) == 0 then .
+              else getpath($status[0]) as $old
+                | setpath($status[0];
+                    {id: "status-row", type: "row"}
+                    + (if $old | has("size") then {size: $old.size} else {} end)
+                    + {children: [$old + {size: {weight: 3}}, $strip]})
+              end)
         end
     ' "$MAIN")"
     if [[ -n "$layout_json" ]]; then
       layout_state=write
-      if jq -e 'any(.. | objects; .id == "headroom-strip")' >/dev/null <<<"$layout_json"; then
+      if [[ "${layout_json%%$'\n'*}" == true ]]; then
         has_status=1
       fi
+      layout_json="${layout_json#*$'\n'}"
     else
       layout_state=no-lists
     fi

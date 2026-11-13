@@ -844,6 +844,31 @@ test("--dry-run --layout with a status block changes nothing and names the strip
   assert.match(said, /headroom-strip/);
 });
 
+test("a main.json with a headroom-strip node but no status block still says there is no status block", (t) => {
+  const box = sandbox(t);
+  const main = mainLayout();
+  main.children[1].children.pop();
+  const lists = nodes(main).find((node) => node.id === "sidebar-lists");
+  lists.children.push({
+    id: "headroom-strip",
+    type: "block",
+    content: { mod: "spaces" },
+  });
+  writeMain(box, main);
+
+  const result = run(box, ["--dry-run", "--layout"]);
+
+  assert.equal(result.status, 0, result.output);
+  const said = result.output
+    .split("\n")
+    .find((line) => line.includes("Add the layout"));
+  assert.ok(said, result.output);
+  assert.ok(said.startsWith("!"), said);
+  assert.match(said, /would write/);
+  assert.match(said, /no status block/);
+  assert.doesNotMatch(said, /beside status/);
+});
+
 test("an existing layout of that name is untouched when main.json has a status block", (t) => {
   const box = sandbox(t);
   writeMain(box);
