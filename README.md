@@ -175,8 +175,10 @@ With `form` set to `auto`, before its first measure the block is a list; after:
   reset's clock time, when a login ends, the refresh control, the
   notifications switch, "Show in status bar" (when the layout has a block with
   the id `headroom-strip`, it shows and hides that block) and Connect account.
-  Each account has an up and a down arrow that move it in the order. From 520
-  px wide each window is one line; below 340 px the clock time is left out.
+  Each account has an up and a down arrow that move it in the order, and
+  three dots, "Rename or remove", whose menu renames the account in place or
+  removes it as its account view does. From 520 px wide each window is one
+  line; below 340 px the clock time is left out.
 
 A click on an account in the list, the rail, the strip or the detail view
 opens its account view as a 380 px popup. The list's header control and the

@@ -8,7 +8,7 @@
 // itself before it opens another view, and when its account is no longer
 // connected.
 import { div, svg } from "gpui-kit";
-import { Input, InputState, h_flex, v_flex } from "gpui-base";
+import { h_flex, v_flex } from "gpui-base";
 import {
   accountHeight,
   accountOf,
@@ -17,6 +17,7 @@ import {
 } from "../logic/account.js";
 import { open as openConnect } from "./connect.js";
 import { open as openDetail } from "./detail.js";
+import { labelField, labelInput } from "./field.js";
 import { bar, levelText, mark, pair, spinner } from "./kit.js";
 
 const CHEVRON = "mods/workspace-chrome/chevron-right.svg";
@@ -60,19 +61,11 @@ export function startRename(view, _cx) {
     live.input.focus();
     return;
   }
-  const input = InputState.new({ value: reading.label });
-  input.set_selected_range({ start: 0, end: reading.label.length });
-  input.on("submit", (_event, cx) => {
-    submitRename(view);
-    cx.notify();
-  });
-  input.on("focus", (_event, cx) => {
-    live.focused = true;
-    cx.notify();
-  });
-  input.on("blur", (_event, cx) => {
-    live.focused = false;
-    cx.notify();
+  const input = labelInput(reading.label, {
+    submit: () => submitRename(view),
+    focus: (focused) => {
+      live.focused = focused;
+    },
   });
   live.input = input;
   live.id = reading.id;
@@ -382,28 +375,15 @@ function loginLine(login, t) {
 
 // The label's field: Enter renames, Esc leaves the label as it was.
 function renameField(reading, input, view) {
-  const t = view.theme;
-  return div()
-    .flex_1()
-    .min_w(0)
-    .on_key_down((event, cx) => {
-      if (event.key !== "escape") return;
-      cancelRename(view);
-      cx.stop_propagation();
-      cx.notify();
-    })
-    .child(
-      Input.new(input)
-        .accessibility_label(`Name of ${reading.label}`)
-        .h(24)
-        .px(6)
-        .rounded(6)
-        .border_1()
-        .border_color(liveOf(view).focused ? t.accent : t.input)
-        .bg(t.background)
-        .text_size(13)
-        .text_color(t.foreground),
-    );
+  return labelField(
+    input,
+    {
+      label: reading.label,
+      focused: liveOf(view).focused,
+      cancel: () => cancelRename(view),
+    },
+    view.theme,
+  );
 }
 
 // The account's own actions, one row of buttons that may wrap: Rename, Sign

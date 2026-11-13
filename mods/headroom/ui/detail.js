@@ -7,7 +7,7 @@
 // before it opens another view.
 import { div, svg } from "gpui-kit";
 import { Switch, h_flex, v_flex } from "gpui-base";
-import { openAccount } from "../logic/account.js";
+import { openAccount, openRemove } from "../logic/account.js";
 import {
   ageText,
   arrowsOf,
@@ -29,7 +29,9 @@ import {
   shortDate,
 } from "../logic/words.js";
 import { open as openConnect } from "./connect.js";
+import { labelField, labelInput } from "./field.js";
 import { bar, levelText, mark, spinner } from "./kit.js";
+import { moreMenu } from "./menu.js";
 
 const REFRESH = "mods/headroom/icons/refresh.svg";
 const ARROW_UP = "mods/headroom/icons/arrow-up.svg";
@@ -66,6 +68,92 @@ export function open(view) {
   });
 }
 
+// This copy's detail view, plain data: `refreshing` while every account is
+// read; `menu`, the account whose menu is open, and `renaming`, the account
+// whose label is its field, each an account's id or null; `closed` once the
+// popup is asked to close.
+function stateOf(view) {
+  return (view.ui.detail ??= {});
+}
+
+// What is not plain data: the rename's field and the account it is for.
+function liveOf(view) {
+  return (view.ui.detailLive ??= { input: null, id: null, focused: false });
+}
+
+/**
+ * Makes the field of a rename given as data. Nothing in a copy that is not
+ * the detail view.
+ */
+export function init(view, cx) {
+  if (view.form !== "detail") return;
+  const id = stateOf(view).renaming;
+  if (id && renameInput(view) === null) startRename(view, id, cx);
+}
+
+/**
+ * Runs the item `key` of the account `id`'s menu, `rename` or `remove`, and
+ * closes the menu. Remove asks with the mod's own dialog over this view.
+ */
+export function chooseMenu(view, id, key, cx) {
+  stateOf(view).menu = null;
+  if (key === "rename") startRename(view, id, cx);
+  else if (key === "remove") openRemove(view, id);
+}
+
+// Rename: the account's label and plan become its field, its text selected.
+function startRename(view, id, cx) {
+  const reading = view.readings.find((entry) => entry.id === id);
+  if (!reading) return;
+  const live = liveOf(view);
+  const input = labelInput(reading.label, {
+    submit: () => submitRename(view),
+    focus: (focused) => {
+      live.focused = focused;
+    },
+  });
+  live.input = input;
+  live.id = id;
+  live.focused = true;
+  stateOf(view).renaming = id;
+  input.focus();
+  // The closing menu hands the keyboard back to its control; take it again.
+  cx.spawn(async (cx) => {
+    await cx.sleep(50);
+    if (live.input === input) input.focus();
+  });
+}
+
+/** The field of the account being renamed, else null. */
+export function renameInput(view) {
+  const id = stateOf(view).renaming;
+  const live = liveOf(view);
+  return id && live.id === id ? live.input : null;
+}
+
+/** Enter in the field: the account takes the field's text as its label. */
+export function submitRename(view) {
+  const input = renameInput(view);
+  if (input === null) return;
+  const id = liveOf(view).id;
+  const text = input.value();
+  endRename(view);
+  view.store.rename(id, text);
+}
+
+/** Esc in the field: the label stays as it was. */
+export function cancelRename(view) {
+  endRename(view);
+}
+
+function endRename(view) {
+  const live = liveOf(view);
+  live.input = null;
+  live.id = null;
+  live.focused = false;
+  stateOf(view).renaming = null;
+}
+
 // Shows (`checked`) or hides the strip's block in the shown layout.
 export function setStrip(view, checked) {
   if (checked) view.host.show(STRIP_BLOCK);
@@ -75,7 +163,7 @@ export function setStrip(view, checked) {
 // Closes the popup, once, before it opens another view; a pane or a block has
 // no overlay to close.
 function closeSelf(view) {
-  const state = (view.ui.detail ??= {});
+  const state = stateOf(view);
   if (state.closed || !view.props.overlay) return;
   state.closed = true;
   view.host.closeOverlay(view.props.overlay);
@@ -83,7 +171,7 @@ function closeSelf(view) {
 
 // Reads every account now; the control is Herdr's spinner until it is done.
 function refresh(view, cx) {
-  const state = (view.ui.detail ??= {});
+  const state = stateOf(view);
   if (state.refreshing) return;
   state.refreshing = true;
   cx.notify();
@@ -153,71 +241,121 @@ function header(view) {
 
 // The account's first line: the mark, the label, the plan and, on the right,
 // why the last read failed or the Sign in again control, then its up and
-// down arrows.
+// down arrows and its three dots. The plan is cut before the label is. While
+// the account is renamed, its field runs from the mark up to the arrows.
 function labelLine(reading, row, index, view) {
   const t = view.theme;
   const signedOut = row.state === "signed-out";
-  const arrows = arrowsOf(view.readings, reading.id);
-  return h_flex()
+  const input =
+    stateOf(view).renaming === reading.id ? renameInput(view) : null;
+  const line = h_flex()
     .h(24)
     .gap(8)
     .items_center()
-    .child(mark(reading.provider, 16, t))
-    .child(
-      div()
-        .min_w(0)
-        .truncate()
-        .text_size(13)
-        .font_medium()
-        .text_color(signedOut ? t.muted : t.foreground)
-        .child(reading.label),
-    )
-    .when(Boolean(reading.plan), (el) =>
-      el.child(
-        div().flex_none().text_size(12).text_color(t.muted).child(reading.plan),
-      ),
-    )
-    .child(div().flex_1())
-    .when(row.state === "failed", (el) =>
-      el.child(
-        div()
-          .flex_none()
-          .text_size(11.5)
-          .text_color(t.muted)
-          .whitespace_nowrap()
-          .child(failedText(reading, view.now)),
-      ),
-    )
-    .when(signedOut, (el) =>
-      el.child(
-        div()
-          .id(`account-${index}-sign-in`)
-          .role("button")
-          .accessibility_label(`Sign in again to ${reading.label}`)
-          .flex_none()
-          .text_size(12)
-          .text_color(t.accent)
-          .cursor_pointer()
-          .hover((s) => s.underline())
-          .on_click((_event, cx) => {
-            cx.stop_propagation();
-            closeSelf(view);
-            openConnect(view, {
-              provider: reading.provider,
-              account: reading.id,
-            });
-          })
-          .child("Sign in again"),
-      ),
-    )
+    .child(mark(reading.provider, 16, t));
+  const named =
+    input !== null
+      ? line.child(nameField(reading, input, index, view))
+      : line
+          .child(
+            div()
+              .min_w(0)
+              .truncate()
+              .text_size(13)
+              .font_medium()
+              .text_color(signedOut ? t.muted : t.foreground)
+              .child(reading.label),
+          )
+          .when(Boolean(reading.plan), (el) =>
+            el.child(
+              div()
+                .min_w(0)
+                .flex_shrink(1000)
+                .truncate()
+                .text_size(12)
+                .text_color(t.muted)
+                .child(reading.plan),
+            ),
+          )
+          .child(div().flex_1())
+          .when(row.state === "failed", (el) =>
+            el.child(
+              div()
+                .flex_none()
+                .text_size(11.5)
+                .text_color(t.muted)
+                .whitespace_nowrap()
+                .child(failedText(reading, view.now)),
+            ),
+          )
+          .when(signedOut, (el) => el.child(signInAgain(reading, index, view)));
+  return named.child(controls(reading, index, view));
+}
+
+// The label's field, the account view's own; a click in it stays there.
+function nameField(reading, input, index, view) {
+  return labelField(
+    input,
+    {
+      label: reading.label,
+      focused: liveOf(view).focused,
+      cancel: () => cancelRename(view),
+    },
+    view.theme,
+  )
+    .id(`account-${index}-name`)
+    .on_click((_event, cx) => cx.stop_propagation());
+}
+
+function signInAgain(reading, index, view) {
+  const t = view.theme;
+  return div()
+    .id(`account-${index}-sign-in`)
+    .role("button")
+    .accessibility_label(`Sign in again to ${reading.label}`)
+    .flex_none()
+    .text_size(12)
+    .text_color(t.accent)
+    .cursor_pointer()
+    .hover((s) => s.underline())
+    .on_click((_event, cx) => {
+      cx.stop_propagation();
+      closeSelf(view);
+      openConnect(view, {
+        provider: reading.provider,
+        account: reading.id,
+      });
+    })
+    .child("Sign in again");
+}
+
+// The up and down arrows, when there is more than one account, then the
+// three dots and their menu, 2 px apart.
+function controls(reading, index, view) {
+  const state = stateOf(view);
+  const arrows = arrowsOf(view.readings, reading.id);
+  return h_flex()
+    .flex_none()
+    .gap(2)
+    .items_center()
     .when(arrows !== null, (el) =>
-      el.child(
-        h_flex()
-          .flex_none()
-          .gap(2)
-          .items_center()
-          .child(arrow(reading, index, -1, arrows?.up, view))
-          .child(arrow(reading, index, 1, arrows?.down, view)),
+      el
+        .child(arrow(reading, index, -1, arrows?.up, view))
+        .child(arrow(reading, index, 1, arrows?.down, view)),
+    )
+    .child(
+      moreMenu(
+        {
+          index,
+          open: state.menu === reading.id,
+          onOpenChange: (open, cx) => {
+            if (open) state.menu = reading.id;
+            else if (state.menu === reading.id) state.menu = null;
+            cx.notify();
+          },
+          onChoose: (key, cx) => chooseMenu(view, reading.id, key, cx),
+        },
+        view.theme,
       ),
     );
 }

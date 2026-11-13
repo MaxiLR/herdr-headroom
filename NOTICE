@@ -79,3 +79,40 @@ ChatGPT and its logo are trademarks of OpenAI. Claude and its logo are
 trademarks of Anthropic. They are their owners' trademarks, used here only to
 identify the providers whose usage the mod reads; the mod is not made, endorsed
 or sponsored by either.
+
+------------------------------------------------------------------------------
+
+Icons
+
+mods/headroom/icons/pencil.svg and mods/headroom/icons/trash.svg are Lucide's
+pencil and trash-2 icons (https://lucide.dev), taken from:
+
+  https://lucide.dev/icons/pencil
+  https://lucide.dev/icons/trash-2
+
+Lucide is licensed under the ISC License; Lucide marks trash-2 as derived from
+the Feather project, licensed under the MIT License. Both notices, from the
+LICENSE file of Lucide's repository (https://github.com/lucide-icons/lucide):
+
+ISC License
+
+Copyright (c) 2026 Lucide Icons and Contributors
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+The MIT License (MIT) (for the icons Lucide derives from Feather)
+
+Copyright (c) 2013-present Cole Bemis
+
+  The MIT License's terms are those quoted above with oh-my-pi's notice, and
+  in LICENSE.
