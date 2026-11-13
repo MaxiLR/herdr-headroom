@@ -366,3 +366,38 @@ test("six accounts scroll under the header, in the person's order", (t) => {
     labels,
   );
 });
+
+test("without props.fit the list never resizes its block; with it, it does", (t) => {
+  const plain = drawForm(t, "list", { size: SIZE, readings: [reading()] });
+  if (!plain) return;
+  assert.ok(withId(plain, "accounts-content"), plain.join("\n"));
+  assert.doesNotMatch(withId(plain, "accounts-content"), /:on_size_change/);
+  const fitted = drawForm(t, "list", {
+    size: SIZE,
+    props: { fit: "headroom" },
+    readings: [reading()],
+  });
+  assert.match(withId(fitted, "accounts-content") ?? "", /:on_size_change/);
+});
+
+test("in a short block six accounts scroll under the fixed header", (t) => {
+  const lines = drawForm(t, "list", {
+    size: { width: 268, height: 150 },
+    readings: Array.from({ length: 6 }, (_, index) =>
+      reading({ id: `claude:acct-${index}:org`, label: `account ${index}` }),
+    ),
+  });
+  if (!lines) return;
+  assert.match(withId(lines, "accounts") ?? "", /:overflow_y_scrollbar/);
+  for (let index = 0; index < 6; index += 1) {
+    assert.ok(
+      inside(lines, "accounts", `account-${index}`),
+      `account-${index} outside the scroll area\n${lines.join("\n")}`,
+    );
+  }
+  assert.ok(withId(lines, "open-detail"), lines.join("\n"));
+  assert.ok(!inside(lines, "accounts", "open-detail"), lines.join("\n"));
+  const header = lines.findIndex((line) => line.trim() === 'text "Limits"');
+  const scroll = lines.findIndex((line) => withId([line], "accounts"));
+  assert.ok(header >= 0 && header < scroll, lines.join("\n"));
+});

@@ -4,20 +4,22 @@ import { FIT_MAX, fitHeight, fitTo } from "../mods/headroom/logic/fit.js";
 import { chooseForm } from "../mods/headroom/logic/form.js";
 
 test("a block asks at most for the height of four accounts", () => {
-  assert.equal(FIT_MAX, 320);
+  assert.equal(FIT_MAX, 329);
+  assert.equal(fitHeight(41 + 4 * 70 + 8, null), 329);
+  assert.equal(fitHeight(41 + 5 * 70 + 8, null), 329);
 });
 
 test("a block asks for the height its content needs, rounded up", () => {
   assert.equal(fitHeight(245, null), 245);
   assert.equal(fitHeight(313.2, null), 314);
-  assert.equal(fitHeight(400, null), 320);
-  assert.equal(fitHeight(320, undefined), 320);
+  assert.equal(fitHeight(400, null), 329);
+  assert.equal(fitHeight(329, undefined), 329);
 });
 
 test("a block does not ask again for the height it has", () => {
   assert.equal(fitHeight(245, 245), null);
   assert.equal(fitHeight(313.2, 314), null);
-  assert.equal(fitHeight(400, 320), null);
+  assert.equal(fitHeight(400, 329), null);
   assert.equal(fitHeight(250, 245), 250);
 });
 
@@ -42,9 +44,9 @@ test("fitTo resizes the block once for the same height", () => {
   fitTo(view, 512);
   assert.deepEqual(asked, [
     ["headroom-block", 245],
-    ["headroom-block", 320],
+    ["headroom-block", 329],
   ]);
-  assert.equal(view.ui.fit, 320);
+  assert.equal(view.ui.fit, 329);
 });
 
 test("fitTo asks nothing of a block without props.fit", () => {

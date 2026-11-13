@@ -127,3 +127,47 @@ test("the spinner and the more icon draw where no asset is installed", (t) => {
   assert.match(all, /svg "mods\/workspace-chrome\/spinner\.svg"/);
   assert.match(all, /svg "mods\/headroom\/icons\/more\.svg"/);
 });
+
+// The pace mark's halo box reaches `reach` + 1.5 px beyond its bar, above
+// (top) and below (bottom): the tick's reach plus the halo.
+const measure = (line, name) =>
+  Number(
+    line?.match(new RegExp(`\\.${name}\\[Number\\((-?[\\d.]+)\\)\\]`))?.[1],
+  );
+
+test("a lone pace mark reaches 2 px above and below its bar, in its halo", (t) => {
+  const lines = drawKit(
+    t,
+    `[
+      bar({ id: "w", fraction: 0.41, pace: 0.5 }, t),
+      bar({ id: "s", fraction: 0.62, pace: 0.7, thin: true }, t),
+    ]`,
+  );
+  if (!lines) return;
+  for (const id of ["w-pace", "s-pace"]) {
+    const line = withId(lines, id);
+    assert.equal(measure(line, "top"), -3.5, `${id}: ${line}`);
+    assert.equal(measure(line, "bottom"), -3.5, `${id}: ${line}`);
+    assert.equal(measure(line, "w"), 5, `${id}: ${line}`);
+    assert.equal(measure(line, "p"), 1.5, `${id}: ${line}`);
+  }
+});
+
+test("a pair sets its bars 6 px apart, each mark reaching alike", (t) => {
+  const lines = drawKit(
+    t,
+    `[pair({
+      id: "a",
+      full: { fraction: 0.41, level: "normal", pace: 0.5 },
+      short: { fraction: 0.92, level: "critical", pace: 0.5 },
+    }, t)]`,
+  );
+  if (!lines) return;
+  const full = lines.findIndex((line) => line.includes(`Str("a-full")`));
+  assert.equal(measure(lines[full - 1], "gap"), 6, lines[full - 1]);
+  for (const id of ["a-full-pace", "a-short-pace"]) {
+    const line = withId(lines, id);
+    assert.equal(measure(line, "top"), -3.5, `${id}: ${line}`);
+    assert.equal(measure(line, "bottom"), -3.5, `${id}: ${line}`);
+  }
+});
