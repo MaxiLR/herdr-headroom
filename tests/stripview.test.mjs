@@ -133,7 +133,7 @@ test("at 250 px the bars are dropped too; marks and percentages stay", (t) => {
   assert.equal(labelled(lines, "Codex").length, 1, all);
 });
 
-test("each account is a button that opens the detail view, named with its numbers", (t) => {
+test("each account is a button that opens its account view, named with its numbers", (t) => {
   const lines = drawForm(t, "strip", {
     size: { width: 640, height: 28 },
     readings: THREE,

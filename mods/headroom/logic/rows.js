@@ -49,7 +49,8 @@ function tightestOf(windows) {
   return tightest;
 }
 
-function stateOf(reading) {
+// `ok`, `first` (nothing read yet), `failed` or `signed-out`.
+export function stateOf(reading) {
   if (reading.status === "signed-out") return "signed-out";
   if (reading.status === "stale" && reading.fetchedAt == null) return "first";
   if (reading.status === "stale" || reading.status === "error") return "failed";

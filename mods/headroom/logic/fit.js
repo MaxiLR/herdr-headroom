@@ -1,8 +1,11 @@
 // A block that is as tall as its content: the height to ask its layout for.
 import { STRIP_BELOW } from "./form.js";
 
-/** The most a block asks for: the height that holds four accounts. */
-export const FIT_MAX = 320;
+/**
+ * The most a block asks for: the height that holds four accounts with both
+ * windows, under the list's header (41 + 4 × 70 + 8).
+ */
+export const FIT_MAX = 329;
 
 /**
  * The least a block asks for: a strip's height. A folded sidebar's rail can be

@@ -107,8 +107,9 @@ function layoutPath(box, name) {
   return join(box.herdr, "layouts", `${name}.json`);
 }
 
-// A layout shaped like the engineer's main.json: a sidebar column holding the
-// brand, the lists and the footer, beside the work column.
+// A layout shaped like Herdr's own main.json: a sidebar column that cannot be
+// resized, holding the brand, the lists and the footer, beside the work column.
+// Only the children of sidebar-lists share a draggable boundary.
 function mainLayout() {
   return {
     id: "root",
@@ -119,6 +120,7 @@ function mainLayout() {
         id: "sidebar",
         type: "column",
         size: { px: 268 },
+        resizable: false,
         background: "chrome",
         children: [
           {
@@ -131,8 +133,20 @@ function mainLayout() {
             id: "sidebar-lists",
             type: "column",
             children: [
-              { id: "spaces", type: "block", content: { mod: "spaces" } },
-              { id: "agents", type: "block", content: { mod: "agents" } },
+              {
+                id: "spaces",
+                type: "block",
+                size: { weight: 1 },
+                min: 90,
+                content: { mod: "spaces" },
+              },
+              {
+                id: "agents",
+                type: "block",
+                size: { weight: 1 },
+                min: 90,
+                content: { mod: "agents" },
+              },
             ],
           },
           {
@@ -152,7 +166,8 @@ function mainLayout() {
   };
 }
 
-// The same layout with the headroom block, written out by hand.
+// The same layout with the headroom block last in sidebar-lists, written out by
+// hand.
 function headroomLayout() {
   return {
     id: "root",
@@ -163,6 +178,7 @@ function headroomLayout() {
         id: "sidebar",
         type: "column",
         size: { px: 268 },
+        resizable: false,
         background: "chrome",
         children: [
           {
@@ -175,14 +191,28 @@ function headroomLayout() {
             id: "sidebar-lists",
             type: "column",
             children: [
-              { id: "spaces", type: "block", content: { mod: "spaces" } },
-              { id: "agents", type: "block", content: { mod: "agents" } },
+              {
+                id: "spaces",
+                type: "block",
+                size: { weight: 1 },
+                min: 90,
+                content: { mod: "spaces" },
+              },
+              {
+                id: "agents",
+                type: "block",
+                size: { weight: 1 },
+                min: 90,
+                content: { mod: "agents" },
+              },
+              {
+                id: "headroom",
+                type: "block",
+                size: { weight: 1 },
+                min: 90,
+                content: { mod: "headroom" },
+              },
             ],
-          },
-          {
-            id: "headroom",
-            type: "block",
-            content: { mod: "headroom", props: { fit: "headroom" } },
           },
           {
             id: "sidebar-footer",
@@ -418,34 +448,58 @@ test("--dry-run with --layout changes nothing and names the layout", (t) => {
   assert.equal(result.status, 0, result.output);
   assert.deepEqual(snapshot(box.herdr), before);
   assert.ok(
-    result.output.includes(layoutPath(box, "main-headroom")),
+    result.output.includes(layoutPath(box, "Herdr Headroom")),
     result.output,
   );
   assert.equal(existsSync(join(box.root, "herdr-app.args")), false);
 });
 
-test("--layout writes main-headroom.json: main.json with the headroom block added", (t) => {
+// Every node of a layout tree, the root first.
+function nodes(layout) {
+  return [layout, ...(layout.children ?? []).flatMap(nodes)];
+}
+
+test("--layout writes Herdr Headroom.json: main.json with headroom last in sidebar-lists", (t) => {
   const box = sandbox(t);
   const main = writeMain(box);
 
   const result = run(box, ["--layout"]);
 
   assert.equal(result.status, 0, result.output);
-  const written = JSON.parse(
-    readFileSync(layoutPath(box, "main-headroom"), "utf8"),
-  );
+  const text = readFileSync(layoutPath(box, "Herdr Headroom"), "utf8");
+  const written = JSON.parse(text);
   assert.deepEqual(written, headroomLayout());
+  const sidebar = written.children[0];
   assert.deepEqual(
-    written.children[0].children.map((node) => node.id),
-    ["brand", "sidebar-lists", "headroom", "sidebar-footer"],
+    sidebar.children.map((node) => node.id),
+    ["brand", "sidebar-lists", "sidebar-footer"],
+  );
+  const lists = sidebar.children[1];
+  assert.deepEqual(
+    lists.children.map((node) => node.id),
+    ["spaces", "agents", "headroom"],
+  );
+  assert.deepEqual(lists.children[2], {
+    id: "headroom",
+    type: "block",
+    size: { weight: 1 },
+    min: 90,
+    content: { mod: "headroom" },
+  });
+  assert.equal(text.includes("fit"), false, text);
+  assert.equal(
+    nodes(written).filter((node) => node.content?.mod === "headroom").length,
+    1,
   );
   assert.equal(readFileSync(layoutPath(box, "main"), "utf8"), main);
   assert.ok(
-    result.output.includes("herdr-app do layout.switch --name main-headroom"),
+    result.output.includes(
+      "herdr-app do layout.switch --name 'Herdr Headroom'",
+    ),
     result.output,
   );
   assert.deepEqual(readdirSync(join(box.herdr, "layouts")).sort(), [
-    "main-headroom.json",
+    "Herdr Headroom.json",
     "main.json",
   ]);
   assert.deepEqual(
@@ -453,6 +507,37 @@ test("--layout writes main-headroom.json: main.json with the headroom block adde
     snapshot(repoMod, { skipGenerated: true }),
   );
 });
+
+for (const [args, name] of [
+  [["--layout"], "Herdr Headroom"],
+  [["--layout", "it's mine"], "it's mine"],
+]) {
+  test(`the printed switch command, run in a shell, names ${name} as one argument`, (t) => {
+    const box = sandbox(t);
+    writeMain(box);
+    const log = fakeHerdr(box, 0);
+
+    const result = run(box, args);
+
+    assert.equal(result.status, 0, result.output);
+    const printed = result.output
+      .split("\n")
+      .find((line) => line.includes("herdr-app do layout.switch"));
+    assert.ok(printed, result.output);
+    const command = printed.slice(printed.indexOf("herdr-app do"));
+    const switched = spawnSync("/bin/sh", ["-c", command], {
+      encoding: "utf8",
+      env: { PATH: [box.bin, "/usr/bin", "/bin"].join(":") },
+    });
+    assert.equal(switched.status, 0, switched.stderr);
+    assert.deepEqual(readFileSync(log, "utf8").trimEnd().split("\n"), [
+      "do",
+      "layout.switch",
+      "--name",
+      name,
+    ]);
+  });
+}
 
 test("--layout with a name writes that layout", (t) => {
   const box = sandbox(t);
@@ -465,7 +550,7 @@ test("--layout with a name writes that layout", (t) => {
     JSON.parse(readFileSync(layoutPath(box, "work"), "utf8")),
     headroomLayout(),
   );
-  assert.equal(existsSync(layoutPath(box, "main-headroom")), false);
+  assert.equal(existsSync(layoutPath(box, "Herdr Headroom")), false);
   assert.equal(readFileSync(layoutPath(box, "main"), "utf8"), main);
   assert.ok(
     result.output.includes("herdr-app do layout.switch --name work"),
@@ -483,7 +568,7 @@ test("--layout followed by another option uses the default name", (t) => {
   assert.equal(result.status, 0, result.output);
   assert.deepEqual(snapshot(box.herdr), before);
   assert.ok(
-    result.output.includes(layoutPath(box, "main-headroom")),
+    result.output.includes(layoutPath(box, "Herdr Headroom")),
     result.output,
   );
 });
@@ -492,15 +577,15 @@ test("an existing layout is left byte for byte and the output says so", (t) => {
   const box = sandbox(t);
   writeMain(box);
   const mine = '{"id":"root","type":"row","children":[]}';
-  writeFileSync(layoutPath(box, "main-headroom"), mine);
+  writeFileSync(layoutPath(box, "Herdr Headroom"), mine);
 
   const result = run(box, ["--layout"]);
 
   assert.equal(result.status, 0, result.output);
-  assert.equal(readFileSync(layoutPath(box, "main-headroom"), "utf8"), mine);
+  assert.equal(readFileSync(layoutPath(box, "Herdr Headroom"), "utf8"), mine);
   assert.match(result.output, /already exists/i);
   assert.ok(
-    result.output.includes(layoutPath(box, "main-headroom")),
+    result.output.includes(layoutPath(box, "Herdr Headroom")),
     result.output,
   );
   assert.deepEqual(
@@ -509,14 +594,70 @@ test("an existing layout is left byte for byte and the output says so", (t) => {
   );
 });
 
+test("a sidebar-lists with children but no sidebar-footer after it gets a layout", (t) => {
+  const box = sandbox(t);
+  const main = {
+    id: "root",
+    type: "row",
+    children: [
+      {
+        id: "sidebar-lists",
+        type: "column",
+        children: [{ id: "spaces", type: "block", content: { mod: "spaces" } }],
+      },
+      { id: "main", type: "block", content: { mod: "terminal" } },
+    ],
+  };
+  writeMain(box, main);
+
+  const result = run(box, ["--layout"]);
+
+  assert.equal(result.status, 0, result.output);
+  assert.deepEqual(
+    JSON.parse(readFileSync(layoutPath(box, "Herdr Headroom"), "utf8")),
+    {
+      id: "root",
+      type: "row",
+      children: [
+        {
+          id: "sidebar-lists",
+          type: "column",
+          children: [
+            { id: "spaces", type: "block", content: { mod: "spaces" } },
+            {
+              id: "headroom",
+              type: "block",
+              size: { weight: 1 },
+              min: 90,
+              content: { mod: "headroom" },
+            },
+          ],
+        },
+        { id: "main", type: "block", content: { mod: "terminal" } },
+      ],
+    },
+  );
+});
+
 for (const [what, main, said] of [
   [
-    "has no sidebar node",
-    { id: "root", type: "row", children: [{ id: "main", type: "block" }] },
-    /sidebar/,
+    "has no sidebar-lists node",
+    {
+      id: "root",
+      type: "row",
+      children: [
+        {
+          id: "sidebar",
+          type: "column",
+          children: [{ id: "sidebar-footer", type: "block" }],
+        },
+        { id: "main", type: "block" },
+      ],
+    },
+    /sidebar-lists/,
   ],
   [
-    "has the footer before the lists",
+    "has a sidebar-lists without children",
     {
       id: "root",
       type: "row",
@@ -525,13 +666,22 @@ for (const [what, main, said] of [
           id: "sidebar",
           type: "column",
           children: [
-            { id: "sidebar-footer", type: "block" },
             { id: "sidebar-lists", type: "column", children: [] },
+            { id: "sidebar-footer", type: "block" },
           ],
         },
       ],
     },
-    /sidebar/,
+    /sidebar-lists/,
+  ],
+  [
+    "has a sidebar-lists with no children array",
+    {
+      id: "root",
+      type: "row",
+      children: [{ id: "sidebar-lists", type: "block" }],
+    },
+    /sidebar-lists/,
   ],
   ["is not valid JSON", '{"id": "root", ', /not valid JSON/i],
   ["is missing", null, /main\.json/],
@@ -546,7 +696,7 @@ for (const [what, main, said] of [
     assert.equal(result.status, 0, result.output);
     assert.match(result.output, said);
     assert.match(result.output, /no layout/i);
-    assert.equal(existsSync(layoutPath(box, "main-headroom")), false);
+    assert.equal(existsSync(layoutPath(box, "Herdr Headroom")), false);
     if (text !== null) {
       assert.equal(readFileSync(layoutPath(box, "main"), "utf8"), text);
     }

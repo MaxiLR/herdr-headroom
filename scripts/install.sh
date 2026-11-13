@@ -14,10 +14,12 @@
 # beside mods/, is never read, copied or removed. When herdr-app is on PATH,
 # the installed mod is checked with `herdr-app check`. No key is bound.
 #
-# --layout [name] (default main-headroom) writes layouts/<name>.json: the
-# home's layouts/main.json with the headroom block added to the sidebar column,
-# right after sidebar-lists. It needs jq, never overwrites a layout and never
-# switches to it; it prints the command that does.
+# --layout [name] (default "Herdr Headroom") writes layouts/<name>.json: the
+# home's layouts/main.json with the headroom block added as the last child of
+# sidebar-lists, with the share and minimum of Spaces and Agents, so it is
+# resized like them. Nothing else in the layout changes. Herdr lists a layout
+# under its file name. It needs jq, never overwrites a layout and never switches
+# to it; it prints the command that does.
 #
 # It prints one line per step: a mark, the step and what happened. --dry-run
 # prints what each step would do, with every file it would change, add or
@@ -32,7 +34,7 @@ DEST="$HERDR_HOME/mods/headroom"
 BACKUPS="$HERDR_HOME/backups"
 LAYOUTS="$HERDR_HOME/layouts"
 MAIN="$LAYOUTS/main.json"
-BLOCK='{"id": "headroom", "type": "block", "content": {"mod": "headroom", "props": {"fit": "headroom"}}}'
+BLOCK='{"id": "headroom", "type": "block", "size": {"weight": 1}, "min": 90, "content": {"mod": "headroom"}}'
 
 if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != dumb ]]; then
   BOLD=$'\033[1m' DIM=$'\033[2m' RESET=$'\033[0m'
@@ -78,7 +80,7 @@ usage() {
 
 dry_run=0
 want_layout=0
-layout_name=main-headroom
+layout_name="Herdr Headroom"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run) dry_run=1 ;;
@@ -150,7 +152,7 @@ if [[ -e "$DEST" ]]; then
 fi
 
 # What to do with the layout: write (with the new layout in $layout_json),
-# exists, no-main, invalid, no-sidebar or no-jq. Decided before anything
+# exists, no-main, invalid, no-lists or no-jq. Decided before anything
 # changes, so a dry run reports the same.
 layout_target="$LAYOUTS/$layout_name.json"
 layout_state=""
@@ -166,30 +168,34 @@ if [[ $want_layout -eq 1 ]]; then
     layout_state=invalid
   else
     layout_json="$(jq --argjson block "$BLOCK" '
-      def ids: [.children[] | if type == "object" then .id else null end];
-      def lists: ids | index("sidebar-lists");
       def fits:
-        type == "object" and .id == "sidebar" and (.children | type) == "array"
-        and (lists as $l
-          | $l != null and (ids | .[$l + 1:] | index("sidebar-footer")) != null);
+        type == "object" and .id == "sidebar-lists"
+        and (.children | type) == "array" and (.children | length) > 0;
       [path(.. | select(fits))] as $found
       | if ($found | length) == 0 then empty
-        else $found[0] as $at
-          | getpath($at) as $sidebar
-          | ($sidebar | lists) as $l
-          | setpath($at + ["children"];
-              $sidebar.children[:$l + 1] + [$block] + $sidebar.children[$l + 1:])
+        else ($found[0] + ["children"]) as $at
+          | setpath($at; getpath($at) + [$block])
         end
     ' "$MAIN")"
     if [[ -n "$layout_json" ]]; then
       layout_state=write
     else
-      layout_state=no-sidebar
+      layout_state=no-lists
     fi
   fi
 fi
 
-switch_command="herdr-app do layout.switch --name $layout_name"
+# shell_word <text>: the text as one shell word, quoted only when it has to be.
+shell_word() {
+  local plain='^[A-Za-z0-9_@%+=:,./-]+$' quote="'" escaped="'\\''"
+  if [[ "$1" =~ $plain ]]; then
+    printf '%s' "$1"
+  else
+    printf "'%s'" "${1//$quote/$escaped}"
+  fi
+}
+
+switch_command="herdr-app do layout.switch --name $(shell_word "$layout_name")"
 
 # layout_report <written|would write>: the layout step's line.
 layout_report() {
@@ -197,9 +203,9 @@ layout_report() {
   case "$layout_state" in
     write)
       if [[ "$1" == written ]]; then
-        step ok "$title" "$layout_target: main.json with headroom after sidebar-lists"
+        step ok "$title" "$layout_target: main.json with headroom last in sidebar-lists"
       else
-        step plan "$title" "would write $layout_target: main.json with headroom after sidebar-lists"
+        step plan "$title" "would write $layout_target: main.json with headroom last in sidebar-lists"
       fi
       ;;
     exists)
@@ -214,8 +220,8 @@ layout_report() {
     invalid)
       step warn "$title" "$MAIN is not valid JSON; no layout written"
       ;;
-    no-sidebar)
-      step warn "$title" "$MAIN has no sidebar node holding sidebar-lists then sidebar-footer; no layout written"
+    no-lists)
+      step warn "$title" "$MAIN has no sidebar-lists node with children; no layout written"
       ;;
   esac
 }

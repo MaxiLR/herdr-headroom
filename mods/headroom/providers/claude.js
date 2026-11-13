@@ -103,7 +103,7 @@ export async function login(io) {
       response_type: "code",
       redirect_uri: REDIRECT_URI,
       scope: SCOPES,
-      code_challenge: await challengeOf(verifier),
+      code_challenge: challengeOf(verifier),
       code_challenge_method: "S256",
       state,
     });

@@ -17,10 +17,10 @@ from scratch is [`RECIPE.md`](RECIPE.md).
   reached. Normal bars take the theme's `muted` colour, high ones `working`,
   critical and limit ones `blocked`. In the list and the detail view a window
   at its limit reads "At limit" instead of a percent.
-- **Pace mark.** A tick on each bar at the share of the window's time that has
-  already passed. A fill past the tick means the account runs out before the
-  reset at its current rate. A window the provider reports no reset time for
-  (one that has not started) has no tick and reads "not started".
+- **Pace mark.** A tick centred on each bar at the share of the window's time
+  that has already passed. A fill past the tick means the account runs out
+  before the reset at its current rate. A window the provider reports no reset
+  time for (one that has not started) has no tick and reads "not started".
 - **Time to reset**, as `<1m`, `42m`, `3h 12m` or `2d 4h`.
 - **Only the windows the plan has.** A Codex plan with a weekly window alone
   shows one bar. Per-model weekly windows are in the detail view, and on an
@@ -29,6 +29,9 @@ from scratch is [`RECIPE.md`](RECIPE.md).
   its age and the reason (`12m old · network`). An account whose login has
   ended shows "Sign in again" and no bars. A Claude account warns in its last 3
   days before its login ends.
+- **Provider marks.** Each account carries its provider's own logo: the ChatGPT
+  logo in the theme's text colour for Codex, Claude's spark in Claude's orange
+  (`#D97757`) for Claude.
 
 ## Install
 
@@ -38,7 +41,7 @@ set, else `~/.config/herdr-app`.
 ```sh
 scripts/install.sh --dry-run          # what it would do; changes nothing
 scripts/install.sh                    # install the mod
-scripts/install.sh --layout           # and add the layout main-headroom
+scripts/install.sh --layout           # and add the layout "Herdr Headroom"
 scripts/install.sh --layout my-name   # or a layout of another name
 ```
 
@@ -59,20 +62,28 @@ does not exist.
 - **Check.** When `herdr-app` is on `PATH`, it runs `herdr-app check` on the
   installed folder. A failed check prints what `herdr-app` said and exits 1;
   without `herdr-app` the check is skipped with a warning.
-- **Layout** (`--layout`, default name `main-headroom`). It needs `jq`. It
+- **Layout** (`--layout`, default name `Herdr Headroom`). It needs `jq`. It
   writes `<Herdr home>/layouts/<name>.json`: a copy of the home's
-  `layouts/main.json` with one Headroom block added to the `sidebar` column,
-  right after `sidebar-lists` and before `sidebar-footer`. It never overwrites a
-  layout and never switches to it; it prints the command that does:
+  `layouts/main.json` with one Headroom block added as the last child of
+  `sidebar-lists`, after Spaces and Agents, with the same share
+  (`"size": { "weight": 1 }`) and the same minimum (`"min": 90`). Its boundary
+  drags like theirs, and Herdr remembers the size. Herdr lists a layout by its
+  file name: Settings shows it as written, the palette with its first letter in
+  upper case. It never overwrites or edits a layout and never switches to it;
+  it prints the command that does:
 
   ```sh
-  herdr-app do layout.switch --name main-headroom
+  herdr-app do layout.switch --name 'Herdr Headroom'
   ```
 
   Without `jq`, without `layouts/main.json`, with a `main.json` that is not
-  valid JSON or has no `sidebar` node holding `sidebar-lists` then
-  `sidebar-footer`, or when the layout already exists, it says so, writes no
-  layout and still installs the mod.
+  valid JSON or has no `sidebar-lists` node with children, or when the layout
+  already exists, it says so, writes no layout and still installs the mod.
+
+  A layout written by the first version of the installer keeps its old
+  placement, a block of its own between `sidebar-lists` and `sidebar-footer`.
+  To replace it, remove `<Herdr home>/layouts/<name>.json` and run `--layout`
+  again.
 
 The installer binds no key and never reads, copies or removes the vault
 (`<Herdr home>/headroom/`).
@@ -90,6 +101,20 @@ The block the installer adds:
 {
   "id": "headroom",
   "type": "block",
+  "size": { "weight": 1 },
+  "min": 90,
+  "content": { "mod": "headroom" }
+}
+```
+
+Without `fit` the list never resizes its block: it fills the block it is
+given, the header stays and the accounts scroll under it. In a fixed spot of
+your own layout, `props.fit` makes the block as tall as its accounts need:
+
+```json
+{
+  "id": "headroom",
+  "type": "block",
   "content": { "mod": "headroom", "props": { "fit": "headroom" } }
 }
 ```
@@ -99,10 +124,11 @@ appears only where a layout puts it.
 
 ### Props
 
-| Prop   | Values                                              | What it does                                                                                                                                                                                                                                                           |
-| ------ | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `form` | `auto` (default), `list`, `rail`, `strip`, `detail` | The form to draw. With `auto`, or none, the block's measured size decides.                                                                                                                                                                                             |
-| `fit`  | the `id` of the block holding this copy             | The list and the rail resize that block (`layout.resize`) to the height their accounts need, from 48 px (a strip's height, so a folded rail unfolds to the list again) up to 320 px (four accounts); past that the accounts scroll. The strip never resizes its block. |
+| Prop      | Values                                                         | What it does                                                                                                                                                                                                                                                           |
+| --------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `form`    | `auto` (default), `list`, `rail`, `strip`, `detail`, `account` | The form to draw. With `auto`, or none, the block's measured size decides.                                                                                                                                                                                             |
+| `account` | the account's id, `<provider>:<account id>:<organization id>`  | The account the account view shows, with `form: "account"`. The ids are in `headroom.readings`.                                                                                                                                                                        |
+| `fit`     | the `id` of the block holding this copy                        | The list and the rail resize that block (`layout.resize`) to the height their accounts need, from 48 px (a strip's height, so a folded rail unfolds to the list again) up to 329 px (four accounts); past that the accounts scroll. The strip never resizes its block. |
 
 The connect dialog is the same mod opened as a dialog with a `connect` prop
 (`{ provider, account }` when it signs an account in again), and Herdr gives
@@ -126,14 +152,28 @@ With `form` set to `auto`, before its first measure the block is a list; after:
 - **List** otherwise: a "Limits" header and, per account, its mark and label,
   a full bar for the weekly window over a thin one for the 5-hour window, and
   one line of numbers. Below 220 px wide the 5-hour numbers lose their word.
+- **Account**, only when `form` is `account` with an `account`: that account
+  alone. Its mark, label and plan, the age of its reading (`Read 2m ago`, or a
+  failed read's `12m old · network`) with a refresh control that reads it
+  again, and its email and organization. Then every window the plan has, each
+  with its percentage, its time to reset and the reset's clock time; when a
+  Claude login ends; each account state as the list shows it (empty tracks
+  before the first read, the last bars dimmed after a failed read, no bars and
+  "Login ended …" for an account that must sign in again); and, when a bar has
+  its pace mark, the line "The line on a bar marks how much of its time has
+  passed." Under them its actions, Rename, Sign in again and Remove, and a last
+  row, "Accounts and settings", that opens the detail view. It closes itself
+  when its account is no longer connected.
 - **Detail**, only when `form` is `detail`: every window of every account, the
   reset's clock time, when a login ends, the refresh control, the
-  notifications switch, Connect account and each account's menu (Rename, Move
-  up, Move down, Sign in again, Remove). From 520 px wide each window is one
-  line; below 340 px the clock time is left out.
+  notifications switch and Connect account. Each account has an up and a down
+  arrow that move it in the order. From 520 px wide each window is one line;
+  below 340 px the clock time is left out.
 
-A click on an account in the list, the rail or the strip, and the list's
-header control, open the detail view as a 380 px popup.
+A click on an account in the list, the rail, the strip or the detail view
+opens its account view as a 380 px popup. The list's header control and the
+account view's last row, "Accounts and settings", open the detail view as a
+380 px popup.
 
 ### The strip's separator
 
@@ -157,15 +197,15 @@ A strip in a status bar row:
 }
 ```
 
-### The detail view as a pane or a dialog
+### The account view and the detail view from elsewhere
 
-As a pane, from a shell:
+The detail view as a pane, from a shell:
 
 ```sh
 herdr-app do pane.split --direction right --mod headroom --props '{"form":"detail"}'
 ```
 
-As a dialog, from another mod:
+The detail view as a dialog, from another mod:
 
 ```js
 import { openOverlay } from "herdr";
@@ -175,6 +215,20 @@ openOverlay({
   kind: "dialog",
   width: 520,
   props: { form: "detail" },
+});
+```
+
+An account's view as a popup, from another mod, with an id from
+`headroom.readings`:
+
+```js
+import { openOverlay } from "herdr";
+
+openOverlay({
+  mod: "headroom",
+  kind: "popup",
+  width: 380,
+  props: { form: "account", account: "<id>" },
 });
 ```
 
@@ -201,17 +255,24 @@ has that label, its organization, or its plan, is added. One email with several
 organizations gives one account per organization.
 
 A Claude login ends 30 days after sign-in, whatever happens in between: the
-detail view shows the date, and the row warns during the last 3 days. A Codex
-login does not end on its own. When a provider rejects a login, the account
-shows "Sign in again"; its stored login is kept until it signs in again or is
-removed.
+account view and the detail view show the date, and the row warns during the
+last 3 days. A Codex login does not end on its own. When a provider rejects a
+login, the account shows "Sign in again"; its stored login is kept until it
+signs in again or is removed.
+
+An account's view holds its own actions. "Sign in again" opens the connect
+dialog at the account's provider, and signing in replaces the account's login.
+Rename turns the label into a field: Enter keeps the new label, Esc leaves it
+as it was. Remove asks first, in Herdr's confirm dialog ("Remove work?" / "Its
+stored login is deleted from this computer."), then deletes the account's
+login from the vault.
 
 Readings are fetched for every account every 5 minutes, when one of its
 windows' reset time passes, and when asked: the refresh control in the detail
-view reads every account again, except one read in the last 30 seconds. An
-access token that expires within 5 minutes is refreshed before a read, and
-once more after a read the provider refuses (401). An account showing "Sign in
-again" is not read.
+view reads every account again, and the one in an account view reads that
+account, except one read in the last 30 seconds. An access token that expires
+within 5 minutes is refreshed before a read, and once more after a read the
+provider refuses (401). An account showing "Sign in again" is not read.
 
 ## Notifications
 
@@ -272,11 +333,11 @@ when an account is connected, read or refreshed.
   there; the ids are made of the provider's own account and organization ids.
 
 - **Nothing in `localStorage`**, and nothing written anywhere else. The mod
-  also reads Herdr's shipped icons (`icons/claude.svg`, `icons/codex.svg`,
-  `mods/workspace-chrome/spinner.svg`, `mods/workspace-chrome/plus.svg`,
-  `mods/workspace-chrome/chevron-left.svg`,
-  `mods/workspace-chrome/chevron-right.svg`) and its own
-  (`mods/headroom/icons/more.svg`, `mods/headroom/icons/refresh.svg`).
+  also reads Herdr's shipped icons (`mods/workspace-chrome/spinner.svg`,
+  `mods/workspace-chrome/plus.svg`, `mods/workspace-chrome/chevron-left.svg`,
+  `mods/workspace-chrome/chevron-right.svg`) and its own in
+  `mods/headroom/icons/` (`chatgpt.svg`, `claude.svg`, `arrow-up.svg`,
+  `arrow-down.svg`, `more.svg`, `refresh.svg`).
 
 ### Programs it runs
 
@@ -419,5 +480,6 @@ tests/             node --test, with fixtures and helpers
 ## Licence
 
 MIT, see [`LICENSE`](LICENSE). The sign-in, refresh and usage-read method, its
-constants and the knowledge of the payloads come from oh-my-pi (MIT); see
-[`NOTICE`](NOTICE).
+constants and the knowledge of the payloads come from oh-my-pi (MIT). That, and
+the provider logos (the ChatGPT logo and Claude's spark) with their sources,
+are in [`NOTICE`](NOTICE).

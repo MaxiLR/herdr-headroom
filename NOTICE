@@ -47,3 +47,35 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+------------------------------------------------------------------------------
+
+Provider logos
+
+mods/headroom/icons/chatgpt.svg is the ChatGPT logo, taken from Wikimedia
+Commons:
+
+  https://commons.wikimedia.org/wiki/File:ChatGPT-Logo.svg
+
+Wikimedia Commons marks the file as public domain ({{PD-simple}}): it consists
+only of simple geometric shapes or text, does not meet the threshold of
+originality needed for copyright protection, and is therefore in the public
+domain. Commons also marks it as a trademark ({{Trademarked}}).
+
+mods/headroom/icons/claude.svg is Claude's spark, the mono file of the Claude
+icon of theSVG (https://github.com/glincker/thesvg), taken from:
+
+  https://thesvg.org/icon/claude
+
+theSVG is licensed under the MIT License:
+
+  Copyright (c) 2025 thesvg.org
+
+  The MIT License's terms are those quoted above with oh-my-pi's notice, and
+  in LICENSE. theSVG's own record of the Claude icon (src/data/icons.json)
+  gives the icon's licence as CC0-1.0.
+
+ChatGPT and its logo are trademarks of OpenAI. Claude and its logo are
+trademarks of Anthropic. They are their owners' trademarks, used here only to
+identify the providers whose usage the mod reads; the mod is not made, endorsed
+or sponsored by either.

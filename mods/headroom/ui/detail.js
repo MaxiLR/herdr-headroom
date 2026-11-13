@@ -1,18 +1,23 @@
 // The detail view: every window of every account, when each resets and when
-// a login ends; the refresh control, the notifications switch and Connect
-// account. A 380 px popup from the list, the rail or the strip; also a dialog
-// or a pane, where from 520 px each window is one line.
+// a login ends; a click on an account opens its account view; the refresh
+// control, the notifications switch and Connect account. A 380 px popup from
+// the list's header and from the account view's last row; also a dialog or a
+// pane, where from 520 px each window is one line.
 import { div, svg } from "gpui-kit";
 import { Switch, h_flex, v_flex } from "gpui-base";
+import { openAccount } from "../logic/account.js";
 import {
   ageText,
+  arrowsOf,
   clockText,
+  moveAccount,
   openHeight,
   windowsInOrder,
 } from "../logic/detail.js";
 import { levelOf } from "../logic/levels.js";
+import { listRowOf } from "../logic/list.js";
 import { untilReset } from "../logic/pace.js";
-import { PREFS_KEY } from "../logic/publish.js";
+import { setNotify } from "../logic/publish.js";
 import { barOf, isThin, rowOf } from "../logic/rows.js";
 import {
   failedText,
@@ -22,14 +27,10 @@ import {
 } from "../logic/words.js";
 import { open as openConnect } from "./connect.js";
 import { bar, levelText, mark, spinner } from "./kit.js";
-import {
-  command as menuCommand,
-  init as menuInit,
-  menuControl,
-  renameField,
-} from "./menu.js";
 
 const REFRESH = "mods/headroom/icons/refresh.svg";
+const ARROW_UP = "mods/headroom/icons/arrow-up.svg";
+const ARROW_DOWN = "mods/headroom/icons/arrow-down.svg";
 const PLUS = "mods/workspace-chrome/plus.svg";
 
 /** The popup's width, and the width drawn before the first layout. */
@@ -43,15 +44,6 @@ const NOTIFY = "Notify at 90% and at the limit";
 
 // The switch's knob slides across natively.
 const SLIDE = { duration: 160, easing: "ease-out" };
-
-export function init(view, cx) {
-  menuInit(view, cx);
-}
-
-/** `headroom.<name>`: the account menu's confirmed Remove. */
-export function command(name, view, cx) {
-  menuCommand(name, view, cx);
-}
 
 export function open(view) {
   view.host.openOverlay({
@@ -133,34 +125,33 @@ function header(view) {
     );
 }
 
-// The account's first line: the mark, the label (its field while it is
-// renamed), the plan and, on the right, why the last read failed or the Sign
-// in again control, then the account menu's control.
+// The account's first line: the mark, the label, the plan and, on the right,
+// why the last read failed or the Sign in again control, then its up and
+// down arrows.
 function labelLine(reading, row, index, view) {
   const t = view.theme;
   const signedOut = row.state === "signed-out";
-  const field = renameField(reading, view);
+  const arrows = arrowsOf(view.readings, reading.id);
   return h_flex()
     .h(24)
     .gap(8)
     .items_center()
-    .child(mark(reading.provider, 16))
+    .child(mark(reading.provider, 16, t))
     .child(
-      field ??
-        div()
-          .min_w(0)
-          .truncate()
-          .text_size(13)
-          .font_medium()
-          .text_color(signedOut ? t.muted : t.foreground)
-          .child(reading.label),
+      div()
+        .min_w(0)
+        .truncate()
+        .text_size(13)
+        .font_medium()
+        .text_color(signedOut ? t.muted : t.foreground)
+        .child(reading.label),
     )
-    .when(Boolean(reading.plan) && field === null, (el) =>
+    .when(Boolean(reading.plan), (el) =>
       el.child(
         div().flex_none().text_size(12).text_color(t.muted).child(reading.plan),
       ),
     )
-    .when(field === null, (el) => el.child(div().flex_1()))
+    .child(div().flex_1())
     .when(row.state === "failed", (el) =>
       el.child(
         div()
@@ -182,16 +173,64 @@ function labelLine(reading, row, index, view) {
           .text_color(t.accent)
           .cursor_pointer()
           .hover((s) => s.underline())
-          .on_click(() =>
+          .on_click((_event, cx) => {
+            cx.stop_propagation();
             openConnect(view, {
               provider: reading.provider,
               account: reading.id,
-            }),
-          )
+            });
+          })
           .child("Sign in again"),
       ),
     )
-    .child(menuControl(reading, index, view));
+    .when(arrows !== null, (el) =>
+      el.child(
+        h_flex()
+          .flex_none()
+          .gap(2)
+          .items_center()
+          .child(arrow(reading, index, -1, arrows?.up, view))
+          .child(arrow(reading, index, 1, arrows?.down, view)),
+      ),
+    );
+}
+
+// The account's up (`delta` -1) or down (1) arrow; dimmed, and doing
+// nothing, when the account cannot move that way. Neither lets the click
+// reach the account: a dimmed one is disabled, so its own click never runs,
+// and it stops the press instead.
+function arrow(reading, index, delta, enabled, view) {
+  const t = view.theme;
+  const up = delta < 0;
+  const name = up ? "Move up" : "Move down";
+  return div()
+    .id(`account-${index}-${up ? "up" : "down"}`)
+    .role("button")
+    .accessibility_label(name)
+    .tooltip(name)
+    .disabled(!enabled)
+    .size(22)
+    .flex_none()
+    .flex()
+    .items_center()
+    .justify_center()
+    .rounded(6)
+    .when(enabled, (el) => el.cursor_pointer().hover((s) => s.bg(t.hover)))
+    .when(!enabled, (el) =>
+      el
+        .opacity(0.35)
+        .on_mouse_down("left", (_event, cx) => cx.stop_propagation()),
+    )
+    .on_click((_event, cx) => {
+      cx.stop_propagation();
+      moveAccount(view, reading.id, delta);
+    })
+    .child(
+      svg(up ? ARROW_UP : ARROW_DOWN)
+        .size(14)
+        .flex_none()
+        .text_color(t.muted),
+    );
 }
 
 // `maxi@terac.example · Terac`, under the label.
@@ -328,12 +367,17 @@ function section(reading, index, account, view) {
   const login = loginLine(reading, row, view);
   return v_flex()
     .id(`account-${index}`)
+    .role("button")
+    .accessibility_label(listRowOf(reading, view.now, width).spoken)
     .flex_none()
     .pt(11)
     .pb(13)
     .px(16)
     .border_t(1)
     .border_color(t.border)
+    .cursor_pointer()
+    .hover((s) => s.bg(t.hover))
+    .on_click(() => openAccount(view, reading.id))
     .child(labelLine(reading, row, index, view))
     .when(who !== null, (el) => el.child(who))
     .children(
@@ -384,7 +428,10 @@ function notifySwitch(view) {
     .rounded(9)
     .bg(on ? t.accent : t.input)
     .cursor_pointer()
-    .on_click(() => view.host.setShared(PREFS_KEY, { notify: !on }))
+    .on_change((checked, cx) => {
+      setNotify(view.host, checked);
+      cx.notify();
+    })
     .child(
       div()
         .absolute()

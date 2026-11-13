@@ -1,9 +1,11 @@
 // The list: a "Limits" header and, per account, its mark and label, the pair
-// of bars (weekly full, 5-hour thin) and one quiet line of numbers. The block
-// asks for the height its accounts need; past four they scroll under the
-// header.
+// of bars (weekly full, 5-hour thin) and one quiet line of numbers. A click on
+// an account opens its account view; the header's control opens the detail
+// view. The header stays; what does not fit scrolls under it. Only a block
+// given `props.fit` asks for the height its accounts need, up to four.
 import { div, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
+import { openAccount } from "../logic/account.js";
 import { listRowOf } from "../logic/list.js";
 import { open as openConnect } from "./connect.js";
 import { open as openDetail } from "./detail.js";
@@ -107,7 +109,7 @@ function labelLine(row, index, view) {
     .h(26)
     .gap(8)
     .items_center()
-    .child(mark(row.provider, 14))
+    .child(mark(row.provider, 14, t))
     .child(
       div()
         .flex_1()
@@ -192,7 +194,7 @@ function account(reading, index, view) {
     .rounded(8)
     .cursor_pointer()
     .hover((s) => s.bg(t.hover))
-    .on_click(() => openDetail(view))
+    .on_click(() => openAccount(view, reading.id))
     .child(labelLine(row, index, view))
     .when(row.ended !== null, (el) =>
       el.child(
@@ -229,7 +231,6 @@ function account(reading, index, view) {
               {
                 ...model.bar,
                 id: `${id}-model-${k}`,
-                tick: "above",
                 dimmed: row.dimmed,
               },
               t,
@@ -260,7 +261,9 @@ export function render(view, cx) {
             .w_full()
             .px(8)
             .pb(8)
-            .on_size_change((size) => fitTo(view, HEADER + size.height))
+            .when(Boolean(view.props.fit), (el) =>
+              el.on_size_change((size) => fitTo(view, HEADER + size.height)),
+            )
             .when(view.readings.length === 0, (el) => el.child(empty(view)))
             .children(
               view.readings.map((reading, index) =>

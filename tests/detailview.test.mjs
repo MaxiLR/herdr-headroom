@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { drawForm, texts, withId } from "./helpers/draw.mjs";
+import { drawForm, drawSource, texts, withId } from "./helpers/draw.mjs";
 import { reading, win } from "./helpers/fakes.mjs";
 
 test("the detail view draws each account and Connect account", (t) => {
@@ -288,7 +288,8 @@ test("the notifications switch is on when notifications are", (t) => {
   );
   const control = notifySwitch(lines) ?? "";
   assert.match(control, /:checked\[Bool\(true\)\]/, show(lines));
-  assert.match(control, /:on_click/);
+  assert.match(control, /:on_change\(fn\)/, show(lines));
+  assert.doesNotMatch(control, /:on_click/, show(lines));
   assert.match(
     control,
     /:accessibility_label\[Str\("Notify at 90% and at the limit"\)\]/,
@@ -303,6 +304,8 @@ test("the notifications switch is drawn off when notifications are off", (t) => 
     /:checked\[Bool\(false\)\]/,
     show(lines),
   );
+  assert.match(notifySwitch(lines) ?? "", /:on_change\(fn\)/, show(lines));
+  assert.doesNotMatch(notifySwitch(lines) ?? "", /:on_click/, show(lines));
 });
 
 test("sign in again: the control, when the login ended, no windows", (t) => {
@@ -447,4 +450,225 @@ test("a Claude account's first read, its login end known, draws its header lines
     "Max",
     "maxi@example.com",
   ]);
+});
+
+test("each account's up and down arrows: buttons named Move up and Move down", (t) => {
+  const lines = draw(t, { readings: [maxi(), terac(), maxilr()] });
+  if (!lines) return;
+  const within = inside(lines, "account-1").join("\n");
+  for (const [id, name] of [
+    ["account-1-up", "Move up"],
+    ["account-1-down", "Move down"],
+  ]) {
+    const control = withId(lines, id) ?? "";
+    assert.ok(within.includes(control) && control !== "", show(lines));
+    assert.match(control, /:role\[Str\("button"\)\]/, show(lines));
+    assert.match(control, /:on_click\(fn\)/);
+    assert.match(control, new RegExp(`:tooltip\\[Str\\("${name}"\\)\\]`));
+    assert.match(
+      control,
+      new RegExp(`:accessibility_label\\[Str\\("${name}"\\)\\]`),
+    );
+  }
+  assert.match(
+    inside(lines, "account-1-up").join("\n"),
+    /svg "mods\/headroom\/icons\/arrow-up\.svg"/,
+    show(lines),
+  );
+  assert.match(
+    inside(lines, "account-1-down").join("\n"),
+    /svg "mods\/headroom\/icons\/arrow-down\.svg"/,
+    show(lines),
+  );
+});
+
+test("the first account's up and the last account's down are dimmed", (t) => {
+  const lines = draw(t, { readings: [maxi(), terac(), maxilr()] });
+  if (!lines) return;
+  const dimmed = /\.opacity\[Number\(0\.35\)\]/;
+  assert.match(withId(lines, "account-0-up") ?? "", dimmed, show(lines));
+  assert.match(withId(lines, "account-2-down") ?? "", dimmed, show(lines));
+  assert.doesNotMatch(withId(lines, "account-1-up") ?? "", dimmed);
+  assert.ok(withId(lines, "account-1-up"), show(lines));
+});
+
+test("with one account there are no arrows", (t) => {
+  const lines = draw(t, { readings: [maxi()] });
+  if (!lines) return;
+  assert.ok(withId(lines, "account-0"), show(lines));
+  assert.ok(
+    !ids(lines).some((id) => id.endsWith("-up") || id.endsWith("-down")),
+    show(lines),
+  );
+});
+
+test("a signed-out account's Sign in again comes before its arrows", (t) => {
+  const lines = draw(t, {
+    readings: [
+      maxi(),
+      terac({
+        status: "signed-out",
+        loginEndsAt: new Date(2026, 10, 9, 15, 0).getTime(),
+        windows: [],
+      }),
+    ],
+  });
+  if (!lines) return;
+  const signIn = at(lines, { id: "account-1-sign-in" });
+  assert.ok(signIn >= 0, show(lines));
+  assert.ok(at(lines, { id: "account-1-up" }) > signIn, show(lines));
+});
+
+test("the detail view has no account menu: the arrows, refresh, the switch and Connect account stay", (t) => {
+  const lines = draw(t, { readings: [maxi(), terac(), maxilr()] });
+  if (!lines) return;
+  assert.ok(!ids(lines).some((id) => id.startsWith("menu-")), show(lines));
+  assert.ok(
+    !lines.some((line) => line.includes('Str("Account menu")')),
+    show(lines),
+  );
+  assert.ok(!lines.some((line) => /^\s*Popover\b/.test(line)), show(lines));
+  for (const word of ["Rename", "Move up", "Move down", "Remove"]) {
+    assert.ok(!texts(lines).includes(word), `${word}\n${show(lines)}`);
+  }
+  for (const id of [
+    "account-0-up",
+    "account-0-down",
+    "account-2-up",
+    "account-2-down",
+    "refresh",
+    "connect-account",
+  ]) {
+    assert.ok(withId(lines, id), `${id}\n${show(lines)}`);
+  }
+  assert.ok(notifySwitch(lines), show(lines));
+  assert.ok(texts(lines).includes("Connect account"), show(lines));
+});
+
+// The theme's hover ground, as Herdr prints it.
+function hoverColour(t) {
+  const lines = drawSource(
+    t,
+    `import { View, div } from "gpui-kit";
+import { theme } from "herdr";
+
+export default class Colours extends View {
+  render() {
+    return div().child(JSON.stringify({ hover: theme().hover }));
+  }
+}
+`,
+  );
+  return lines ? JSON.parse(texts(lines)[0]).hover : null;
+}
+
+test("each account opens its account view on a click, with the hover ground and a pointer", (t) => {
+  const hover = hoverColour(t);
+  if (hover === null) return;
+  const lines = draw(t, { readings: [maxi(), terac(), maxilr()] });
+  if (!lines) return;
+  for (const id of ["account-0", "account-1", "account-2"]) {
+    const line = withId(lines, id) ?? "";
+    assert.match(line, /:on_click\(fn\)/, `${id}\n${show(lines)}`);
+    assert.ok(
+      line.includes(`:hover(.bg[Str(${JSON.stringify(hover)})])`),
+      `${id}\n${show(lines)}`,
+    );
+    assert.match(line, /\.cursor_pointer/, `${id}\n${show(lines)}`);
+  }
+});
+
+test("each account is a button a screen reader names by its label and its windows", (t) => {
+  const lines = drawForm(t, "detail", {
+    props: { form: "detail", overlay: "overlay-1" },
+    size: { width: 380, height: 640 },
+    readings: [
+      reading(),
+      reading({
+        id: "claude:acct-maxi:org-terac",
+        label: "maxi · Terac",
+        status: "signed-out",
+        loginEndsAt: new Date(2026, 10, 9, 15, 0).getTime(),
+        windows: [],
+      }),
+    ],
+  });
+  if (!lines) return;
+  for (const [id, words] of [
+    [
+      "account-0",
+      "maxi, Weekly 41% used, resets in 4d 6h, 5-hour 62% used, resets in 1h 48m",
+    ],
+    ["account-1", "maxi · Terac, Sign in again, Login ended Nov 9"],
+  ]) {
+    const line = withId(lines, id) ?? "";
+    assert.match(line, /:role\[Str\("button"\)\]/, `${id}\n${show(lines)}`);
+    assert.ok(
+      line.includes(`:accessibility_label[Str(${JSON.stringify(words)})]`),
+      `${id}\n${line}`,
+    );
+  }
+});
+
+test("inside a clickable account the arrows, dimmed ones too, and Sign in again keep their own click", (t) => {
+  const lines = draw(t, {
+    readings: [
+      maxi(),
+      terac({
+        status: "signed-out",
+        loginEndsAt: new Date(2026, 10, 9, 15, 0).getTime(),
+        windows: [],
+      }),
+      maxilr(),
+    ],
+  });
+  if (!lines) return;
+  for (const [account, controls] of [
+    ["account-0", ["account-0-up", "account-0-down"]],
+    ["account-1", ["account-1-up", "account-1-down", "account-1-sign-in"]],
+    ["account-2", ["account-2-up", "account-2-down"]],
+  ]) {
+    assert.match(withId(lines, account) ?? "", /:on_click\(fn\)/, account);
+    const within = inside(lines, account);
+    for (const id of controls) {
+      const control = within.find((line) =>
+        line.includes(`:id[Str(${JSON.stringify(id)})]`),
+      );
+      assert.ok(control, `${id} not inside ${account}\n${show(lines)}`);
+      assert.match(control, /:on_click\(fn\)/, `${id}\n${show(lines)}`);
+    }
+  }
+});
+
+test("with no accounts only Connect account, the refresh control and the switch are clickable", (t) => {
+  const lines = draw(t, { readings: [], accounts: [] });
+  if (!lines) return;
+  const clickable = lines.filter((line) =>
+    /:on_click\(fn\)|:on_change\(fn\)/.test(line),
+  );
+  assert.equal(clickable.length, 3, show(clickable));
+  assert.ok(
+    clickable.some((line) => line.includes(':id[Str("connect-account")]')),
+    show(clickable),
+  );
+  assert.ok(
+    clickable.some((line) => line.includes(':id[Str("refresh")]')),
+    show(clickable),
+  );
+  assert.ok(
+    clickable.some((line) => line.trim().startsWith('Switch "notify"')),
+    show(clickable),
+  );
+});
+
+// A dimmed arrow is disabled, so its own click never runs to stop the click;
+// it keeps the press from reaching the account instead.
+test("a dimmed arrow keeps a press from reaching its account", (t) => {
+  const lines = draw(t, { readings: [maxi(), terac(), maxilr()] });
+  if (!lines) return;
+  for (const id of ["account-0-up", "account-2-down"]) {
+    const control = withId(lines, id) ?? "";
+    assert.match(control, /:disabled\[Bool\(true\)\]/, `${id}\n${show(lines)}`);
+    assert.match(control, /:on_mouse_down_left\(fn\)/, `${id}\n${show(lines)}`);
+  }
 });
