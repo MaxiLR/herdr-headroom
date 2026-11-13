@@ -218,3 +218,40 @@ export default class Acting extends View {
     lines: lines.filter((_, i) => i !== at && i !== at + 1),
   };
 }
+
+// Draws `ui/<form>.js` as `drawActing` does, then clicks the element with
+// `id`: the form is drawn once with every element's id and click handler
+// noted, and the handler of the element with `id` runs with an empty event.
+// Gives `drawActing`'s `{ calls, lines }`, so `calls` holds what the click
+// asked of the store and the host, or null (the test skipped) when
+// `herdr-app` is not on PATH. The drawing fails when no element with `id`
+// has a click.
+export function drawClicking(t, form, fixture, id) {
+  return drawActing(
+    t,
+    form,
+    fixture,
+    `const kit = Object.getPrototypeOf(div());
+    const setId = kit.id;
+    const setClick = kit.on_click;
+    const ids = new Map();
+    const clicks = new Map();
+    kit.id = function (value) {
+      ids.set(this, value);
+      return setId.call(this, value);
+    };
+    kit.on_click = function (handler) {
+      clicks.set(this, handler);
+      return setClick.call(this, handler);
+    };
+    try {
+      form.render(view, cx);
+    } finally {
+      kit.id = setId;
+      kit.on_click = setClick;
+    }
+    const clicked = [...clicks].find(([el]) => ids.get(el) === ${JSON.stringify(id)});
+    if (clicked === undefined) throw new Error("no click on " + ${JSON.stringify(id)});
+    clicked[1]({}, cx);`,
+  );
+}
