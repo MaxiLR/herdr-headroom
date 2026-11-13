@@ -263,3 +263,22 @@ test("a refresh whose fetch rejects is network, a 500 unexpected", async () => {
   const empty = await refreshWith(() => ({ status: 200, body: {} }));
   assert.deepEqual(empty.result, { ok: false, kind: "unexpected" });
 });
+
+test("sign-in presents the address at once and completes without crypto.subtle", async (t) => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, "crypto");
+  Object.defineProperty(globalThis, "crypto", {
+    configurable: true,
+    value: { getRandomValues: (array) => array },
+  });
+  t.after(() => {
+    Object.defineProperty(globalThis, "crypto", original);
+  });
+  assert.equal(globalThis.crypto.subtle, undefined);
+  const { host, result } = signIn({ code: `auth-code-1#${STATE}` });
+  // Nothing has been awaited yet: the address is already presented.
+  assert.equal(host.presented.length, 1);
+  const answer = await result;
+  assert.equal(answer.ok, true);
+  assert.deepEqual(sent(host), [EXCHANGE]);
+  assert.equal(sent(host)[0].body.code_verifier, VERIFIER);
+});
