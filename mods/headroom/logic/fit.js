@@ -1,11 +1,19 @@
 // A block that is as tall as its content: the height to ask its layout for.
+import { STRIP_BELOW } from "./form.js";
 
 /** The most a block asks for: the height that holds four accounts. */
 export const FIT_MAX = 320;
 
+/**
+ * The least a block asks for: a strip's height. A folded sidebar's rail can be
+ * shorter, and a block fitted to it would stay a strip once the sidebar
+ * unfolds, since the strip never fits its block.
+ */
+export const FIT_MIN = STRIP_BELOW;
+
 /** The px to ask for `needed`, or null when that is `last`, the height asked. */
 export function fitHeight(needed, last) {
-  const px = Math.min(Math.ceil(needed), FIT_MAX);
+  const px = Math.min(Math.max(Math.ceil(needed), FIT_MIN), FIT_MAX);
   return px === last ? null : px;
 }
 

@@ -5,7 +5,7 @@ const NAMED = ["list", "rail", "strip", "detail"];
 
 // Narrower than this, the block is a rail; shorter than this, a strip.
 const RAIL_BELOW = 160;
-const STRIP_BELOW = 48;
+export const STRIP_BELOW = 48;
 
 export function chooseForm(props, size) {
   if (props.connect) return "connect";

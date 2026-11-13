@@ -25,6 +25,14 @@ const ABANDONED_AFTER_MS = 2 * 60 * 1000;
 // A manual refresh reads no account whose read started less long ago.
 const MANUAL_GAP_MS = 30 * 1000;
 
+// The toast a vault save refused outside a sign-in posts; a sign-in says it
+// in its dialog.
+const REFUSED_TOAST = {
+  title: "Could not keep the logins private, so nothing was stored",
+  body: "Accounts may be gone after Herdr restarts.",
+  level: "error",
+};
+
 // A provider's answer, or `unexpected` when it throws.
 async function attempt(call) {
   try {
@@ -121,11 +129,17 @@ export function createStore(host, { providers = allProviders } = {}) {
     return started;
   }
 
+  // Says why when the vault refused `answer`; gives `answer` back.
+  function warn(answer) {
+    if (!answer.ok && answer.kind === "vault") host.notify(REFUSED_TOAST);
+    return answer;
+  }
+
   const signedOut = (id) => readings.get(id)?.status === "signed-out";
 
   // Puts the tokens a refresh gave in place of the login whose refresh token
   // was `spent`, saved before they are used; when the vault cannot save them
-  // they are kept in memory all the same. A login replaced meanwhile stays.
+  // they are kept in memory all the same, and the toast says why. A login replaced meanwhile stays.
   function keepTokens(id, spent, { accessToken, refreshToken, expiresAt }) {
     return exclusively(async () => {
       if (!accounts.some((a) => a.id === id && a.refreshToken === spent)) {
@@ -136,7 +150,7 @@ export function createStore(host, { providers = allProviders } = {}) {
           ? { ...account, accessToken, refreshToken, expiresAt }
           : account,
       );
-      await vault.save(next);
+      warn(await vault.save(next));
       accounts = next;
     });
   }
@@ -281,12 +295,14 @@ export function createStore(host, { providers = allProviders } = {}) {
       return { ok: true, id };
     },
 
-    rename: (id, label) => change((current) => rename(current, id, label)),
+    rename: (id, label) =>
+      change((current) => rename(current, id, label)).then(warn),
 
-    move: (id, delta) => change((current) => move(current, id, delta)),
+    move: (id, delta) =>
+      change((current) => move(current, id, delta)).then(warn),
 
     // Deletes the account's stored login and its reading.
-    remove: (id) => change((current) => remove(current, id)),
+    remove: (id) => change((current) => remove(current, id)).then(warn),
 
     tick() {
       const now = host.now();
