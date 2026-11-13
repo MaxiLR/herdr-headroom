@@ -163,3 +163,82 @@ test("a rail that needs less than 48 asks for 48, so it unfolds to the list", ()
     "list",
   );
 });
+
+// A copy of the mod as it starts in the layout `layout`: a fresh `ui` over
+// `host`, whose shared state Herdr keeps across restarts.
+function copyOn(host, props = { fit: "headroom" }) {
+  return { props, host, ui: {} };
+}
+
+function inLayout(layout) {
+  const host = fakeHost();
+  host.state.layout = layout;
+  return host;
+}
+
+test("a first fit asks for the height and remembers it under headroom.fit", () => {
+  const host = inLayout("herdr-headroom");
+  fitTo(copyOn(host), listNeeds([weeklyOnly("codex")], NOW));
+  assert.deepEqual(host.resizes, [{ id: "headroom", px: 111 }]);
+  assert.deepEqual(host.sets, [
+    ["headroom.fit", { "herdr-headroom": { headroom: 111 } }],
+  ]);
+});
+
+test("the same view fitted again to the same height asks nothing", () => {
+  const host = inLayout("herdr-headroom");
+  const view = copyOn(host);
+  fitTo(view, listNeeds([weeklyOnly("codex")], NOW));
+  fitTo(view, listNeeds([weeklyOnly("codex")], NOW));
+  assert.deepEqual(host.resizes, [{ id: "headroom", px: 111 }]);
+  assert.equal(host.sets.length, 1);
+});
+
+// A restart: the block was dragged since, and the new copy must not undo it.
+test("a new copy over a remembered height asks nothing", () => {
+  const host = inLayout("herdr-headroom");
+  host.state["headroom.fit"] = { "herdr-headroom": { headroom: 111 } };
+  fitTo(copyOn(host), listNeeds([weeklyOnly("codex")], NOW));
+  assert.deepEqual(host.resizes, []);
+  assert.deepEqual(host.sets, []);
+});
+
+test("a second account with both bars asks once for 181 and remembers it", () => {
+  const host = inLayout("herdr-headroom");
+  host.state["headroom.fit"] = { "herdr-headroom": { headroom: 111 } };
+  const two = [weeklyOnly("codex"), both("maxi")];
+  fitTo(copyOn(host), listNeeds(two, NOW));
+  fitTo(copyOn(host), listNeeds(two, NOW));
+  assert.deepEqual(host.resizes, [
+    { id: "headroom", px: 1 + 41 + 61 + 70 + 8 },
+  ]);
+  assert.deepEqual(host.state["headroom.fit"], {
+    "herdr-headroom": { headroom: 181 },
+  });
+});
+
+test("the same block id under another layout is fitted on its own", () => {
+  const host = inLayout("mine");
+  host.state["headroom.fit"] = { "herdr-headroom": { headroom: 111 } };
+  fitTo(copyOn(host), listNeeds([weeklyOnly("codex")], NOW));
+  fitTo(copyOn(host), listNeeds([weeklyOnly("codex")], NOW));
+  assert.deepEqual(host.resizes, [{ id: "headroom", px: 111 }]);
+  assert.deepEqual(host.state["headroom.fit"], {
+    "herdr-headroom": { headroom: 111 },
+    mine: { headroom: 111 },
+  });
+});
+
+test("without props.fit nothing is asked and nothing is remembered", () => {
+  const host = inLayout("herdr-headroom");
+  fitTo(copyOn(host, {}), listNeeds([weeklyOnly("codex")], NOW));
+  assert.deepEqual(host.resizes, []);
+  assert.deepEqual(host.sets, []);
+});
+
+test("the fitted block keeps no height of its own in the view", () => {
+  const host = inLayout("herdr-headroom");
+  const view = copyOn(host);
+  fitTo(view, listNeeds([weeklyOnly("codex")], NOW));
+  assert.deepEqual(view.ui, {});
+});
