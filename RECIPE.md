@@ -258,7 +258,9 @@ width: 380, height, props: { form: "account", account } }`, `{ mod:
 "headroom.remove" } } }`; it receives `remove` from `nextCommand()`.
 - Shared state: `headroom.readings` (`{ version: 1, accounts: [reading] }`, the
   public interface in the README), `headroom.prefs` (`{ notify }`),
-  `headroom.notified` (`{ version: 1, keys }`).
+  `headroom.notified` (`{ version: 1, keys }`), `headroom.fit`
+  (`{ <layout name>: { <block id>: px } }`, the height last fitted per layout
+  and block).
 - The vault `<Herdr home>/headroom/vault.json`, `{ version: 1, accounts }`.
 - Programs: `open` (macOS) or `xdg-open`; `mkdir -p`, `chmod 700`, `chmod 600`,
   `stat -f %Lp` (macOS) or `stat -c %a`.
