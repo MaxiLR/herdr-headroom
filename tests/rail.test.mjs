@@ -51,7 +51,7 @@ test("a weekly-only row shows its weekly percent with no tag", () => {
   assert.deepEqual(railNumber(row), { text: "23%", tag: "", level: "normal" });
 });
 
-test("a row whose tightest is a per-model window shows that window's percent", () => {
+test("a per-model window ahead of weekly never gives the number", () => {
   const row = rowOf(
     reading({
       windows: [
@@ -62,7 +62,7 @@ test("a row whose tightest is a per-model window shows that window's percent", (
     }),
     NOW,
   );
-  assert.deepEqual(railNumber(row), { text: "67%", tag: "", level: "normal" });
+  assert.deepEqual(railNumber(row), { text: "41%", tag: "", level: "normal" });
 });
 
 test("a signed-out row and a first read show no number", () => {
@@ -89,7 +89,7 @@ test("a weekly-only tooltip says when its one window resets", () => {
   );
 });
 
-test("a per-model window that is the tightest is named in the tooltip", () => {
+test("the tooltip gives the weekly and the 5-hour numbers only", () => {
   assert.equal(
     railTooltip(
       reading({
@@ -101,7 +101,7 @@ test("a per-model window that is the tightest is named in the tooltip", () => {
       }),
       NOW,
     ),
-    "maxi: Weekly 41% · 4d 6h, 5-hour 30% · 1h 48m, Opus 67% · 4d 6h",
+    "maxi: Weekly 41% · 4d 6h, 5-hour 30% · 1h 48m",
   );
 });
 

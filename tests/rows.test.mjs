@@ -39,50 +39,107 @@ test("a row carries the reading's id, provider and label", () => {
   assert.equal(row.label, "maxi");
 });
 
-test("a model window more used than weekly is in models and the tightest", () => {
-  const opus = win("7d:opus", 0.67, WEEKLY_RESET);
-  const r = reading();
-  const row = rowOf({ ...r, windows: [...r.windows, opus] }, NOW);
+// Weekly at 41 %, 5-hour at 30 %, and the per-model windows `models`.
+const withModels = (...models) =>
+  reading({
+    windows: [
+      win("7d", 0.41, WEEKLY_RESET),
+      win("5h", 0.3, SHORT_RESET),
+      ...models,
+    ],
+  });
+const fable = (overrides) => win("7d:fable", 0.67, WEEKLY_RESET, overrides);
+const opus = (overrides) => win("7d:opus", 0.5, WEEKLY_RESET, overrides);
+
+test("a per-model window ahead of weekly is neither on the row nor its tightest", () => {
+  const r = withModels(fable());
+  const row = rowOf(r, NOW);
   assert.equal(row.weekly, r.windows[0]);
   assert.equal(row.short, r.windows[1]);
-  assert.deepEqual(row.models, [opus]);
-  assert.equal(row.tightest, opus);
+  assert.equal("models" in row, false);
+  assert.equal(row.tightest, r.windows[0]);
+  assert.equal(row.limitWords, null);
 });
 
-test("a model window less used than weekly is not in models", () => {
-  const opus = win("7d:opus", 0.18, WEEKLY_RESET);
-  const r = reading();
-  const row = rowOf({ ...r, windows: [...r.windows, opus] }, NOW);
-  assert.deepEqual(row.models, []);
-  assert.equal(row.tightest, r.windows[1]);
+test("a per-model window at its limit is named, and weekly stays the tightest", () => {
+  const r = withModels(fable({ atLimit: true }));
+  const row = rowOf(r, NOW);
+  assert.equal(row.limitWords, "Fable at limit");
+  assert.equal(row.tightest, r.windows[0]);
 });
 
-test("models keep the reading's order", () => {
-  const opus = win("7d:opus", 0.5, WEEKLY_RESET);
-  const sonnet = win("7d:sonnet", 0.8, WEEKLY_RESET);
-  const r = reading();
+test("a per-model window used up is at its limit without the flag", () => {
+  const row = rowOf(withModels(win("7d:fable", 1, WEEKLY_RESET)), NOW);
+  assert.equal(row.limitWords, "Fable at limit");
+});
+
+test("the name is the label after Weekly · ", () => {
   const row = rowOf(
-    { ...r, windows: [opus, r.windows[0], sonnet, r.windows[1]] },
+    withModels(fable({ atLimit: true, label: "Weekly · Fable" })),
     NOW,
   );
-  assert.deepEqual(row.models, [opus, sonnet]);
-  assert.equal(row.tightest, sonnet);
+  assert.equal(row.limitWords, "Fable at limit");
 });
 
-test("a model window at its limit is in models and the tightest before any higher fraction", () => {
-  const opus = win("7d:opus", 0.3, WEEKLY_RESET, { atLimit: true });
+test("several per-model windows at their limit are counted", () => {
+  const row = rowOf(
+    withModels(fable({ atLimit: true }), opus({ atLimit: true })),
+    NOW,
+  );
+  assert.equal(row.limitWords, "2 models at limit");
+});
+
+test("only the per-model windows at their limit are named", () => {
+  const row = rowOf(withModels(fable(), opus({ atLimit: true })), NOW);
+  assert.equal(row.limitWords, "Opus at limit");
+});
+
+test("with weekly itself at its limit no per-model window is named", () => {
+  const r = reading({
+    windows: [
+      win("7d", 0.5, WEEKLY_RESET, { atLimit: true }),
+      win("5h", 0.3, SHORT_RESET),
+      fable({ atLimit: true }),
+    ],
+  });
+  const row = rowOf(r, NOW);
+  assert.equal(row.limitWords, null);
+  assert.equal(row.tightest, r.windows[0]);
+});
+
+test("a failed read, a first read and a signed-out account name no per-model window", () => {
+  const { windows } = withModels(fable({ atLimit: true }));
+  for (const overrides of [
+    { status: "stale", fetchedAt: NOW - HOUR, error: "network" },
+    { status: "stale", fetchedAt: null },
+    { status: "error", fetchedAt: NOW - HOUR, error: "unexpected" },
+    { status: "signed-out" },
+  ]) {
+    const row = rowOf(reading({ windows, ...overrides }), NOW);
+    assert.equal(row.limitWords, null, JSON.stringify(overrides));
+  }
+});
+
+test("the 5-hour window at its limit is the tightest before a fuller weekly", () => {
+  const r = reading({
+    windows: [
+      win("7d", 0.8, WEEKLY_RESET),
+      win("5h", 0.6, SHORT_RESET, { atLimit: true }),
+      fable({ atLimit: true }),
+    ],
+  });
+  const row = rowOf(r, NOW);
+  assert.equal(row.tightest, r.windows[1]);
+  assert.equal(row.limitWords, "Fable at limit");
+});
+
+test("a model window less used than weekly leaves the tightest to the general windows", () => {
   const r = reading();
-  const row = rowOf({ ...r, windows: [...r.windows, opus] }, NOW);
-  assert.deepEqual(row.models, [opus]);
-  assert.equal(row.tightest, opus);
-});
-
-test("a model window at its limit is not more used than a weekly at its limit with a higher fraction", () => {
-  const weekly = win("7d", 0.5, WEEKLY_RESET, { atLimit: true });
-  const opus = win("7d:opus", 0.3, WEEKLY_RESET, { atLimit: true });
-  const row = rowOf(reading({ windows: [weekly, opus] }), NOW);
-  assert.deepEqual(row.models, []);
-  assert.equal(row.tightest, weekly);
+  const row = rowOf(
+    { ...r, windows: [...r.windows, win("7d:opus", 0.18, WEEKLY_RESET)] },
+    NOW,
+  );
+  assert.equal(row.tightest, r.windows[1]);
 });
 
 test("a tie keeps weekly before short", () => {
@@ -97,25 +154,26 @@ test("a weekly-only reading has no short window", () => {
   const row = rowOf(reading({ windows: [weekly] }), NOW);
   assert.equal(row.weekly, weekly);
   assert.equal(row.short, null);
-  assert.deepEqual(row.models, []);
   assert.equal(row.tightest, weekly);
 });
 
-test("without a weekly window there are no models", () => {
+test("without a weekly window no per-model window is named", () => {
   const short = win("5h", 0.2, SHORT_RESET);
-  const opus = win("7d:opus", 0.9, WEEKLY_RESET);
-  const row = rowOf(reading({ windows: [short, opus] }), NOW);
+  const row = rowOf(
+    reading({ windows: [short, opus({ usedFraction: 1, atLimit: true })] }),
+    NOW,
+  );
   assert.equal(row.weekly, null);
-  assert.deepEqual(row.models, []);
   assert.equal(row.tightest, short);
+  assert.equal(row.limitWords, null);
 });
 
 test("a reading without windows has no tightest", () => {
   const row = rowOf(reading({ windows: [] }), NOW);
   assert.equal(row.weekly, null);
   assert.equal(row.short, null);
-  assert.deepEqual(row.models, []);
   assert.equal(row.tightest, null);
+  assert.equal(row.limitWords, null);
 });
 
 test("an extra: window never reaches the row", () => {
@@ -135,8 +193,8 @@ test("an extra: window never reaches the row", () => {
   );
   assert.equal(row.weekly, r.windows[0]);
   assert.equal(row.short, r.windows[1]);
-  assert.deepEqual(row.models, []);
   assert.equal(row.tightest, r.windows[1]);
+  assert.equal(row.limitWords, null);
 });
 
 test("a Codex window of another length counts as general", () => {

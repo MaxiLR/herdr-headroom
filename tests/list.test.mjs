@@ -38,7 +38,7 @@ test("a pair row has both bars and the weekly numbers left of the 5-hour ones", 
     left: { word: null, parts: ["41%", "4d 6h"], level: "normal" },
     right: { word: "5-hour", parts: ["62%", "1h 48m"], level: "normal" },
   });
-  assert.deepEqual(row.models, []);
+  assert.equal("models" in row, false);
 });
 
 test("below 220 px the 5-hour numbers lose their word", () => {
@@ -127,41 +127,25 @@ test("at its limit the numbers become At limit and the time left", () => {
   });
 });
 
-test("a per-model window more used than weekly gets its own bar and numbers", () => {
+test("a per-model window ahead of weekly is neither a bar nor spoken", () => {
   const row = listRowOf(
     reading({
       windows: [
         win("7d", 0.41, WEEKLY_RESET),
-        win("5h", 0.62, SHORT_RESET),
-        win("7d:opus", 0.67, WEEKLY_RESET, { label: "Weekly · Opus" }),
+        win("5h", 0.3, SHORT_RESET),
+        win("7d:fable", 0.67, WEEKLY_RESET, { label: "Weekly · Fable" }),
       ],
     }),
     NOW,
     WIDE,
   );
-  assert.equal(row.models.length, 1);
-  assert.equal(row.models[0].bar.fraction, 0.67);
-  near(row.models[0].bar.pace, 66 / 168);
-  assert.deepEqual(row.models[0].numbers, {
-    word: "Opus",
-    parts: ["67%", "4d 6h"],
-    level: "normal",
-  });
-});
-
-test("a per-model window less used than weekly is not on the row", () => {
-  const row = listRowOf(
-    reading({
-      windows: [
-        win("7d", 0.41, WEEKLY_RESET),
-        win("5h", 0.62, SHORT_RESET),
-        win("7d:opus", 0.18, WEEKLY_RESET, { label: "Weekly · Opus" }),
-      ],
-    }),
-    NOW,
-    WIDE,
+  assert.equal("models" in row, false);
+  assert.equal(row.pair.full.fraction, 0.41);
+  assert.equal(row.pair.short.fraction, 0.3);
+  assert.equal(
+    row.spoken,
+    "maxi, Weekly 41% used, resets in 4d 6h, 5-hour 30% used, resets in 1h 48m",
   );
-  assert.deepEqual(row.models, []);
 });
 
 test("a window that has not started has no pace and says not started", () => {
@@ -242,7 +226,7 @@ test("signed out: Sign in again, when the login ended, no bars and no numbers", 
   assert.equal(row.ended, "Login ended Nov 9");
   assert.equal(row.pair, null);
   assert.equal(row.numbers, null);
-  assert.deepEqual(row.models, []);
+  assert.equal("models" in row, false);
 });
 
 test("a login ending within 3 days is said on the label line in the high tone", () => {

@@ -180,7 +180,7 @@ test("at its limit the numbers read At limit and the time left", (t) => {
   assert.doesNotMatch(all, /97%/);
 });
 
-test("a per-model window ahead of weekly gets a bar and numbers of its own", (t) => {
+test("a per-model window ahead of weekly is not on the row", (t) => {
   const lines = drawForm(t, "list", {
     size: SIZE,
     readings: [
@@ -194,9 +194,8 @@ test("a per-model window ahead of weekly gets a bar and numbers of its own", (t)
     ],
   });
   if (!lines) return;
-  assert.match(sentence(lines), /Opus 67% · 4d 6h/, lines.join("\n"));
-  assert.ok(withId(lines, "account-0-model-0"), lines.join("\n"));
-  assert.ok(withId(lines, "account-0-model-0-pace"), lines.join("\n"));
+  assert.doesNotMatch(sentence(lines), /Opus|67%/, lines.join("\n"));
+  assert.equal(withId(lines, "account-0-model-0"), undefined);
 });
 
 test("a per-model window behind weekly is not on the row", (t) => {
