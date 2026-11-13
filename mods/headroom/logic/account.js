@@ -32,6 +32,10 @@ export function accountOf(view) {
 }
 
 // The px the account view of `reading` needs, at most `OPEN_MAX`.
+export function accountHeight(reading, account) {
+  return openHeight(reading);
+}
+
 function openHeight(reading) {
   const windows = (reading?.windows ?? []).reduce(
     (sum, window) =>

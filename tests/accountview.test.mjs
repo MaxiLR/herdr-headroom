@@ -190,3 +190,365 @@ test("a reading with no windows draws its label and the way to the detail view",
   assert.ok(drawn.includes("Accounts and settings"), show(lines));
   assert.equal(withId(lines, "window-0"), undefined, show(lines));
 });
+
+// The whole view: the draft's readings, in local time.
+const DEC_5 = new Date(2026, 11, 5, 12, 0).getTime();
+const DEC_9 = new Date(2026, 11, 9, 12, 0).getTime();
+const NOV_9 = new Date(2026, 10, 9, 15, 0).getTime();
+const NOV_14 = new Date(2026, 10, 14, 9, 0).getTime(); // in 1d 18h 30m
+const TODAY_1508 = new Date(2026, 10, 12, 15, 8).getTime(); // in 38m
+const TODAY_1812 = new Date(2026, 10, 12, 18, 12).getTime(); // in 3h 42m
+const TODAY_1636 = new Date(2026, 10, 12, 16, 36).getTime(); // in 2h 6m
+const SPARK = "GPT-5.3-Codex-Spark";
+const PACE_LINE = "The line on a bar marks how much of its time has passed.";
+
+// maxi with its per-model window, given first, and the end of its login.
+function maxiWhole(overrides = {}) {
+  return reading({
+    id: MAXI,
+    fetchedAt: THURSDAY - 2 * MINUTE,
+    loginEndsAt: DEC_5,
+    windows: [
+      win("7d:sonnet", 0.18, MONDAY_2030, { label: "Weekly · Sonnet" }),
+      win("5h", 0.62, TODAY_1618),
+      win("7d", 0.41, MONDAY_2030),
+    ],
+    ...overrides,
+  });
+}
+
+function teracWhole(overrides = {}) {
+  return reading({
+    id: TERAC,
+    label: "maxi · Terac",
+    plan: "Team",
+    fetchedAt: THURSDAY - 3 * MINUTE,
+    loginEndsAt: DEC_9,
+    windows: [win("7d", 0.78, SATURDAY_1830), win("5h", 0.91, TODAY_1701)],
+    ...overrides,
+  });
+}
+
+// maxilr with its Spark limits, given before its general windows.
+function maxilrWhole(overrides = {}) {
+  return reading({
+    id: MAXILR,
+    provider: "codex",
+    label: "maxilr",
+    plan: "Pro",
+    fetchedAt: THURSDAY - 2 * MINUTE,
+    windows: [
+      win("extra:gpt-5-3-codex-spark:5h", 0.64, TODAY_1636, {
+        label: `${SPARK} · 5-hour`,
+        durationMs: 5 * HOUR,
+      }),
+      win("extra:gpt-5-3-codex-spark:7d", 0.3, TUESDAY_1630, {
+        label: `${SPARK} · Weekly`,
+        durationMs: 7 * DAY,
+      }),
+      win("7d", 0.23, TUESDAY_1630),
+      win("5h", 0.12, TODAY_1812),
+    ],
+    ...overrides,
+  });
+}
+
+function drawAccount(t, id, readings, { width = 380, ui } = {}) {
+  return drawForm(t, "account", {
+    props: { form: "account", account: id, overlay: "overlay-1" },
+    size: { width, height: 640 },
+    now: THURSDAY,
+    readings,
+    accounts: ACCOUNTS,
+    ...(ui ? { ui } : {}),
+  });
+}
+
+// Every drawn text joined by spaces, so texts drawn apart read as one.
+const sentence = (lines) => texts(lines).join(" ");
+
+const ids = (lines) =>
+  lines
+    .map((line) => line.match(/:id\[Str\("([^"]*)"\)\]/)?.[1])
+    .filter(Boolean);
+
+// The lines drawn inside the element with `id`.
+function inside(lines, id) {
+  const start = lines.findIndex((line) =>
+    line.includes(`:id[Str(${JSON.stringify(id)})]`),
+  );
+  if (start < 0) return [];
+  const depth = lines[start].search(/\S/);
+  const found = [];
+  for (const line of lines.slice(start + 1)) {
+    if (line.trim() === "" || line.search(/\S/) <= depth) break;
+    found.push(line);
+  }
+  return found;
+}
+
+test("one account among three draws only its own label, email and windows", (t) => {
+  const lines = drawAccount(t, MAXI, [
+    teracWhole(),
+    maxiWhole(),
+    maxilrWhole(),
+  ]);
+  if (!lines) return;
+  const drawn = texts(lines);
+  for (const text of [
+    "maxi",
+    "Max",
+    "maxi@example.com",
+    "41%",
+    "62%",
+    "18%",
+    "Login ends Dec 5",
+  ]) {
+    assert.ok(drawn.includes(text), `${text}\n${show(lines)}`);
+  }
+  for (const text of [
+    "maxi · Terac",
+    "maxi@terac.example",
+    "Terac",
+    "maxilr",
+    "maxilr@example.com",
+    "78%",
+    "91%",
+    "23%",
+    "Login ends Dec 9",
+  ]) {
+    assert.ok(!drawn.includes(text), `${text}\n${show(lines)}`);
+  }
+});
+
+test("the header holds the label, the plan, this account's age and the refresh control; the email and organization under it", (t) => {
+  const lines = drawAccount(t, TERAC, [maxiWhole(), teracWhole()]);
+  if (!lines) return;
+  assert.match(
+    sentence(lines),
+    /^maxi · Terac Team Read 3m ago maxi@terac\.example · Terac Weekly /,
+    show(lines),
+  );
+  const control = withId(lines, "refresh") ?? "";
+  assert.match(control, /:role\[Str\("button"\)\]/, show(lines));
+  assert.match(control, /:accessibility_label\[Str\("Refresh"\)\]/);
+  assert.match(control, /:on_click/);
+  assert.match(
+    inside(lines, "refresh").join("\n"),
+    /svg "mods\/headroom\/icons\/refresh\.svg"/,
+    show(lines),
+  );
+});
+
+test("a per-model window comes after the general ones, with its name, numbers and clock time", (t) => {
+  const lines = drawAccount(t, MAXI, [maxiWhole()]);
+  if (!lines) return;
+  assert.match(
+    sentence(lines),
+    new RegExp(
+      [
+        "Weekly 41% · resets in 4d 6h Mon 20:30",
+        "5-hour 62% · resets in 1h 48m 16:18",
+        "Weekly · Sonnet 18% · resets in 4d 6h Mon 20:30",
+      ].join(" "),
+    ),
+    show(lines),
+  );
+  for (const id of ["window-0", "window-1", "window-2"]) {
+    assert.ok(withId(lines, `${id}-pace`), `${id}-pace\n${show(lines)}`);
+  }
+  assert.match(withId(lines, "window-1") ?? "", /\.h\[Number\(3/);
+  assert.match(withId(lines, "window-2") ?? "", /\.h\[Number\(6/);
+});
+
+test("a Codex account's additional limits come after its general windows", (t) => {
+  const lines = drawAccount(t, MAXILR, [maxilrWhole()]);
+  if (!lines) return;
+  assert.match(
+    sentence(lines),
+    new RegExp(
+      [
+        "Weekly 23% · resets in 5d 2h Tue 16:30",
+        "5-hour 12% · resets in 3h 42m 18:12",
+        `${SPARK} · 5-hour 64% · resets in 2h 6m 16:36`,
+        `${SPARK} · Weekly 30% · resets in 5d 2h Tue 16:30`,
+      ].join(" "),
+    ),
+    show(lines),
+  );
+});
+
+test("the age is this account's even when another account was read later", (t) => {
+  const lines = drawAccount(t, MAXI, [
+    maxiWhole(),
+    teracWhole({ fetchedAt: THURSDAY }),
+  ]);
+  if (!lines) return;
+  const drawn = texts(lines);
+  assert.ok(drawn.includes("Read 2m ago"), show(lines));
+  assert.ok(!drawn.includes("Read just now"), show(lines));
+});
+
+test("at its limit the percentage is the words At limit, with the reset and its clock time", (t) => {
+  const lines = drawAccount(t, TERAC, [
+    teracWhole({
+      windows: [
+        win("7d", 1, SATURDAY_1830),
+        win("5h", 0.97, TODAY_1508, { atLimit: true }),
+      ],
+    }),
+  ]);
+  if (!lines) return;
+  const all = sentence(lines);
+  assert.match(all, /5-hour At limit · resets in 38m 15:08/, show(lines));
+  assert.match(all, /Weekly At limit · resets in 2d 4h Sat 18:30/);
+  assert.doesNotMatch(all, /100%|97%/, show(lines));
+});
+
+test("a login in its last 3 days says how many days are left", (t) => {
+  const lines = drawAccount(t, TERAC, [teracWhole({ loginEndsAt: NOV_14 })]);
+  if (!lines) return;
+  const drawn = texts(lines);
+  assert.ok(drawn.includes("Login ends in 2 days"), show(lines));
+  assert.ok(!drawn.includes("Login ends Nov 14"), show(lines));
+});
+
+test("a failed read says its age and reason, dims its bars and keeps only the percentages", (t) => {
+  const lines = drawAccount(t, TERAC, [
+    teracWhole({
+      status: "stale",
+      fetchedAt: THURSDAY - 12 * MINUTE,
+      error: "network",
+    }),
+  ]);
+  if (!lines) return;
+  const drawn = texts(lines);
+  const all = sentence(lines);
+  assert.ok(drawn.includes("12m old · network"), show(lines));
+  assert.ok(drawn.includes("78%"), show(lines));
+  assert.ok(drawn.includes("91%"), show(lines));
+  assert.doesNotMatch(all, /resets|Sat 18:30|17:01|Read /, show(lines));
+  assert.ok(!ids(lines).some((id) => id.endsWith("-pace")), show(lines));
+  for (const id of ["window-0", "window-1"]) {
+    assert.match(withId(lines, id) ?? "", /\.opacity\[Number\(0\.4\)\]/, id);
+  }
+  assert.ok(!drawn.includes(PACE_LINE), show(lines));
+  assert.equal(withId(lines, "pace-key"), undefined, show(lines));
+  assert.ok(drawn.includes("Login ends Dec 9"), show(lines));
+});
+
+test("an account that must sign in again draws its label and when its login ended, no windows", (t) => {
+  const lines = drawAccount(t, TERAC, [
+    teracWhole({ status: "signed-out", loginEndsAt: NOV_9 }),
+  ]);
+  if (!lines) return;
+  const drawn = texts(lines);
+  assert.ok(drawn.includes("maxi · Terac"), show(lines));
+  assert.ok(drawn.includes("Login ended Nov 9"), show(lines));
+  const all = sentence(lines);
+  assert.doesNotMatch(all, /%|Read |Weekly|5-hour/, show(lines));
+  assert.ok(!ids(lines).some((id) => id.startsWith("window-")), show(lines));
+});
+
+test("a first read draws the mark, the label, the email and one pair of empty tracks; the control turns", (t) => {
+  const lines = drawAccount(t, TERAC, [
+    teracWhole({ status: "stale", fetchedAt: null, windows: [] }),
+  ]);
+  if (!lines) return;
+  const drawn = texts(lines);
+  assert.ok(drawn.includes("maxi · Terac"), show(lines));
+  assert.ok(drawn.includes("maxi@terac.example"), show(lines));
+  assert.ok(!drawn.includes("Team"), show(lines));
+  assert.doesNotMatch(sentence(lines), /Read |Login/, show(lines));
+  assert.ok(withId(lines, "first-full"), show(lines));
+  assert.ok(withId(lines, "first-short"), show(lines));
+  assert.match(
+    inside(lines, "refresh").join("\n"),
+    /svg "mods\/workspace-chrome\/spinner\.svg"/,
+    show(lines),
+  );
+});
+
+test("the line about the pace mark is drawn with a pace mark", (t) => {
+  const lines = drawAccount(t, MAXI, [maxiWhole()]);
+  if (!lines) return;
+  assert.ok(texts(lines).includes(PACE_LINE), show(lines));
+  assert.ok(withId(lines, "pace-key"), show(lines));
+  // It comes after the windows and before the login line.
+  const drawn = texts(lines);
+  assert.ok(drawn.indexOf(PACE_LINE) > drawn.indexOf("18%"), show(lines));
+  assert.ok(
+    drawn.indexOf(PACE_LINE) < drawn.indexOf("Login ends Dec 5"),
+    show(lines),
+  );
+});
+
+for (const [name, overrides] of [
+  ["a failed read", { status: "stale", error: "network" }],
+  ["a first read", { status: "stale", fetchedAt: null, windows: [] }],
+  ["an account that must sign in again", { status: "signed-out" }],
+  [
+    "windows that have not started",
+    { windows: [win("7d", 0, null), win("5h", 0, null)] },
+  ],
+]) {
+  test(`no line about the pace mark for ${name}`, (t) => {
+    const lines = drawAccount(t, MAXI, [maxiWhole(overrides)]);
+    if (!lines) return;
+    assert.ok(!texts(lines).includes(PACE_LINE), show(lines));
+    assert.equal(withId(lines, "pace-key"), undefined, show(lines));
+  });
+}
+
+test("a window that has not started reads 0% · not started, with no clock time", (t) => {
+  const lines = drawAccount(t, MAXI, [
+    maxiWhole({ windows: [win("7d", 0.05, MONDAY_2030), win("5h", 0, null)] }),
+  ]);
+  if (!lines) return;
+  assert.match(
+    sentence(lines),
+    /Weekly 5% · resets in 4d 6h Mon 20:30 5-hour 0% · not started Login/,
+    show(lines),
+  );
+  assert.equal(withId(lines, "window-1-pace"), undefined, show(lines));
+});
+
+test("at 300 px nothing is dropped, clock times included", (t) => {
+  const wide = drawAccount(t, MAXI, [maxiWhole()]);
+  if (!wide) return;
+  const narrow = drawAccount(t, MAXI, [maxiWhole()], { width: 300 });
+  assert.deepEqual(texts(narrow), texts(wide));
+  assert.ok(texts(narrow).includes("Mon 20:30"), show(narrow));
+  assert.ok(texts(narrow).includes("16:18"), show(narrow));
+});
+
+test("the refresh control reads this account only", (t) => {
+  const result = drawActing(
+    t,
+    "account",
+    {
+      props: { form: "account", account: TERAC, overlay: "overlay-1" },
+      now: THURSDAY,
+      readings: [maxiWhole(), teracWhole(), maxilrWhole()],
+      accounts: ACCOUNTS,
+    },
+    "form.refresh(view, cx);",
+  );
+  if (!result) return;
+  assert.deepEqual(result.calls, [["refresh", TERAC]]);
+});
+
+test("while reading, the refresh control is Herdr's spinner", (t) => {
+  const lines = drawAccount(t, TERAC, [teracWhole()], {
+    ui: { account: { refreshing: true } },
+  });
+  if (!lines) return;
+  const drawn = inside(lines, "refresh").join("\n");
+  assert.match(
+    drawn,
+    /svg "mods\/workspace-chrome\/spinner\.svg"/,
+    show(lines),
+  );
+  assert.doesNotMatch(drawn, /refresh\.svg/);
+  assert.ok(texts(lines).includes("Read 3m ago"), show(lines));
+});
