@@ -1,11 +1,11 @@
 // The account view: one account alone, in a 380 px popup opened by a click on
-// it in the list, the rail or the strip. Its header (mark, label, plan, the
-// age of its reading and its own refresh control, then its email and
-// organization), every window the plan has, each with its name over its bar
-// and one quiet line of numbers under it, the line about the pace mark and
-// when its login ends; then the account's own actions (Rename, Sign in again,
-// Remove), and its last row opens the detail view. When its account is no
-// longer connected it closes itself.
+// it in the list, the rail, the strip or the detail view. Its header (mark,
+// label, plan, the age of its reading and its own refresh control, then its
+// email and organization), every window the plan has, each with its name over
+// its bar and one quiet line of numbers under it, the line about the pace mark
+// and when its login ends; then the account's own actions (Rename, Sign in
+// again, Remove), and its last row opens the detail view. When its account is
+// no longer connected it closes itself.
 import { div, svg } from "gpui-kit";
 import { Input, InputState, h_flex, v_flex } from "gpui-base";
 import { accountOf, accountViewOf, removeQuestion } from "../logic/account.js";
