@@ -229,14 +229,15 @@ test("a rename preloaded as data draws the field, and Enter renames to the label
   assert.deepEqual(entered.calls, [["rename", TERAC, "maxi · Terac"]]);
 });
 
-test("Sign in again opens the connect dialog with the account's provider chosen", (t) => {
+test("Sign in again closes the popup, then opens the connect dialog with the account's provider chosen", (t) => {
   const result = act(t, {
     account: MAXILR,
     steps: "form.signInAgain(view);",
   });
   if (!result) return;
-  assert.equal(result.calls.length, 1, JSON.stringify(result.calls));
-  const [name, spec] = result.calls[0];
+  assert.equal(result.calls.length, 2, JSON.stringify(result.calls));
+  assert.deepEqual(result.calls[0], ["closeOverlay", "overlay-1"]);
+  const [name, spec] = result.calls[1];
   assert.equal(name, "openOverlay");
   assert.equal(spec.mod, "headroom");
   assert.equal(spec.kind, "dialog");
@@ -244,6 +245,21 @@ test("Sign in again opens the connect dialog with the account's provider chosen"
     connect: { provider: "codex", account: MAXILR },
   });
 });
+
+for (const [action, steps] of [
+  ["Rename", "form.startRename(view, cx);"],
+  ["Remove", "form.askRemove(view);"],
+  ["Refresh", "form.refresh(view, cx);"],
+]) {
+  test(`${action} leaves the account popup open`, (t) => {
+    const result = act(t, { steps });
+    if (!result) return;
+    assert.ok(
+      !result.calls.some(([name]) => name === "closeOverlay"),
+      JSON.stringify(result.calls),
+    );
+  });
+}
 
 const CONFIRM = {
   mod: "confirm",
