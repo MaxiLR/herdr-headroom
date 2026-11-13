@@ -17,8 +17,13 @@
 # --layout [name] (default herdr-headroom) writes layouts/<name>.json: the
 # home's layouts/main.json with the headroom block added as the last child of
 # sidebar-lists. The block is sized by the mod (props.fit): it starts at 111 px,
-# one account with one bar, and the mod corrects it on its first measure.
-# Nothing else in the layout changes. Herdr lists a layout under its file name
+# one account with one bar, and the mod corrects it on its first measure. The
+# first block with the id status (Herdr's workspace-status) is put in a row of
+# its size, keeping its id and content with a weight of 3, beside the strip's
+# block, hidden, with a weight of 2: two fifths of the status bar, 120 to
+# 720 px, across a boundary that drags. Without a status block the layout is
+# written without the strip and the step says so. Nothing else in the layout
+# changes. Herdr lists a layout under its file name
 # and switches only to a name of letters, digits, - or _, so any other name is
 # a usage error, refused before anything changes. It needs jq, never overwrites
 # a layout and never switches to it; it prints the command that does.
@@ -37,6 +42,7 @@ BACKUPS="$HERDR_HOME/backups"
 LAYOUTS="$HERDR_HOME/layouts"
 MAIN="$LAYOUTS/main.json"
 BLOCK='{"id": "headroom", "type": "block", "size": {"px": 111}, "min": 90, "content": {"mod": "headroom", "props": {"fit": "headroom"}}}'
+STRIP='{"id": "headroom-strip", "type": "block", "hidden": true, "size": {"weight": 2}, "min": 120, "max": 720, "content": {"mod": "headroom", "props": {"form": "strip", "fit": "headroom-strip"}}}'
 
 if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != dumb ]]; then
   BOLD=$'\033[1m' DIM=$'\033[2m' RESET=$'\033[0m'
@@ -158,11 +164,13 @@ if [[ -e "$DEST" ]]; then
 fi
 
 # What to do with the layout: write (with the new layout in $layout_json),
-# exists, no-main, invalid, no-lists or no-jq. Decided before anything
+# exists, no-main, invalid, no-lists or no-jq; with write, has_status tells
+# whether the strip went beside the status block. Decided before anything
 # changes, so a dry run reports the same.
 layout_target="$LAYOUTS/$layout_name.json"
 layout_state=""
 layout_json=""
+has_status=0
 if [[ $want_layout -eq 1 ]]; then
   if [[ -e "$layout_target" ]]; then
     layout_state=exists
@@ -173,18 +181,30 @@ if [[ $want_layout -eq 1 ]]; then
   elif ! jq -se 'length == 1' "$MAIN" >/dev/null 2>&1; then
     layout_state=invalid
   else
-    layout_json="$(jq --argjson block "$BLOCK" '
+    layout_json="$(jq --argjson block "$BLOCK" --argjson strip "$STRIP" '
       def fits:
         type == "object" and .id == "sidebar-lists"
         and (.children | type) == "array" and (.children | length) > 0;
+      def status: type == "object" and .id == "status" and .type == "block";
       [path(.. | select(fits))] as $found
       | if ($found | length) == 0 then empty
         else ($found[0] + ["children"]) as $at
           | setpath($at; getpath($at) + [$block])
+          | [path(.. | select(status))] as $status
+          | if ($status | length) == 0 then .
+            else getpath($status[0]) as $old
+              | setpath($status[0];
+                  {id: "status-row", type: "row"}
+                  + (if $old | has("size") then {size: $old.size} else {} end)
+                  + {children: [$old + {size: {weight: 3}}, $strip]})
+            end
         end
     ' "$MAIN")"
     if [[ -n "$layout_json" ]]; then
       layout_state=write
+      if jq -e 'any(.. | objects; .id == "headroom-strip")' >/dev/null <<<"$layout_json"; then
+        has_status=1
+      fi
     else
       layout_state=no-lists
     fi
@@ -198,10 +218,21 @@ layout_report() {
   local title="Add the layout $layout_name"
   case "$layout_state" in
     write)
-      if [[ "$1" == written ]]; then
-        step ok "$title" "$layout_target: main.json with headroom last in sidebar-lists"
+      local what="main.json with headroom last in sidebar-lists"
+      if [[ $has_status -eq 1 ]]; then
+        what="$what and headroom-strip, hidden, beside status"
+        if [[ "$1" == written ]]; then
+          step ok "$title" "$layout_target: $what"
+        else
+          step plan "$title" "would write $layout_target: $what"
+        fi
       else
-        step plan "$title" "would write $layout_target: main.json with headroom last in sidebar-lists"
+        what="$what; $MAIN has no status block, so no headroom-strip"
+        if [[ "$1" == written ]]; then
+          step warn "$title" "$layout_target: $what"
+        else
+          step warn "$title" "would write $layout_target: $what"
+        fi
       fi
       ;;
     exists)
