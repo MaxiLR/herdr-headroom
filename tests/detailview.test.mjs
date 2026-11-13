@@ -578,6 +578,38 @@ test("each account opens its account view on a click, with the hover ground and 
   }
 });
 
+test("each account is a button a screen reader names by its label and its windows", (t) => {
+  const lines = drawForm(t, "detail", {
+    props: { form: "detail", overlay: "overlay-1" },
+    size: { width: 380, height: 640 },
+    readings: [
+      reading(),
+      reading({
+        id: "claude:acct-maxi:org-terac",
+        label: "maxi · Terac",
+        status: "signed-out",
+        loginEndsAt: new Date(2026, 10, 9, 15, 0).getTime(),
+        windows: [],
+      }),
+    ],
+  });
+  if (!lines) return;
+  for (const [id, words] of [
+    [
+      "account-0",
+      "maxi, Weekly 41% used, resets in 4d 6h, 5-hour 62% used, resets in 1h 48m",
+    ],
+    ["account-1", "maxi · Terac, Sign in again, Login ended Nov 9"],
+  ]) {
+    const line = withId(lines, id) ?? "";
+    assert.match(line, /:role\[Str\("button"\)\]/, `${id}\n${show(lines)}`);
+    assert.ok(
+      line.includes(`:accessibility_label[Str(${JSON.stringify(words)})]`),
+      `${id}\n${line}`,
+    );
+  }
+});
+
 test("inside a clickable account the arrows, dimmed ones too, and Sign in again keep their own click", (t) => {
   const lines = draw(t, {
     readings: [
