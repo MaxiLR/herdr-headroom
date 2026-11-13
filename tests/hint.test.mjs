@@ -1,11 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  drawn,
-  hintCount,
-  moreBelow,
-  wheel,
-} from "../mods/headroom/logic/hint.js";
+import { moreBelow } from "../mods/headroom/logic/hint.js";
+import { drawn, hintCount, wheel } from "../mods/headroom/logic/hint.js";
 import { NOW, reading } from "./helpers/fakes.mjs";
 
 // Six accounts of 70 px, one after another.
