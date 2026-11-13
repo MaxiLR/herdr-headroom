@@ -163,3 +163,7 @@ export function openAccount(view, id) {
     props: { form: "account", account: id },
   });
 }
+
+export function removeQuestion(_label) {
+  return null;
+}

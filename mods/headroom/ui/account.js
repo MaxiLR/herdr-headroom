@@ -329,3 +329,13 @@ export function render(view, cx) {
     )
     .child(detailRow(view));
 }
+
+export function command(_name, _view, _cx) {}
+export function startRename(_view, _cx) {}
+export function renameInput(_view) {
+  return null;
+}
+export function submitRename(_view) {}
+export function cancelRename(_view) {}
+export function signInAgain(_view) {}
+export function askRemove(_view) {}

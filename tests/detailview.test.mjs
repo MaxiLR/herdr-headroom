@@ -518,3 +518,29 @@ test("a signed-out account's Sign in again comes before its arrows", (t) => {
   assert.ok(signIn >= 0, show(lines));
   assert.ok(at(lines, { id: "account-1-up" }) > signIn, show(lines));
 });
+
+test("the detail view has no account menu: the arrows, refresh, the switch and Connect account stay", (t) => {
+  const lines = draw(t, { readings: [maxi(), terac(), maxilr()] });
+  if (!lines) return;
+  assert.ok(!ids(lines).some((id) => id.startsWith("menu-")), show(lines));
+  assert.ok(
+    !lines.some((line) => line.includes('Str("Account menu")')),
+    show(lines),
+  );
+  assert.ok(!lines.some((line) => /^\s*Popover\b/.test(line)), show(lines));
+  for (const word of ["Rename", "Move up", "Move down", "Remove"]) {
+    assert.ok(!texts(lines).includes(word), `${word}\n${show(lines)}`);
+  }
+  for (const id of [
+    "account-0-up",
+    "account-0-down",
+    "account-2-up",
+    "account-2-down",
+    "refresh",
+    "connect-account",
+  ]) {
+    assert.ok(withId(lines, id), `${id}\n${show(lines)}`);
+  }
+  assert.ok(notifySwitch(lines), show(lines));
+  assert.ok(texts(lines).includes("Connect account"), show(lines));
+});
