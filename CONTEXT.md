@@ -55,19 +55,26 @@ each account when its reading is due, runs one operation per account at a
 time, and publishes the readings.
 
 **Form** — The shape a copy of the mod takes, from its `form` prop or its
-block's size. The **list** is a header and a row per account with its pair of
-bars and numbers (the default). The **rail** is each account's mark and
-tightest percent over its bars, in a block narrower than 160 px. The **strip**
-is one line with an item per account, in a block under 48 px tall. The
-**account view** is a form too (`form: "account"` with an `account`). The
-**detail** view is every window of every account, the arrows that reorder the
-accounts, the notifications switch, Show in status bar and Connect account,
-opened from the list's header control and from the account view, as a popup,
-dialog or pane.
+block's size. The **list** is a 1 px line on its top edge, a header and a row
+per account with its weekly and 5-hour bars and numbers (the default); a block
+given `fit` is as tall as the first two accounts, and with more a hint on the
+bottom edge says how many are cut off below. The **rail** is each account's
+mark and the percent of the fuller of its weekly and 5-hour window over its
+bars, in a block narrower than 160 px, with the same line and a shorter hint.
+The **strip** is one line with an item per account, in a block under 48 px
+tall; the installer puts it, hidden, in the status bar, behind the switch Show
+in status bar. The **account view** is a form too (`form: "account"` with an
+`account`). The **detail** view is the one place to manage everything: every
+window of every account, the arrows that reorder the accounts, Rename and
+Remove behind each account's three dots, the notifications switch, Show in
+status bar and Connect account. It is opened from the list's header control
+and from the account view, as a popup, dialog or pane.
 
 **Account view** — The view of one account alone, with everything known about
 it and its own actions (Rename, Sign in again, Remove), opened by a click on
-an account, as a popup.
+an account, as a popup. Remove asks first, in the mod's own dialog over the
+view. It closes itself when it opens another view (the detail view, or the
+connect dialog to sign in again) and when its account is no longer connected.
 
 **Connect dialog** — The dialog that signs an account in: choose Claude or
 Codex, then approve on the provider's page in the browser, pasting Claude's
