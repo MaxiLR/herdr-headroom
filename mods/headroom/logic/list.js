@@ -23,7 +23,9 @@ const EMPTY = { fraction: 0, level: "normal", pace: null };
  *   null for no bars; `dimmed`: the bars are a failed read's last ones.
  * - `numbers`: `{ left, right }` under the pair, or null; each side is
  *   `{ word, parts, level }`, drawn `word parts[0] · parts[1]`.
- * - `spoken`: the row for a screen reader.
+ * - `limitWords`: `Fable at limit`, the per-model windows at their limit, or
+ *   null; drawn after the week's percent, in place of its reset time.
+ * - `spoken`: the row for a screen reader, ending with `limitWords`.
  */
 export function listRowOf(reading, now, width) {
   const row = rowOf(reading, now);
@@ -39,6 +41,7 @@ export function listRowOf(reading, now, width) {
     dimmed: false,
     pair: null,
     numbers: null,
+    limitWords: row.limitWords,
   };
 
   if (row.state === "signed-out") {
@@ -59,6 +62,7 @@ export function listRowOf(reading, now, width) {
   const said = (windows) =>
     [row.label, ...windows.map((w) => spokenOf(w, now, failed))]
       .concat(note ? [note.text] : [])
+      .concat(row.limitWords ? [row.limitWords] : [])
       .join(", ");
 
   if (!row.weekly && !row.short) {
@@ -71,17 +75,25 @@ export function listRowOf(reading, now, width) {
     };
   }
 
-  const numbers = (window, word, alone) => ({
-    word,
-    parts: numbersText(window, now, { alone, failed }).split(" · "),
-    level: failed ? "normal" : levelOf(window),
-  });
+  // With the words in place of the week's reset time, below NARROW_PX the
+  // 5-hour side gives up its own (`untimed`) to leave the words room.
+  const withWords = row.limitWords !== null;
+  const numbers = (window, word, alone, untimed) => {
+    const parts = numbersText(window, now, { alone, failed }).split(" · ");
+    return {
+      word,
+      parts: untimed ? parts.slice(0, 1) : parts,
+      level: failed ? "normal" : levelOf(window),
+    };
+  };
   const shortWord = narrow ? null : row.short?.label;
   const left = row.weekly
-    ? numbers(row.weekly, null, !row.short && !narrow)
-    : numbers(row.short, shortWord, !narrow);
+    ? numbers(row.weekly, null, !row.short && !narrow, withWords)
+    : numbers(row.short, shortWord, !narrow, false);
   const right =
-    row.weekly && row.short ? numbers(row.short, shortWord, false) : null;
+    row.weekly && row.short
+      ? numbers(row.short, shortWord, false, withWords && narrow)
+      : null;
 
   return {
     ...base,

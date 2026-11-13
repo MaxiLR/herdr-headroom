@@ -150,24 +150,34 @@ function labelLine(row, index, view) {
 }
 
 // One side of the numbers line: `5-hour 62% · 1h 48m`, the first part in its
-// level's colour, the separators in `dim`.
-function numbers({ word, parts, level }, t) {
+// level's colour, the separators in `dim`. `words`, a reached per-model limit,
+// follow in the critical colour and are cut with an ellipsis when they do not
+// fit.
+function numbers({ word, parts, level }, words, t) {
   const [first, ...rest] = parts;
+  const dot = () => div().text_color(t.dim).child("·");
   return h_flex()
     .min_w(0)
     .gap(4)
     .items_baseline()
     .when(word !== null, (el) => el.child(div().mr(1).child(word)))
     .child(div().text_color(levelText(level, t)).child(first))
-    .children(
-      rest.flatMap((part) => [
-        div().text_color(t.dim).child("·"),
-        div().child(part),
-      ]),
+    .children(rest.flatMap((part) => [dot(), div().child(part)]))
+    .when(words !== null, (el) =>
+      el
+        .child(dot())
+        .child(
+          div()
+            .min_w(0)
+            .truncate()
+            .text_color(levelText("critical", t))
+            .child(words),
+        ),
     );
 }
 
-function numbersLine(left, right, t) {
+// The week's side, with the words, gives way before the 5-hour side does.
+function numbersLine(left, right, words, t) {
   return h_flex()
     .h(14)
     .mt(6)
@@ -177,8 +187,10 @@ function numbersLine(left, right, t) {
     .text_size(11)
     .text_color(t.muted)
     .whitespace_nowrap()
-    .when(left !== null, (el) => el.child(numbers(left, t)))
-    .when(right !== null, (el) => el.child(numbers(right, t)));
+    .when(left !== null, (el) => el.child(numbers(left, words, t)))
+    .when(right !== null, (el) =>
+      el.child(numbers(right, null, t).flex_none()),
+    );
 }
 
 // Fits a block given `props.fit` to its first two accounts; with none, to
@@ -237,7 +249,9 @@ function account(reading, index, view) {
         ),
       )
       .when(row.numbers !== null, (el) =>
-        el.child(numbersLine(row.numbers.left, row.numbers.right, t)),
+        el.child(
+          numbersLine(row.numbers.left, row.numbers.right, row.limitWords, t),
+        ),
       )
   );
 }
