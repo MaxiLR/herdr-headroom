@@ -60,3 +60,24 @@ test("an unknown form is chosen by size", () => {
     "list",
   );
 });
+
+test("an account form naming its account holds whatever the size", () => {
+  const props = { form: "account", account: "claude:a:o" };
+  assert.equal(chooseForm(props, { width: 40, height: 20 }), "account");
+  assert.equal(chooseForm(props, { width: 900, height: 900 }), "account");
+  assert.equal(chooseForm(props, null), "account");
+});
+
+test("connect props win over an account form", () => {
+  assert.equal(
+    chooseForm({ form: "account", account: "claude:a:o", connect: {} }, null),
+    "connect",
+  );
+});
+
+test("an account form naming no account is chosen by size", () => {
+  assert.equal(
+    chooseForm({ form: "account" }, { width: 100, height: 300 }),
+    "rail",
+  );
+});

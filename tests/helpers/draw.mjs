@@ -120,3 +120,101 @@ export function texts(lines) {
 export function withId(lines, id) {
   return lines.find((line) => line.includes(`:id[Str(${JSON.stringify(id)})]`));
 }
+
+// Draws `ui/<form>.js` as `drawForm` does, but its store and host record what
+// is asked of them. `steps` is JavaScript run in the view's `init` after the
+// form's own, with `view`, `cx` and `form` in scope. Gives `{ calls, lines }`,
+// or null (the test skipped) when `herdr-app` is not on PATH: `calls` is
+// `[name, ...args]` for each call to the store's `refresh`, `rename`, `move`
+// and `remove` (each resolves `{ ok: true }`) and to the host's
+// `openOverlay` (it returns "overlay-2"), `closeOverlay`, `setShared`,
+// `resize` and `openUrl` (it resolves true), in order, read after the form's `render` has run;
+// `lines` are the form's own drawn lines.
+export function drawActing(t, form, fixture = {}, steps = "") {
+  const lines = drawSource(
+    t,
+    `import { View, div } from "gpui-kit";
+import { theme } from "herdr";
+import * as form from "./ui/${form}.js";
+
+const fixture = ${JSON.stringify(fixture)};
+const calls = [];
+const nothing = () => undefined;
+const record =
+  (name, answer) =>
+  (...args) => {
+    calls.push([name, ...args]);
+    return answer;
+  };
+const recordAsync =
+  (name) =>
+  async (...args) => {
+    calls.push([name, ...args]);
+    return { ok: true };
+  };
+
+export default class Acting extends View {
+  init(_props, cx) {
+    const store = {
+      accounts: () => fixture.accounts ?? [],
+      refresh: recordAsync("refresh"),
+      rename: recordAsync("rename"),
+      move: recordAsync("move"),
+      remove: recordAsync("remove"),
+    };
+    const host = {
+      now: () => fixture.now ?? ${NOW},
+      random: nothing,
+      fetch: nothing,
+      platform: "macos",
+      home: "",
+      exec: nothing,
+      readText: nothing,
+      writeText: nothing,
+      shared: nothing,
+      setShared: record("setShared", null),
+      notify: nothing,
+      layout: () => fixture.layout ?? null,
+      resize: record("resize", null),
+      openOverlay: record("openOverlay", "overlay-2"),
+      closeOverlay: record("closeOverlay", null),
+      openUrl: async (...args) => record("openUrl", true)(...args),
+    };
+    this.view = {
+      form: ${JSON.stringify(form)},
+      props: fixture.props ?? {},
+      size: fixture.size ?? null,
+      now: fixture.now ?? ${NOW},
+      theme: theme(),
+      readings: fixture.readings ?? [],
+      notify: fixture.notify ?? true,
+      ui: fixture.ui ?? {},
+      store,
+      host,
+    };
+    const view = this.view;
+    form.init?.(view, cx);
+    ${steps}
+  }
+
+  render(cx) {
+    this.view.theme = theme();
+    const drawn = form.render(this.view, cx);
+    return div()
+      .id("acting")
+      .child(div().id("acting-calls").child(JSON.stringify(calls)))
+      .child(div().id("drawn").size_full().child(drawn));
+  }
+}
+`,
+  );
+  if (!lines) return null;
+  const at = lines.findIndex((line) =>
+    line.includes(':id[Str("acting-calls")]'),
+  );
+  const [recorded] = texts(lines.slice(at + 1, at + 2));
+  return {
+    calls: JSON.parse(recorded),
+    lines: lines.filter((_, i) => i !== at && i !== at + 1),
+  };
+}
