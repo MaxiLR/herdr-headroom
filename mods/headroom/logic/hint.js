@@ -89,6 +89,16 @@ export function wheel(view, form, delta) {
   return hintCount(view, form) !== was;
 }
 
+/**
+ * Called on every frame with the form the copy draws. A form not drawn loses
+ * its scrolling area, which comes back at the top, so its position goes too.
+ */
+export function drawn(view) {
+  for (const form of Object.keys(FORMS)) {
+    if (form !== view.form) delete view.ui[form];
+  }
+}
+
 /** `count` accounts, in words: "1 more account", "3 more accounts". */
 export function moreWords(count) {
   return `${count} more account${count === 1 ? "" : "s"}`;

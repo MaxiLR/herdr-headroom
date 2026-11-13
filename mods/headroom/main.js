@@ -19,6 +19,7 @@ import {
   writeTextFile,
 } from "herdr";
 import { chooseForm } from "./logic/form.js";
+import { drawn } from "./logic/hint.js";
 import { createHost } from "./logic/host.js";
 import { PREFS_KEY, published } from "./logic/publish.js";
 import { sharedStore } from "./logic/store.js";
@@ -91,6 +92,7 @@ export default class Headroom extends View {
 
   render(cx) {
     const view = this.view();
+    drawn(view);
     return div()
       .id("root")
       .size_full()
