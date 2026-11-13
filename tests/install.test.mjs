@@ -456,31 +456,36 @@ test("--layout writes Herdr Headroom.json: main.json with the headroom block add
   );
 });
 
-test("the printed switch command, run in a shell, names the layout as one argument", (t) => {
-  const box = sandbox(t);
-  writeMain(box);
-  const log = fakeHerdr(box, 0);
+for (const [args, name] of [
+  [["--layout"], "Herdr Headroom"],
+  [["--layout", "it's mine"], "it's mine"],
+]) {
+  test(`the printed switch command, run in a shell, names ${name} as one argument`, (t) => {
+    const box = sandbox(t);
+    writeMain(box);
+    const log = fakeHerdr(box, 0);
 
-  const result = run(box, ["--layout"]);
+    const result = run(box, args);
 
-  assert.equal(result.status, 0, result.output);
-  const printed = result.output
-    .split("\n")
-    .find((line) => line.includes("herdr-app do layout.switch"));
-  assert.ok(printed, result.output);
-  const command = printed.slice(printed.indexOf("herdr-app do"));
-  const switched = spawnSync("/bin/sh", ["-c", command], {
-    encoding: "utf8",
-    env: { PATH: [box.bin, "/usr/bin", "/bin"].join(":") },
+    assert.equal(result.status, 0, result.output);
+    const printed = result.output
+      .split("\n")
+      .find((line) => line.includes("herdr-app do layout.switch"));
+    assert.ok(printed, result.output);
+    const command = printed.slice(printed.indexOf("herdr-app do"));
+    const switched = spawnSync("/bin/sh", ["-c", command], {
+      encoding: "utf8",
+      env: { PATH: [box.bin, "/usr/bin", "/bin"].join(":") },
+    });
+    assert.equal(switched.status, 0, switched.stderr);
+    assert.deepEqual(readFileSync(log, "utf8").trimEnd().split("\n"), [
+      "do",
+      "layout.switch",
+      "--name",
+      name,
+    ]);
   });
-  assert.equal(switched.status, 0, switched.stderr);
-  assert.deepEqual(readFileSync(log, "utf8").trimEnd().split("\n"), [
-    "do",
-    "layout.switch",
-    "--name",
-    "Herdr Headroom",
-  ]);
-});
+}
 
 test("--layout with a name writes that layout", (t) => {
   const box = sandbox(t);

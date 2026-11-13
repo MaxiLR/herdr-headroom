@@ -63,9 +63,9 @@ does not exist.
   writes `<Herdr home>/layouts/<name>.json`: a copy of the home's
   `layouts/main.json` with one Headroom block added to the `sidebar` column,
   right after `sidebar-lists` and before `sidebar-footer`. Herdr lists a layout
-  under its file name, so the name is what Settings and the palette show. It
-  never overwrites a layout and never switches to it; it prints the command
-  that does:
+  by its file name: Settings shows it as written, the palette with its first
+  letter in upper case. It never overwrites a layout and never switches to it;
+  it prints the command that does:
 
   ```sh
   herdr-app do layout.switch --name 'Herdr Headroom'
