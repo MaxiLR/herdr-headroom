@@ -288,17 +288,98 @@ test("RECIPE.md uses no crypto.subtle and warns about it", () => {
   assert.match(section(recipe, "Watch out"), /crypto\.subtle/);
 });
 
-test("design.json is valid, without the menu and with the account view", () => {
+test("design.json is valid, keeps the account view and names the three-dot menu and Remove's dialog", () => {
   const design = JSON.parse(read(".impeccable/design.json"));
+  assert.equal(design.schemaVersion, 2);
   const names = design.components.map((component) => component.name);
-  assert.ok(!names.some((name) => /menu/i.test(name)), names.join(", "));
-  assert.ok(
-    names.some((name) => /account view/i.test(name)),
-    names.join(", "),
-  );
-  assert.ok(
-    !design.extensions.shadows.some((shadow) => shadow.name === "menu"),
-  );
+  for (const name of [/account view/i, /three-dot menu/i, /remove's dialog/i]) {
+    assert.ok(
+      names.some((found) => name.test(found)),
+      `${name}: ${names.join(", ")}`,
+    );
+  }
   const row = design.components.find((c) => c.refersTo === "account-row");
   assert.match(row.css, /\.ds-thin\{[^}]*margin-top:6px/);
+  assert.match(row.description, /two bars at most/i);
+});
+
+test("DESIGN.md and design.json ask Remove with the mod's own dialog, not Herdr's confirm dialog", () => {
+  for (const path of ["DESIGN.md", ".impeccable/design.json"]) {
+    const text = read(path).replace(/\s+/g, " ");
+    assert.doesNotMatch(text, /\b329\b/, path);
+    assert.doesNotMatch(text, /confirms? through Herdr's/, path);
+    assert.doesNotMatch(text, /Herdr's own confirm dialog/, path);
+    assert.doesNotMatch(text, /scrollbar, confirm dialog/, path);
+  }
+  const design = read("DESIGN.md").replace(/\s+/g, " ");
+  assert.match(design, /Remove asks [^.]*the mod's own dialog/);
+  const dialog = section(read("DESIGN.md"), "Remove's Dialog").replace(
+    /\s+/g,
+    " ",
+  );
+  for (const px of [18, 15, 13, 32, 8]) {
+    assert.match(dialog, new RegExp(`\\b${px} px\\b`), `${px} px`);
+  }
+  assert.match(dialog, /`blocked`/);
+  assert.match(dialog, /`solid-foreground`/);
+});
+
+test("a row draws two bars at most, and the rail and the strip show the fuller of the weekly and the 5-hour window", () => {
+  const design = read("DESIGN.md").replace(/\s+/g, " ");
+  assert.doesNotMatch(design, /tightest window/);
+  assert.doesNotMatch(design, /Per-model window:\*\*/);
+  assert.match(design, /two bars at most/i);
+  assert.match(design, /fuller of the weekly and the 5-hour/);
+  assert.match(design, /never in the list/i);
+  const brief = read(".impeccable/surfaces/mods-headroom-main-js.md").replace(
+    /\s+/g,
+    " ",
+  );
+  assert.doesNotMatch(brief, /tightest window/);
+  assert.match(brief, /fuller of the weekly and the 5-hour/);
+});
+
+test("DESIGN.md gives the line, the fitted list, the hint, the rail and the strip their measures", () => {
+  const layout = section(read("DESIGN.md"), "Layout").replace(/\s+/g, " ");
+  for (const px of [1, 41, 70, 61, 49, 50, 25, 34, 11, 16, 10.5, 120, 720]) {
+    assert.match(layout, new RegExp(`(^|[^\\d.])${px} px\\b`), `${px} px`);
+  }
+  assert.match(layout, /"3 more"/);
+  assert.match(layout, /"\+3"/);
+  assert.match(layout, /`chevron-down`/);
+  assert.match(layout, /two fifths of the status bar/);
+  assert.match(layout, /up to 640 px/);
+});
+
+test("DESIGN.md draws the three-dot menu, the danger button, the square Connect account and the second switch", () => {
+  const doc = read("DESIGN.md");
+  const menu = section(doc, "Three-Dot Menu").replace(/\s+/g, " ");
+  for (const px of [176, 5, 12.8, 31, 7, 14, 9]) {
+    assert.match(menu, new RegExp(`(^|[^\\d.])${px} px\\b`), `${px} px`);
+  }
+  assert.match(menu, /`popover`/);
+  const buttons = section(doc, "Buttons").replace(/\s+/g, " ");
+  assert.match(buttons, /`solid-foreground`[^.]*5:1/);
+  assert.match(buttons, /30 px square/);
+  assert.match(buttons, /340 px/);
+  assert.match(buttons, /22 px three-dot/);
+  const toggle = section(doc, "Switch").replace(/\s+/g, " ");
+  assert.match(toggle, /Show in status bar/);
+  assert.match(toggle, /10 px under/);
+  const view = section(doc, "Account View").replace(/\s+/g, " ");
+  assert.match(view, /640 px/);
+  assert.match(view, /closes itself when it opens another view/);
+});
+
+test("PRODUCT.md fits Limits to two accounts, puts the strip behind a switch and says what the second live use showed", () => {
+  const product = read("PRODUCT.md");
+  const context = section(product, "Operating Context").replace(/\s+/g, " ");
+  assert.match(context, /two accounts/);
+  assert.match(context, /hint/);
+  assert.match(context, /Show in status bar/);
+  assert.match(context, /one place to manage/);
+  const evidence = section(product, "Evidence on Hand").replace(/\s+/g, " ");
+  assert.match(evidence, /second live use/);
+  assert.match(evidence, /[Nn]ot tried live/);
+  assert.doesNotMatch(evidence, /has not been tried live yet/);
 });
