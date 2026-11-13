@@ -47,8 +47,7 @@ logos, from the mod's own `mods/headroom/icons/`: the ChatGPT logo
   (`5-hour 62% · 1h 48m`); the percent in its level's number colour, the `·`
   in `dim`. Below 220 px wide the 5-hour numbers drop the word "5-hour". A plan
   with one window shows one bar and `23% · resets in 5d 2h`. A per-model weekly
-  window more used than the general weekly window adds a full bar 7 px below
-  with its own line (`Opus 80% · 3d 1h`).
+  window is never a bar on the row, nor the rail's or the strip's percent.
 - Notes: a failed read, `12m old · network` in `muted`; a Claude login in its
   last 3 days, `Login ends in 2 days` in the high number colour. A signed-out
   account: the label in `muted`, "Sign in again" at 11 px in `accent` on the

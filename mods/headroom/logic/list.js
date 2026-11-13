@@ -2,7 +2,7 @@
 
 import { levelOf } from "./levels.js";
 import { untilReset } from "./pace.js";
-import { barOf, modelName, rowOf } from "./rows.js";
+import { barOf, rowOf } from "./rows.js";
 import { failedText, loginText, numbersText, percentText } from "./words.js";
 
 /** Below this width the 5-hour numbers lose their word. */
@@ -23,7 +23,6 @@ const EMPTY = { fraction: 0, level: "normal", pace: null };
  *   null for no bars; `dimmed`: the bars are a failed read's last ones.
  * - `numbers`: `{ left, right }` under the pair, or null; each side is
  *   `{ word, parts, level }`, drawn `word parts[0] · parts[1]`.
- * - `models`: `[{ bar, numbers }]`, a full bar per model window ahead of weekly.
  * - `spoken`: the row for a screen reader.
  */
 export function listRowOf(reading, now, width) {
@@ -40,7 +39,6 @@ export function listRowOf(reading, now, width) {
     dimmed: false,
     pair: null,
     numbers: null,
-    models: [],
   };
 
   if (row.state === "signed-out") {
@@ -94,21 +92,16 @@ export function listRowOf(reading, now, width) {
       short: row.short ? barOf(row.short, now) : null,
     },
     numbers: { left, right },
-    models: row.models.map((window) => ({
-      bar: barOf(window, now),
-      numbers: numbers(window, modelName(window), false),
-    })),
-    spoken: said([row.weekly, row.short, ...row.models].filter(Boolean)),
+    spoken: said([row.weekly, row.short].filter(Boolean)),
   };
 }
 
 // `Weekly 41% used, resets in 4d 6h`: one window for a screen reader.
 function spokenOf(window, now, failed) {
-  const name = window.id.includes(":") ? modelName(window) : window.label;
   const used =
     levelOf(window) === "limit"
-      ? `${name} at limit`
-      : `${name} ${percentText(window)} used`;
+      ? `${window.label} at limit`
+      : `${window.label} ${percentText(window)} used`;
   if (failed) return used;
   const left = untilReset(window, now);
   return left == null ? `${used}, not started` : `${used}, resets in ${left}`;

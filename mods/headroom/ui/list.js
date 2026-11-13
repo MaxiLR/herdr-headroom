@@ -9,7 +9,7 @@ import { openAccount } from "../logic/account.js";
 import { listRowOf } from "../logic/list.js";
 import { open as openConnect } from "./connect.js";
 import { open as openDetail } from "./detail.js";
-import { bar, fitTo, levelText, mark, moreIcon, pair } from "./kit.js";
+import { fitTo, levelText, mark, moreIcon, pair } from "./kit.js";
 
 const HEADER = 41;
 const PLUS = "mods/workspace-chrome/plus.svg";
@@ -221,23 +221,6 @@ function account(reading, index, view) {
     )
     .when(row.numbers !== null, (el) =>
       el.child(numbersLine(row.numbers.left, row.numbers.right, t)),
-    )
-    .children(
-      row.models.flatMap((model, k) => [
-        div()
-          .mt(7)
-          .child(
-            bar(
-              {
-                ...model.bar,
-                id: `${id}-model-${k}`,
-                dimmed: row.dimmed,
-              },
-              t,
-            ),
-          ),
-        numbersLine(model.numbers, null, t),
-      ]),
     );
 }
 

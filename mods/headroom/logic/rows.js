@@ -32,14 +32,6 @@ const isGeneral = (window) => !window.id.includes(":");
 const isModel = (window) => window.id.startsWith("7d:");
 const atLimit = (window) => levelOf(window) === "limit";
 
-// True when `window` is more used than `weekly`.
-function moreUsed(window, weekly) {
-  return (
-    window.usedFraction > weekly.usedFraction ||
-    (atLimit(window) && !atLimit(weekly))
-  );
-}
-
 // Of `windows`, one at its limit before any other, then the most used; a tie
 // keeps the earlier.
 function tightestOf(windows) {
@@ -65,26 +57,36 @@ export function stateOf(reading) {
   return "ok";
 }
 
-// The row of `reading` at `now`.
+// Which per-model windows of `reading` are at their limit, in words:
+// `Fable at limit`, `2 models at limit`, or null for none. Null too when the
+// account is not read, or is out with its weekly window anyway.
+function limitWordsOf(reading, state, weekly) {
+  if (state !== "ok" || weekly === null || atLimit(weekly)) return null;
+  const reached = reading.windows.filter(
+    (window) => isModel(window) && atLimit(window),
+  );
+  if (reached.length === 0) return null;
+  return reached.length === 1
+    ? `${modelName(reached[0])} at limit`
+    : `${reached.length} models at limit`;
+}
+
+// The row of `reading` at `now`: its weekly and 5-hour windows, the fuller of
+// the two, and the per-model windows at their limit in words.
 export function rowOf(reading, now) {
   const general = reading.windows.filter(isGeneral);
   const weekly = general.find((window) => !isThin(window)) ?? null;
   const short = general.find(isThin) ?? null;
-  const models = weekly
-    ? reading.windows.filter(
-        (window) => isModel(window) && moreUsed(window, weekly),
-      )
-    : [];
-  const candidates = [weekly, short, ...models].filter(Boolean);
+  const state = stateOf(reading);
   return {
     id: reading.id,
     provider: reading.provider,
     label: reading.label,
-    state: stateOf(reading),
+    state,
     weekly,
     short,
-    models,
-    tightest: tightestOf(candidates),
+    tightest: tightestOf([weekly, short].filter(Boolean)),
+    limitWords: limitWordsOf(reading, state, weekly),
     loginWarning:
       reading.loginEndsAt != null &&
       reading.status !== "signed-out" &&

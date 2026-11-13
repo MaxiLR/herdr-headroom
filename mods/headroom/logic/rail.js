@@ -2,7 +2,7 @@
 // words its hover gives, and whether the rail is wide enough for the number.
 
 import { levelOf } from "./levels.js";
-import { modelName, rowOf } from "./rows.js";
+import { rowOf } from "./rows.js";
 import { failedText, numbersText, percentText, tagOf } from "./words.js";
 
 /** The narrowest rail, in px, with room for the number beside the mark. */
@@ -28,19 +28,17 @@ export function railNumber(row) {
 export function railTooltip(reading, now) {
   const row = rowOf(reading, now);
   if (row.state === "signed-out") return `${row.label}: Sign in again`;
-  const windows = [row.weekly, row.short, ...row.models].filter(Boolean);
+  const windows = [row.weekly, row.short].filter(Boolean);
   if (row.state === "first" || windows.length === 0) {
     return `${row.label}: Not read yet`;
   }
   const failed = row.state === "failed";
   const alone = windows.length === 1;
   const numbers = windows
-    .map((window) => {
-      const name = row.models.includes(window)
-        ? modelName(window)
-        : window.label;
-      return `${name} ${numbersText(window, now, { alone, failed })}`;
-    })
+    .map(
+      (window) =>
+        `${window.label} ${numbersText(window, now, { alone, failed })}`,
+    )
     .join(", ");
   return failed
     ? `${row.label}: ${numbers} · Read failed: ${failedText(reading, now)}`

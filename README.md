@@ -23,8 +23,8 @@ from scratch is [`RECIPE.md`](RECIPE.md).
   time for (one that has not started) has no tick and reads "not started".
 - **Time to reset**, as `<1m`, `42m`, `3h 12m` or `2d 4h`.
 - **Only the windows the plan has.** A Codex plan with a weekly window alone
-  shows one bar. Per-model weekly windows are in the detail view, and on an
-  account's row only when one is more used than the general weekly window.
+  shows one bar. Per-model weekly windows are in the account view and the
+  detail view; an account's row draws the weekly and the 5-hour window only.
 - **Account states.** A read that failed keeps the last reading, dimmed, with
   its age and the reason (`12m old · network`). An account whose login has
   ended shows "Sign in again" and no bars. A Claude account warns in its last 3
