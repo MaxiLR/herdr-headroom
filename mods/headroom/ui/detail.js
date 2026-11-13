@@ -1,6 +1,7 @@
 // The detail view: every window of every account, when each resets and when
 // a login ends; a click on an account opens its account view; the refresh
-// control, the notifications switch and Connect account. A 380 px popup from
+// control, the notifications switch, Show in status bar (when the layout has
+// the strip's block) and Connect account. A 380 px popup from
 // the list's header and from the account view's last row; also a dialog or a
 // pane, where from 520 px each window is one line. As a popup it closes itself
 // before it opens another view.
@@ -20,6 +21,7 @@ import { listRowOf } from "../logic/list.js";
 import { untilReset } from "../logic/pace.js";
 import { setNotify } from "../logic/publish.js";
 import { barOf, isThin, rowOf } from "../logic/rows.js";
+import { STRIP_BLOCK, stripBlock } from "../logic/strip.js";
 import {
   failedText,
   loginText,
@@ -42,18 +44,32 @@ const WIDE_PX = 520;
 const NARROW_PX = 340;
 
 const NOTIFY = "Notify at 90% and at the limit";
+const STRIP = "Show in status bar";
 
 // The switch's knob slides across natively.
 const SLIDE = { duration: 160, easing: "ease-out" };
+
+// The popup's height for what `view` shows.
+function heightOf(view) {
+  return openHeight(view.readings, view.store.accounts(), {
+    strip: stripBlock(view.host.layout()) !== null,
+  });
+}
 
 export function open(view) {
   view.host.openOverlay({
     mod: "headroom",
     kind: "popup",
     width: WIDTH,
-    height: openHeight(view.readings, view.store.accounts()),
+    height: heightOf(view),
     props: { form: "detail" },
   });
+}
+
+// Shows (`checked`) or hides the strip's block in the shown layout.
+export function setStrip(view, checked) {
+  if (checked) view.host.show(STRIP_BLOCK);
+  else view.host.hide(STRIP_BLOCK);
 }
 
 // Closes the popup, once, before it opens another view; a pane or a block has
@@ -429,12 +445,12 @@ function empty(t) {
     );
 }
 
-function notifySwitch(view) {
-  const t = view.theme;
-  const on = view.notify;
-  return Switch.new("notify")
+// A 30 by 18 px switch, `accent` when on and `input` when off, its knob
+// sliding across; `change(checked)` runs when it is turned.
+function toggle(id, on, label, change, t) {
+  return Switch.new(id)
     .checked(on)
-    .accessibility_label(NOTIFY)
+    .accessibility_label(label)
     .relative()
     .flex_none()
     .w(30)
@@ -443,7 +459,7 @@ function notifySwitch(view) {
     .bg(on ? t.accent : t.input)
     .cursor_pointer()
     .on_change((checked, cx) => {
-      setNotify(view.host, checked);
+      change(checked);
       cx.notify();
     })
     .child(
@@ -456,6 +472,28 @@ function notifySwitch(view) {
         .bg(on ? t.accent_foreground : t.muted)
         .transition("left", SLIDE),
     );
+}
+
+function notifySwitch(view) {
+  return toggle(
+    "notify",
+    view.notify,
+    NOTIFY,
+    (checked) => setNotify(view.host, checked),
+    view.theme,
+  );
+}
+
+// On while the strip's block is shown; null when the layout has none.
+function stripSwitch(view, block) {
+  if (block === null) return null;
+  return toggle(
+    "strip",
+    !block.hidden,
+    STRIP,
+    (checked) => setStrip(view, checked),
+    view.theme,
+  );
 }
 
 // A line of the footer's left column: a switch and its label.
@@ -517,8 +555,9 @@ function connectButton(view) {
 
 // The switches in a column at the left, which takes the room; Connect account
 // at the right, centred on them.
-function footer(view) {
+function footer(view, block) {
   const t = view.theme;
+  const strip = stripSwitch(view, block);
   return h_flex()
     .flex_none()
     .px(16)
@@ -532,7 +571,8 @@ function footer(view) {
         .flex_1()
         .min_w(0)
         .gap(10)
-        .child(switchLine(notifySwitch(view), NOTIFY, t)),
+        .child(switchLine(notifySwitch(view), NOTIFY, t))
+        .when(strip !== null, (el) => el.child(switchLine(strip, STRIP, t))),
     )
     .child(connectButton(view));
 }
@@ -540,12 +580,15 @@ function footer(view) {
 export function render(view, cx) {
   const t = view.theme;
   const accounts = view.store.accounts();
+  const block = stripBlock(view.host.layout());
   // As a popup the root is as tall as its opener asked Herdr for: Herdr sizes
   // a popup to its content. As a pane or a block it fills its place.
   const root = v_flex().id("detail-view");
   return (
     view.props.overlay
-      ? root.w_full().h(openHeight(view.readings, accounts))
+      ? root
+          .w_full()
+          .h(openHeight(view.readings, accounts, { strip: block !== null }))
       : root.size_full()
   )
     .min_h(0)
@@ -570,5 +613,5 @@ export function render(view, cx) {
           ),
         ),
     )
-    .child(footer(view));
+    .child(footer(view, block));
 }

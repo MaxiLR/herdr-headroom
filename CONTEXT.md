@@ -61,8 +61,9 @@ tightest percent over its bars, in a block narrower than 160 px. The **strip**
 is one line with an item per account, in a block under 48 px tall. The
 **account view** is a form too (`form: "account"` with an `account`). The
 **detail** view is every window of every account, the arrows that reorder the
-accounts, the notifications switch and Connect account, opened from the list's
-header control and from the account view, as a popup, dialog or pane.
+accounts, the notifications switch, Show in status bar and Connect account,
+opened from the list's header control and from the account view, as a popup,
+dialog or pane.
 
 **Account view** — The view of one account alone, with everything known about
 it and its own actions (Rename, Sign in again, Remove), opened by a click on

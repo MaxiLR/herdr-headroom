@@ -106,8 +106,11 @@ started`) and the reset's clock time (`16:20` today, else `Mon 20:30`) at
   colour in its last 3 days; `Login ended Nov 9` for a signed-out account.
 - Footer, 1 px `border` rule above, 16 px by 12 px: a 30 by 18 px switch
   (`accent` with an `accent_foreground` knob when on, `input` with a `muted`
-  knob when off), "Notify at 90% and at the limit" at 12 px in `muted`, and a
-  30 px "Connect account" button on `raised` with an `input` border.
+  knob when off), "Notify at 90% and at the limit" at 12 px in `muted`; when
+  the shown layout has a `headroom-strip` block, 10 px under it the same
+  switch and "Show in status bar", on while that block is shown, which shows
+  and hides it (28 px more footer); and, centred on them at the right, a 30 px
+  "Connect account" button on `raised` with an `input` border.
 - The popup is as tall as its accounts, at most 640 px; past that they scroll.
 
 **Account view** (a 380 px popup, as tall as its content up to 640 px; past
@@ -250,7 +253,8 @@ a jump past both posts the limit toast only. Clicking one does nothing.
 - gpui-kit `View`, `div`, `svg`; gpui-base `h_flex`, `v_flex`, `Switch`,
   `Input`, `InputState`. `cx.spawn`, `cx.sleep`, `cx.timer.every(60000)`,
   `cx.focus_handle`, `cx.write_to_clipboard`.
-- Commands: `layout.resize`; overlays `{ mod: "headroom", kind: "popup",
+- Commands: `layout.resize`, `layout.show` and `layout.hide` (`{ id }`, the
+  strip's block); overlays `{ mod: "headroom", kind: "popup",
 width: 380, height, props: { form: "account", account } }`, `{ mod:
 "headroom", kind: "popup", width: 380, height, props: { form: "detail" } }`,
   `{ mod: "headroom", kind: "dialog", width: 420, props: { connect } }` and

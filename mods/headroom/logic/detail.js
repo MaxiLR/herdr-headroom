@@ -53,6 +53,8 @@ export function windowsInOrder(windows) {
 export const HEIGHTS = {
   header: 46,
   footer: 57,
+  // Show in status bar: 10 under the notifications switch, its 18 px switch.
+  strip: 28,
   empty: 80,
   // An account: its padding (11 above, 13 below), its 1 px rule and its
   // 24 px label line.
@@ -71,8 +73,9 @@ export const HEIGHTS = {
 export const OPEN_MAX = 640;
 
 // The px a popup needs to show `readings` whole, at most `OPEN_MAX`;
-// `accounts` (as `store.accounts()` gives them) add their email lines.
-export function openHeight(readings, accounts = []) {
+// `accounts` (as `store.accounts()` gives them) add their email lines, and
+// `strip` the footer's Show in status bar.
+export function openHeight(readings, accounts = [], { strip = false } = {}) {
   const sections = readings.map((reading) => {
     const windows = reading.status === "signed-out" ? [] : reading.windows;
     const bars = windows.reduce(
@@ -93,7 +96,8 @@ export function openHeight(readings, accounts = []) {
     sections.length === 0
       ? HEIGHTS.empty
       : sections.reduce((sum, px) => sum + px, 0);
-  return Math.min(OPEN_MAX, HEIGHTS.header + body + HEIGHTS.footer + 2);
+  const footer = HEIGHTS.footer + (strip ? HEIGHTS.strip : 0);
+  return Math.min(OPEN_MAX, HEIGHTS.header + body + footer + 2);
 }
 
 // The arrows of account `id` among `readings` (in the person's order):

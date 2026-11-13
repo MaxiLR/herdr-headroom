@@ -24,6 +24,20 @@ const GLYPH = 0.6;
 
 const textWidth = (text, size) => text.length * size * GLYPH;
 
+/** The id of the strip's block in the installed layout. */
+export const STRIP_BLOCK = "headroom-strip";
+
+/** The strip's block anywhere in `layout`, or null. */
+export function stripBlock(layout) {
+  if (!layout) return null;
+  if (layout.type === "block") return layout.id === STRIP_BLOCK ? layout : null;
+  for (const child of layout.children ?? []) {
+    const found = stripBlock(child);
+    if (found) return found;
+  }
+  return null;
+}
+
 /**
  * True when the copy's own block, in `layout`, follows a shown sibling in a
  * row. The block is the one `props.fit` names, or else the only block of the
