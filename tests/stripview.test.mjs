@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { drawForm, texts, withId } from "./helpers/draw.mjs";
+import { drawForm, drawSource, texts, withId } from "./helpers/draw.mjs";
 import { NOW, reading, win } from "./helpers/fakes.mjs";
 
 const MINUTE = 60 * 1000;
@@ -219,3 +219,44 @@ test("with no accounts the strip offers to connect one", (t) => {
   assert.deepEqual(texts(lines), ["Connect account"], all);
   assert.match(withId(lines, "connect-account") ?? "", /:on_click/, all);
 });
+
+// The theme's border colour, as Herdr prints it.
+function borderColour(t) {
+  const lines = drawSource(
+    t,
+    `import { View, div } from "gpui-kit";
+import { theme } from "herdr";
+
+export default class Colours extends View {
+  render() {
+    return div().child(JSON.stringify({ border: theme().border }));
+  }
+}
+`,
+  );
+  return lines ? JSON.parse(texts(lines)[0]).border : null;
+}
+
+for (const [name, fixture] of [
+  ["three accounts at 640 px", { width: 640, readings: THREE }],
+  ["three accounts at 250 px", { width: 250, readings: THREE }],
+  ["no accounts", { width: 640, readings: [] }],
+]) {
+  test(`${name}: the strip draws a 1 px border line on its top edge`, (t) => {
+    const border = borderColour(t);
+    if (border === null) return;
+    const lines = drawForm(t, "strip", {
+      size: { width: fixture.width, height: 28 },
+      readings: fixture.readings,
+      layout: AFTER,
+    });
+    if (!lines) return;
+    const all = lines.join("\n");
+    const strip = withId(lines, "strip") ?? "";
+    assert.match(strip, /\.border_t\[Number\(1(\.0)?\)\]/, all);
+    assert.ok(
+      strip.includes(`.border_color[Str(${JSON.stringify(border)})]`),
+      all,
+    );
+  });
+}
