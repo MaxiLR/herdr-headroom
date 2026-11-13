@@ -194,8 +194,8 @@ a jump past both posts the limit toast only. Clicking one does nothing.
 - Props: `form` (`auto`, `list`, `rail`, `strip`, `detail`); `fit` (the id of
   the block holding the copy: the list and the rail call
   `run("layout.resize", { id, px })` with their content's height, at least 48
-  px so a folded rail unfolds to the list and at most 320 px, once per height, from `on_size_change`); `connect` (`{ provider?,
-account? }`, the connect dialog); `overlay` (Herdr's).
+  px so a folded rail unfolds to the list and at most 320 px, once per height,
+  from `on_size_change`); `connect` (`{ provider?, account? }`, the connect dialog); `overlay` (Herdr's).
 - `herdr`: `props`, `theme`, `settings`, `window` (its `platform`), `appHome`,
   `readTextFile`, `writeTextFile(path, text, expected)`, `exec`, `shared`,
   `setShared`, `notify`, `layout`, `run`, `openOverlay`, `closeOverlay`,

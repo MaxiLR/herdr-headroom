@@ -257,9 +257,9 @@ when an account is connected, read or refreshed.
   set to 0600 again when it is not. When the folder or file cannot be made
   private, the mod empties the file, stores nothing and says "Could not keep
   the login private, so nothing was stored." in the connect dialog, or in an
-  error toast when a refresh, rename, move or remove was refused. The vault lives outside `mods/`,
-  so copying or sharing the mod folder never carries a login. Removing an
-  account deletes its login from the vault.
+  error toast when a refresh, rename, move or remove was refused. The vault
+  lives outside `mods/`, so copying or sharing the mod folder never carries a
+  login. Removing an account deletes its login from the vault.
 - **Herdr's shared state**, which Herdr keeps in `<Herdr home>/shared.json` and
   every mod can read:
   - `headroom.readings`: the current readings (see below).
