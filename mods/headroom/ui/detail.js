@@ -1,10 +1,11 @@
 // The detail view: every window of every account, when each resets and when
-// a login ends; the refresh control, the notifications switch and Connect
-// account. A 380 px popup from the list's header and from the account view's
+// a login ends; a click on an account opens its account view; the refresh
+// control, the notifications switch and Connect account. A 380 px popup from the list's header and from the account view's
 // last row; also a dialog or a pane, where from 520 px each window is one
 // line.
 import { div, svg } from "gpui-kit";
 import { Switch, h_flex, v_flex } from "gpui-base";
+import { openAccount } from "../logic/account.js";
 import {
   ageText,
   arrowsOf,
@@ -171,12 +172,13 @@ function labelLine(reading, row, index, view) {
           .text_color(t.accent)
           .cursor_pointer()
           .hover((s) => s.underline())
-          .on_click(() =>
+          .on_click((_event, cx) => {
+            cx.stop_propagation();
             openConnect(view, {
               provider: reading.provider,
               account: reading.id,
-            }),
-          )
+            });
+          })
           .child("Sign in again"),
       ),
     )
@@ -193,7 +195,9 @@ function labelLine(reading, row, index, view) {
 }
 
 // The account's up (`delta` -1) or down (1) arrow; dimmed, and doing
-// nothing, when the account cannot move that way.
+// nothing, when the account cannot move that way. Neither lets the click
+// reach the account: a dimmed one is disabled, so its own click never runs,
+// and it stops the press instead.
 function arrow(reading, index, delta, enabled, view) {
   const t = view.theme;
   const up = delta < 0;
@@ -211,8 +215,15 @@ function arrow(reading, index, delta, enabled, view) {
     .justify_center()
     .rounded(6)
     .when(enabled, (el) => el.cursor_pointer().hover((s) => s.bg(t.hover)))
-    .when(!enabled, (el) => el.opacity(0.35))
-    .on_click(() => moveAccount(view, reading.id, delta))
+    .when(!enabled, (el) =>
+      el
+        .opacity(0.35)
+        .on_mouse_down("left", (_event, cx) => cx.stop_propagation()),
+    )
+    .on_click((_event, cx) => {
+      cx.stop_propagation();
+      moveAccount(view, reading.id, delta);
+    })
     .child(
       svg(up ? ARROW_UP : ARROW_DOWN)
         .size(14)
@@ -361,6 +372,9 @@ function section(reading, index, account, view) {
     .px(16)
     .border_t(1)
     .border_color(t.border)
+    .cursor_pointer()
+    .hover((s) => s.bg(t.hover))
+    .on_click(() => openAccount(view, reading.id))
     .child(labelLine(reading, row, index, view))
     .when(who !== null, (el) => el.child(who))
     .children(
