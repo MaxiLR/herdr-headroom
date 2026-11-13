@@ -1,5 +1,6 @@
 // The small drawing kit every form is built from: the bar with its pace
-// mark, the pair of bars, the provider marks, the spinner and the fonts.
+// mark, the pair of bars, the provider marks and their dot, the spinner and
+// the fonts.
 import { div, svg } from "gpui-kit";
 import { v_flex } from "gpui-base";
 import { settings } from "herdr";
@@ -42,6 +43,13 @@ const HALO = 1.5;
 // The least a fill that is not empty is drawn at, so 1 % still shows.
 const MIN_FILL = 3;
 
+// The dot of a reached limit the row has no bar for: 5 px, its box 2 px above
+// the mark's and 3 px beyond it, in a ring of the ground as wide as the pace
+// mark's halo.
+const DOT = 5;
+const DOT_RISE = 2;
+const DOT_REACH = 3;
+
 /** A provider's mark, `size` px, in `t`'s colours, named for screen readers. */
 export function mark(provider, size, t) {
   const { path, label, color } = MARKS[provider];
@@ -50,6 +58,26 @@ export function mark(provider, size, t) {
     .flex_none()
     .text_color(color(t))
     .accessibility_label(label);
+}
+
+/**
+ * `icon`, a mark `size` px, with the dot of a reached limit on its upper
+ * right corner when `dot`: `<id>-dot`, in `blocked`, ringed by a disc of
+ * `ground` (`chrome` by default) behind it. It takes no room; without the
+ * dot `icon` is drawn as it is.
+ */
+export function dotted(icon, { id, size, dot, ground }, t) {
+  if (!dot) return icon;
+  const ring = div()
+    .absolute()
+    .top(-(DOT_RISE + HALO))
+    .right(-(DOT_REACH + HALO))
+    .size(DOT + 2 * HALO)
+    .p(HALO)
+    .rounded_full()
+    .bg(ground ?? t.chrome)
+    .child(div().id(`${id}-dot`).size(DOT).rounded_full().bg(t.blocked));
+  return div().relative().flex_none().size(size).child(icon).child(ring);
 }
 
 /**

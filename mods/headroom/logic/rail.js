@@ -23,7 +23,8 @@ export function railNumber(row) {
 
 /**
  * The tooltip, and the spoken name, of `reading`'s account at `now`:
- * `maxi: Weekly 41% · 4d 6h, 5-hour 62% · 1h 48m`.
+ * `maxi: Weekly 41% · 4d 6h, 5-hour 62% · 1h 48m`, ending with the per-model
+ * windows at their limit, the dot's meaning: `…, Fable at limit`.
  */
 export function railTooltip(reading, now) {
   const row = rowOf(reading, now);
@@ -40,9 +41,12 @@ export function railTooltip(reading, now) {
         `${window.label} ${numbersText(window, now, { alone, failed })}`,
     )
     .join(", ");
-  return failed
-    ? `${row.label}: ${numbers} · Read failed: ${failedText(reading, now)}`
-    : `${row.label}: ${numbers}`;
+  if (failed) {
+    return `${row.label}: ${numbers} · Read failed: ${failedText(reading, now)}`;
+  }
+  return row.limitWords === null
+    ? `${row.label}: ${numbers}`
+    : `${row.label}: ${numbers}, ${row.limitWords}`;
 }
 
 /** True when a rail `width` px wide (null: not measured yet) has the number. */

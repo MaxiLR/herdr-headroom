@@ -11,7 +11,7 @@ import { fitTo, LINE, railNeeds } from "../logic/fit.js";
 import { railNumber, railTooltip, showsNumber } from "../logic/rail.js";
 import { barOf, rowOf } from "../logic/rows.js";
 import { open as openConnect } from "./connect.js";
-import { levelText, mark, pair } from "./kit.js";
+import { dotted, levelText, mark, pair } from "./kit.js";
 
 const PLUS = "mods/workspace-chrome/plus.svg";
 
@@ -38,11 +38,16 @@ function badge(t) {
     .child("!");
 }
 
-// The 16 px line: the mark, and on the right the number (or the badge).
-function line(row, wide, t) {
+// The 16 px line: the mark, with the dot of a per-model limit reached, and on
+// the right the number (or the badge).
+function line(row, index, wide, t) {
   const signedOut = row.state === "signed-out";
-  const icon = mark(row.provider, 14, t).when(signedOut, (el) =>
-    el.opacity(SIGNED_OUT_MARK),
+  const icon = dotted(
+    mark(row.provider, 14, t).when(signedOut, (el) =>
+      el.opacity(SIGNED_OUT_MARK),
+    ),
+    { id: `account-${index}`, size: 14, dot: row.limitWords !== null },
+    t,
   );
   const number = wide ? railNumber(row) : null;
   const end = signedOut
@@ -120,7 +125,7 @@ function account(reading, index, view, wide) {
       .when(Boolean(view.props.fit) && index < 2, (el) =>
         el.on_size_change(() => fit(view, null)),
       )
-      .child(line(row, wide, t))
+      .child(line(row, index, wide, t))
       .when(row.state !== "signed-out", (el) =>
         el.child(bars(row, index, view)),
       )
