@@ -107,8 +107,9 @@ function layoutPath(box, name) {
   return join(box.herdr, "layouts", `${name}.json`);
 }
 
-// A layout shaped like the engineer's main.json: a sidebar column holding the
-// brand, the lists and the footer, beside the work column.
+// A layout shaped like Herdr's own main.json: a sidebar column that cannot be
+// resized, holding the brand, the lists and the footer, beside the work column.
+// Only the children of sidebar-lists share a draggable boundary.
 function mainLayout() {
   return {
     id: "root",
@@ -119,6 +120,7 @@ function mainLayout() {
         id: "sidebar",
         type: "column",
         size: { px: 268 },
+        resizable: false,
         background: "chrome",
         children: [
           {
@@ -131,8 +133,20 @@ function mainLayout() {
             id: "sidebar-lists",
             type: "column",
             children: [
-              { id: "spaces", type: "block", content: { mod: "spaces" } },
-              { id: "agents", type: "block", content: { mod: "agents" } },
+              {
+                id: "spaces",
+                type: "block",
+                size: { weight: 1 },
+                min: 90,
+                content: { mod: "spaces" },
+              },
+              {
+                id: "agents",
+                type: "block",
+                size: { weight: 1 },
+                min: 90,
+                content: { mod: "agents" },
+              },
             ],
           },
           {
@@ -152,7 +166,8 @@ function mainLayout() {
   };
 }
 
-// The same layout with the headroom block, written out by hand.
+// The same layout with the headroom block last in sidebar-lists, written out by
+// hand.
 function headroomLayout() {
   return {
     id: "root",
@@ -163,6 +178,7 @@ function headroomLayout() {
         id: "sidebar",
         type: "column",
         size: { px: 268 },
+        resizable: false,
         background: "chrome",
         children: [
           {
@@ -175,14 +191,28 @@ function headroomLayout() {
             id: "sidebar-lists",
             type: "column",
             children: [
-              { id: "spaces", type: "block", content: { mod: "spaces" } },
-              { id: "agents", type: "block", content: { mod: "agents" } },
+              {
+                id: "spaces",
+                type: "block",
+                size: { weight: 1 },
+                min: 90,
+                content: { mod: "spaces" },
+              },
+              {
+                id: "agents",
+                type: "block",
+                size: { weight: 1 },
+                min: 90,
+                content: { mod: "agents" },
+              },
+              {
+                id: "headroom",
+                type: "block",
+                size: { weight: 1 },
+                min: 90,
+                content: { mod: "headroom" },
+              },
             ],
-          },
-          {
-            id: "headroom",
-            type: "block",
-            content: { mod: "headroom", props: { fit: "headroom" } },
           },
           {
             id: "sidebar-footer",
@@ -424,20 +454,42 @@ test("--dry-run with --layout changes nothing and names the layout", (t) => {
   assert.equal(existsSync(join(box.root, "herdr-app.args")), false);
 });
 
-test("--layout writes Herdr Headroom.json: main.json with the headroom block added", (t) => {
+// Every node of a layout tree, the root first.
+function nodes(layout) {
+  return [layout, ...(layout.children ?? []).flatMap(nodes)];
+}
+
+test("--layout writes Herdr Headroom.json: main.json with headroom last in sidebar-lists", (t) => {
   const box = sandbox(t);
   const main = writeMain(box);
 
   const result = run(box, ["--layout"]);
 
   assert.equal(result.status, 0, result.output);
-  const written = JSON.parse(
-    readFileSync(layoutPath(box, "Herdr Headroom"), "utf8"),
-  );
+  const text = readFileSync(layoutPath(box, "Herdr Headroom"), "utf8");
+  const written = JSON.parse(text);
   assert.deepEqual(written, headroomLayout());
+  const sidebar = written.children[0];
   assert.deepEqual(
-    written.children[0].children.map((node) => node.id),
-    ["brand", "sidebar-lists", "headroom", "sidebar-footer"],
+    sidebar.children.map((node) => node.id),
+    ["brand", "sidebar-lists", "sidebar-footer"],
+  );
+  const lists = sidebar.children[1];
+  assert.deepEqual(
+    lists.children.map((node) => node.id),
+    ["spaces", "agents", "headroom"],
+  );
+  assert.deepEqual(lists.children[2], {
+    id: "headroom",
+    type: "block",
+    size: { weight: 1 },
+    min: 90,
+    content: { mod: "headroom" },
+  });
+  assert.equal(text.includes("fit"), false, text);
+  assert.equal(
+    nodes(written).filter((node) => node.content?.mod === "headroom").length,
+    1,
   );
   assert.equal(readFileSync(layoutPath(box, "main"), "utf8"), main);
   assert.ok(
@@ -542,14 +594,70 @@ test("an existing layout is left byte for byte and the output says so", (t) => {
   );
 });
 
+test("a sidebar-lists with children but no sidebar-footer after it gets a layout", (t) => {
+  const box = sandbox(t);
+  const main = {
+    id: "root",
+    type: "row",
+    children: [
+      {
+        id: "sidebar-lists",
+        type: "column",
+        children: [{ id: "spaces", type: "block", content: { mod: "spaces" } }],
+      },
+      { id: "main", type: "block", content: { mod: "terminal" } },
+    ],
+  };
+  writeMain(box, main);
+
+  const result = run(box, ["--layout"]);
+
+  assert.equal(result.status, 0, result.output);
+  assert.deepEqual(
+    JSON.parse(readFileSync(layoutPath(box, "Herdr Headroom"), "utf8")),
+    {
+      id: "root",
+      type: "row",
+      children: [
+        {
+          id: "sidebar-lists",
+          type: "column",
+          children: [
+            { id: "spaces", type: "block", content: { mod: "spaces" } },
+            {
+              id: "headroom",
+              type: "block",
+              size: { weight: 1 },
+              min: 90,
+              content: { mod: "headroom" },
+            },
+          ],
+        },
+        { id: "main", type: "block", content: { mod: "terminal" } },
+      ],
+    },
+  );
+});
+
 for (const [what, main, said] of [
   [
-    "has no sidebar node",
-    { id: "root", type: "row", children: [{ id: "main", type: "block" }] },
-    /sidebar/,
+    "has no sidebar-lists node",
+    {
+      id: "root",
+      type: "row",
+      children: [
+        {
+          id: "sidebar",
+          type: "column",
+          children: [{ id: "sidebar-footer", type: "block" }],
+        },
+        { id: "main", type: "block" },
+      ],
+    },
+    /sidebar-lists/,
   ],
   [
-    "has the footer before the lists",
+    "has a sidebar-lists without children",
     {
       id: "root",
       type: "row",
@@ -558,13 +666,22 @@ for (const [what, main, said] of [
           id: "sidebar",
           type: "column",
           children: [
-            { id: "sidebar-footer", type: "block" },
             { id: "sidebar-lists", type: "column", children: [] },
+            { id: "sidebar-footer", type: "block" },
           ],
         },
       ],
     },
-    /sidebar/,
+    /sidebar-lists/,
+  ],
+  [
+    "has a sidebar-lists with no children array",
+    {
+      id: "root",
+      type: "row",
+      children: [{ id: "sidebar-lists", type: "block" }],
+    },
+    /sidebar-lists/,
   ],
   ["is not valid JSON", '{"id": "root", ', /not valid JSON/i],
   ["is missing", null, /main\.json/],
