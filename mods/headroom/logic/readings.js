@@ -82,3 +82,24 @@ export function signedOutReading(account, provider, now) {
     provider,
   );
 }
+
+// Whether `windows`, just read, differ from those of `previous`, the reading
+// before: a window came or went, started, reached or left its limit, or its
+// share used changed. Reset times are not compared: a provider's drift by
+// milliseconds between reads. Nothing has moved since a reading that was
+// never read or whose login had ended.
+export function moved(previous, windows) {
+  if (previous?.fetchedAt == null || previous.status === "signed-out") {
+    return false;
+  }
+  if (previous.windows.length !== windows.length) return true;
+  return windows.some((window) => {
+    const before = previous.windows.find((one) => one.id === window.id);
+    return (
+      !before ||
+      before.usedFraction !== window.usedFraction ||
+      before.atLimit !== window.atLimit ||
+      (before.resetsAt == null) !== (window.resetsAt == null)
+    );
+  });
+}

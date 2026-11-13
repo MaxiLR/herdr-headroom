@@ -203,10 +203,18 @@ strip the hover names the account and gives its numbers:
 400 ms, ease-out. The switch's knob slides over 160 ms. The spinner turns
 natively. Countdowns redraw once a minute.
 
-**Freshness.** Each copy checks once a minute and when it starts; an account is
-read when its last read is 5 minutes old or one of its windows has reset since.
-All copies share one store, so one read serves them all. An access token that
-expires within 5 minutes is refreshed first, and once more after a 401.
+**Freshness.** Each copy checks once a minute and when it starts. An idle
+account is read when its last read is 5 minutes old; an active one sooner,
+Claude after 2 minutes and Codex after 1. An account is active while an agent
+in Herdr is working (`agents()`, any agent), while its last read changed a
+window's numbers (its share used, whether it has started or is at its limit,
+or which windows there are), or while a window is from 75 % up to, but not
+at, its limit. A failed read waits 5 minutes whatever else holds. After a
+read that worked, a window whose reset time has passed is read at once. A
+read due within 5 seconds of a check is made at that check, so a late timer
+never skips a minute. All copies share one store, so one read serves them
+all. An access token that expires within 5 minutes is refreshed first, and
+once more after a 401.
 
 **Toasts** (Herdr's toast mod draws them). `work is at 91% of its weekly limit`
 (warning) at 90 %, `work reached its 5-hour limit` (error) at the limit, each
@@ -238,8 +246,8 @@ a jump past both posts the limit toast only. Clicking one does nothing.
 - `herdr`: `props`, `theme`, `settings`, `window` (its `platform`), `appHome`,
   `readTextFile`, `writeTextFile(path, text, expected)`, `exec`, `shared`,
   `setShared`, `notify`, `layout`, `run`, `openOverlay`, `closeOverlay`,
-  `nextCommand`. The global `fetch`, `crypto.getRandomValues`, `btoa`,
-  `Buffer`, `URLSearchParams`.
+  `nextCommand`, `agents` (whether one is working). The global `fetch`,
+  `crypto.getRandomValues`, `btoa`, `Buffer`, `URLSearchParams`.
 - gpui-kit `View`, `div`, `svg`; gpui-base `h_flex`, `v_flex`, `Switch`,
   `Input`, `InputState`. `cx.spawn`, `cx.sleep`, `cx.timer.every(60000)`,
   `cx.focus_handle`, `cx.write_to_clipboard`.
@@ -280,9 +288,16 @@ width: 380, height, props: { form: "account", account } }`, `{ mod:
 
 - **Runtime (herdr-app 0.1.15).** No `TextEncoder`, `Headers`,
   `AbortController` or `setTimeout`: build PKCE bytes by hand, wait with
-  `cx.sleep`. `fetch` exposes no response headers. A mod cannot listen on a
-  port, so Claude's sign-in is the paste-the-code flow. A mod may import only
-  from its own folder.
+  `cx.sleep`. `fetch` exposes no response headers, so a provider's
+  `Retry-After` cannot be honored: a failed read waits a flat 5 minutes. A mod
+  cannot listen on a port, so Claude's sign-in is the paste-the-code flow. A
+  mod may import only from its own folder.
+- **Reading too often.** Claude's usage endpoint has answered 429 to tools
+  reading it every 30 to 60 seconds, and stays refusing for minutes. Read it
+  about every 2 minutes at most (5 seconds less with the check's slack), only
+  while the account is active, and compare the share used, not the reset
+  times, to tell whether numbers moved: Claude's reset times drift by
+  milliseconds from read to read.
 - **No `crypto.subtle`.** `crypto.subtle.digest` does not work in Herdr
   0.1.15's mod runtime: its promise never settles. SHA-256 for the PKCE
   challenge is the mod's own (`logic/sha256.js`), synchronous and in plain

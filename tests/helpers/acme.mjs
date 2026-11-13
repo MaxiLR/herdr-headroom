@@ -8,6 +8,8 @@ export const MINUTE = 60 * 1000;
 export const TOKEN_URL = "https://acme.test/token";
 export const USAGE_URL = "https://acme.test/usage";
 export const LOGIN_TTL_MS = 30 * 24 * 60 * MINUTE;
+// How often an active acme account is read.
+export const ACTIVE_EVERY_MS = 2 * MINUTE;
 
 const HOME = "/home/test/.config/herdr-app";
 export const VAULT = `${HOME}/headroom/vault.json`;
@@ -70,6 +72,7 @@ function acme() {
     id: "acme",
     name: "Acme",
     loginTtlMs: LOGIN_TTL_MS,
+    activeEveryMs: ACTIVE_EVERY_MS,
     login: async () => ({ ok: false, kind: "cancelled" }),
     async read(credentials, io) {
       const { response, failed } = await call(io, USAGE_URL, {

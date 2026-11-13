@@ -8,7 +8,14 @@ its login.
 
 **Provider** — A service whose usage limits Headroom reads: `claude` (a Claude
 Pro or Max subscription) or `codex` (a ChatGPT subscription). Each is one
-adapter in `mods/headroom/providers/` with `login`, `refresh` and `read`.
+adapter in `mods/headroom/providers/` with `login`, `refresh`, `read` and
+`activeEveryMs`, how often its active accounts are read (without one, every
+5 minutes).
+
+**Active** — An account worth reading more often than every 5 minutes: an
+agent in Herdr is working, its last read changed a window's numbers, or one
+of its windows is from 75 % up to, but not at, its limit. An account that is
+not active is **idle**; one whose last read failed is read as if idle.
 
 **Window** — One usage limit of an account over a stretch of time, as the
 provider reports it: its length, the share used and when it resets. The

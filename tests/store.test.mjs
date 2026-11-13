@@ -334,16 +334,16 @@ test("an unknown provider is unexpected", async () => {
   });
 });
 
-test("tick reads again once the reading is older than 5 minutes, not before", async () => {
+test("tick reads again once the reading is 5 minutes old, give or take a few seconds, not before", async () => {
   const { host, store } = await connected();
   assert.equal(usageRequests(host).length, 1);
-  host.clock.now += 299999;
+  host.clock.now += 294000;
   await store.tick();
   assert.equal(usageRequests(host).length, 1);
-  host.clock.now += 2;
+  host.clock.now += 4000;
   await store.tick();
   assert.equal(usageRequests(host).length, 2);
-  assert.equal(published(host).accounts[0].fetchedAt, NOW + 15000 + 300001);
+  assert.equal(published(host).accounts[0].fetchedAt, NOW + 15000 + 298000);
 });
 
 test("a read already running is not started twice", async () => {
