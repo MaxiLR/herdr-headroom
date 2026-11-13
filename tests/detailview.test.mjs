@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { drawForm, texts, withId } from "./helpers/draw.mjs";
+import { drawForm, drawSource, texts, withId } from "./helpers/draw.mjs";
 import { reading, win } from "./helpers/fakes.mjs";
 
 test("the detail view draws each account and Connect account", (t) => {
@@ -543,4 +543,100 @@ test("the detail view has no account menu: the arrows, refresh, the switch and C
   }
   assert.ok(notifySwitch(lines), show(lines));
   assert.ok(texts(lines).includes("Connect account"), show(lines));
+});
+
+// The theme's hover ground, as Herdr prints it.
+function hoverColour(t) {
+  const lines = drawSource(
+    t,
+    `import { View, div } from "gpui-kit";
+import { theme } from "herdr";
+
+export default class Colours extends View {
+  render() {
+    return div().child(JSON.stringify({ hover: theme().hover }));
+  }
+}
+`,
+  );
+  return lines ? JSON.parse(texts(lines)[0]).hover : null;
+}
+
+test("each account opens its account view on a click, with the hover ground and a pointer", (t) => {
+  const hover = hoverColour(t);
+  if (hover === null) return;
+  const lines = draw(t, { readings: [maxi(), terac(), maxilr()] });
+  if (!lines) return;
+  for (const id of ["account-0", "account-1", "account-2"]) {
+    const line = withId(lines, id) ?? "";
+    assert.match(line, /:on_click\(fn\)/, `${id}\n${show(lines)}`);
+    assert.ok(
+      line.includes(`:hover(.bg[Str(${JSON.stringify(hover)})])`),
+      `${id}\n${show(lines)}`,
+    );
+    assert.match(line, /\.cursor_pointer/, `${id}\n${show(lines)}`);
+  }
+});
+
+test("inside a clickable account the arrows, dimmed ones too, and Sign in again keep their own click", (t) => {
+  const lines = draw(t, {
+    readings: [
+      maxi(),
+      terac({
+        status: "signed-out",
+        loginEndsAt: new Date(2026, 10, 9, 15, 0).getTime(),
+        windows: [],
+      }),
+      maxilr(),
+    ],
+  });
+  if (!lines) return;
+  for (const [account, controls] of [
+    ["account-0", ["account-0-up", "account-0-down"]],
+    ["account-1", ["account-1-up", "account-1-down", "account-1-sign-in"]],
+    ["account-2", ["account-2-up", "account-2-down"]],
+  ]) {
+    assert.match(withId(lines, account) ?? "", /:on_click\(fn\)/, account);
+    const within = inside(lines, account);
+    for (const id of controls) {
+      const control = within.find((line) =>
+        line.includes(`:id[Str(${JSON.stringify(id)})]`),
+      );
+      assert.ok(control, `${id} not inside ${account}\n${show(lines)}`);
+      assert.match(control, /:on_click\(fn\)/, `${id}\n${show(lines)}`);
+    }
+  }
+});
+
+test("with no accounts only Connect account, the refresh control and the switch are clickable", (t) => {
+  const lines = draw(t, { readings: [], accounts: [] });
+  if (!lines) return;
+  const clickable = lines.filter((line) =>
+    /:on_click\(fn\)|:on_change\(fn\)/.test(line),
+  );
+  assert.equal(clickable.length, 3, show(clickable));
+  assert.ok(
+    clickable.some((line) => line.includes(':id[Str("connect-account")]')),
+    show(clickable),
+  );
+  assert.ok(
+    clickable.some((line) => line.includes(':id[Str("refresh")]')),
+    show(clickable),
+  );
+  assert.ok(
+    clickable.some((line) => line.trim().startsWith('Switch "notify"')),
+    show(clickable),
+  );
+});
+
+// A dimmed arrow is disabled, so its own click never runs to stop the click;
+// it keeps the press from reaching the account instead.
+test("a dimmed arrow keeps a press from reaching its account", (t) => {
+  const lines = draw(t, { readings: [maxi(), terac(), maxilr()] });
+  if (!lines) return;
+  for (const id of ["account-0-up", "account-2-down"]) {
+    const control = withId(lines, id) ?? "";
+    assert.match(control, /:disabled\[Bool\(true\)\]/, `${id}\n${show(lines)}`);
+    assert.match(control, /:on_mouse_down_left\(fn\)/, `${id}\n${show(lines)}`);
+  }
 });
