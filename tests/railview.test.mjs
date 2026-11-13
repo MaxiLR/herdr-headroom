@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { drawForm, texts, withId } from "./helpers/draw.mjs";
+import { drawForm, texts, themeColour, withId } from "./helpers/draw.mjs";
 import { NOW, reading, win } from "./helpers/fakes.mjs";
 
 const MINUTE = 60 * 1000;
@@ -144,4 +144,38 @@ test("with no accounts the rail offers to connect one", (t) => {
     lines.join("\n"),
   );
   assert.match(connect, /:on_click/);
+});
+
+for (const props of [{}, { fit: "headroom" }]) {
+  const name = props.fit ? "with props.fit" : "without props.fit";
+  test(`${name} the rail draws a 1 px border line on its top edge`, (t) => {
+    const border = themeColour(t, "border");
+    if (border === null) return;
+    const lines = drawForm(t, "rail", { size: MAC, props, readings: THREE });
+    const all = lines.join("\n");
+    const root = withId(lines, "rail") ?? "";
+    assert.match(root, /\.border_t\[Number\(1(\.0)?\)\]/, all);
+    assert.ok(
+      root.includes(`.border_color[Str(${JSON.stringify(border)})]`),
+      all,
+    );
+  });
+}
+
+test("a fitted rail carries the handler that fits it; an unfitted one none", (t) => {
+  const fitted = drawForm(t, "rail", {
+    size: MAC,
+    props: { fit: "headroom" },
+    readings: THREE,
+  });
+  if (!fitted) return;
+  assert.ok(
+    fitted.some((line) => line.includes(":on_size_change")),
+    fitted.join("\n"),
+  );
+  const plain = drawForm(t, "rail", { size: MAC, readings: THREE });
+  assert.ok(
+    !plain.some((line) => line.includes(":on_size_change")),
+    plain.join("\n"),
+  );
 });

@@ -31,3 +31,19 @@ export function fitTo(view, needed) {
   view.host.resize(view.props.fit, px);
   view.ui.fit = px;
 }
+
+export function listRowHeight(reading, now) {
+  return 0;
+}
+
+export function railRowHeight(reading, now) {
+  return 0;
+}
+
+export function listNeeds(readings, now) {
+  return 0;
+}
+
+export function railNeeds(readings, now) {
+  return 0;
+}

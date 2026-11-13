@@ -255,3 +255,21 @@ export function drawClicking(t, form, fixture, id) {
     clicked[1]({}, cx);`,
   );
 }
+
+// The theme's colour `key` (`border`, `chrome`, …) as Herdr prints it, or
+// null (the test skipped) when `herdr-app` is not on PATH.
+export function themeColour(t, key) {
+  const lines = drawSource(
+    t,
+    `import { View, div } from "gpui-kit";
+import { theme } from "herdr";
+
+export default class Colours extends View {
+  render() {
+    return div().child(JSON.stringify(theme()[${JSON.stringify(key)}]));
+  }
+}
+`,
+  );
+  return lines ? JSON.parse(texts(lines)[0]) : null;
+}

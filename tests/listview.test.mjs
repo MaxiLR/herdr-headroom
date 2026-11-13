@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { drawForm, texts, withId } from "./helpers/draw.mjs";
+import { drawForm, texts, themeColour, withId } from "./helpers/draw.mjs";
 import { NOW, reading, win } from "./helpers/fakes.mjs";
 
 const SIZE = { width: 268, height: 300 };
@@ -399,4 +399,45 @@ test("in a short block six accounts scroll under the fixed header", (t) => {
   const header = lines.findIndex((line) => line.trim() === 'text "Limits"');
   const scroll = lines.findIndex((line) => withId([line], "accounts"));
   assert.ok(header >= 0 && header < scroll, lines.join("\n"));
+});
+
+for (const props of [{}, { fit: "headroom" }]) {
+  const name = props.fit ? "with props.fit" : "without props.fit";
+  test(`${name} the list draws a 1 px border line on its top edge`, (t) => {
+    const border = themeColour(t, "border");
+    if (border === null) return;
+    const lines = drawForm(t, "list", {
+      size: SIZE,
+      props,
+      readings: [reading()],
+    });
+    const all = lines.join("\n");
+    const root = withId(lines, "list") ?? "";
+    assert.match(root, /\.border_t\[Number\(1(\.0)?\)\]/, all);
+    assert.ok(
+      root.includes(`.border_color[Str(${JSON.stringify(border)})]`),
+      all,
+    );
+  });
+}
+
+test("a fitted list carries the handler that fits it; an unfitted one none", (t) => {
+  const fitted = drawForm(t, "list", {
+    size: SIZE,
+    props: { fit: "headroom" },
+    readings: [reading(), reading({ id: "claude:b:org", label: "b" })],
+  });
+  if (!fitted) return;
+  assert.ok(
+    fitted.some((line) => line.includes(":on_size_change")),
+    fitted.join("\n"),
+  );
+  const plain = drawForm(t, "list", {
+    size: SIZE,
+    readings: [reading(), reading({ id: "claude:b:org", label: "b" })],
+  });
+  assert.ok(
+    !plain.some((line) => line.includes(":on_size_change")),
+    plain.join("\n"),
+  );
 });
