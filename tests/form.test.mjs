@@ -81,3 +81,11 @@ test("an account form naming no account is chosen by size", () => {
     "rail",
   );
 });
+
+test("a copy given remove props is the remove dialog whatever its size", () => {
+  const props = { remove: "claude:a:b" };
+  assert.equal(chooseForm(props, null), "remove");
+  assert.equal(chooseForm(props, { width: 380, height: 160 }), "remove");
+  assert.equal(chooseForm(props, { width: 100, height: 300 }), "remove");
+  assert.equal(chooseForm(props, { width: 600, height: 30 }), "remove");
+});

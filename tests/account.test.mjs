@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   accountHeight,
   openAccount,
+  openRemove,
   removeQuestion,
 } from "../mods/headroom/logic/account.js";
 import { NOW, fakeHost, reading, win } from "./helpers/fakes.mjs";
@@ -163,4 +164,18 @@ test("the question before removing names the account and what is lost", () => {
     title: "Remove maxilr?",
     detail: "Its stored login is deleted from this computer.",
   });
+});
+
+test("openRemove asks with the mod's own 380 px dialog, not Herdr's confirm", () => {
+  const host = fakeHost();
+  openRemove({ host }, "claude:acct-maxi:org-terac");
+  assert.deepEqual(host.overlays, [
+    {
+      mod: "headroom",
+      kind: "dialog",
+      width: 380,
+      props: { remove: "claude:acct-maxi:org-terac" },
+    },
+  ]);
+  assert.ok(!host.overlays.some((spec) => spec.mod === "confirm"));
 });

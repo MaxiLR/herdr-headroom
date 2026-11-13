@@ -261,47 +261,19 @@ for (const [action, steps] of [
   });
 }
 
-const CONFIRM = {
-  mod: "confirm",
+const REMOVE_DIALOG = {
+  mod: "headroom",
   kind: "dialog",
-  props: {
-    title: "Remove maxi · Terac?",
-    detail: "Its stored login is deleted from this computer.",
-    command: { name: "headroom.remove" },
-  },
+  width: 380,
+  props: { remove: TERAC },
 };
 
-test("Remove asks first with Herdr's confirm dialog and removes nothing", (t) => {
+test("Remove asks first with the mod's own dialog and removes nothing", (t) => {
   const result = act(t, { steps: "form.askRemove(view);" });
   if (!result) return;
-  assert.deepEqual(result.calls, [["openOverlay", CONFIRM]]);
-});
-
-test("the confirmed remove removes the account asked about, once", (t) => {
-  const result = act(t, {
-    steps: `form.askRemove(view);
-    form.command("remove", view, cx);
-    form.command("remove", view, cx);`,
-  });
-  if (!result) return;
-  assert.deepEqual(result.calls, [
-    ["openOverlay", CONFIRM],
-    ["remove", TERAC],
-  ]);
-});
-
-test("a remove command with nothing waiting removes nothing", (t) => {
-  const result = act(t, { steps: `form.command("remove", view, cx);` });
-  if (!result) return;
-  assert.deepEqual(result.calls, []);
-});
-
-test("a newly opened account view disarms a remove left unanswered", (t) => {
-  const result = act(t, {
-    steps: `form.askRemove(view);
-    form.init(view, cx);
-    form.command("remove", view, cx);`,
-  });
-  if (!result) return;
-  assert.deepEqual(result.calls, [["openOverlay", CONFIRM]]);
+  const { calls } = result;
+  assert.deepEqual(calls, [["openOverlay", REMOVE_DIALOG]]);
+  const said = JSON.stringify(calls);
+  assert.ok(!said.includes('"confirm"'), said);
+  assert.ok(!said.includes("headroom.remove"), said);
 });
