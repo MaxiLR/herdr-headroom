@@ -3,11 +3,13 @@
 // age of its reading and its own refresh control, then its email and
 // organization), every window the plan has, each with its name over its bar
 // and one quiet line of numbers under it, the line about the pace mark and
-// when its login ends; its last row opens the detail view. When its account
-// is no longer connected it closes itself.
+// when its login ends; then the account's own actions (Rename, Sign in again,
+// Remove), and its last row opens the detail view. When its account is no
+// longer connected it closes itself.
 import { div, svg } from "gpui-kit";
-import { h_flex, v_flex } from "gpui-base";
-import { accountOf, accountViewOf } from "../logic/account.js";
+import { Input, InputState, h_flex, v_flex } from "gpui-base";
+import { accountOf, accountViewOf, removeQuestion } from "../logic/account.js";
+import { open as openConnect } from "./connect.js";
 import { open as openDetail } from "./detail.js";
 import { bar, levelText, mark, pair, spinner } from "./kit.js";
 
@@ -18,13 +20,134 @@ const PACE_LINE = "The line on a bar marks how much of its time has passed.";
 // The tracks of windows not read yet.
 const EMPTY = { fraction: 0, level: "normal", pace: null };
 
+// The account a Remove is waiting on Herdr's confirm dialog for, or null.
+// Herdr hands the confirmed command to the shown copies of the mod, not to
+// the one that asked, and maybe to several; module code is shared by every
+// copy, so whichever copy hears it first takes the account, once.
+let pending = null;
+
+// This copy's view, plain data: `renaming` while the label is its field,
+// `refreshing` while this account is read, `closed` once the popup is asked
+// to close.
+function stateOf(view) {
+  return (view.ui.account ??= {});
+}
+
+// What is not plain data: the rename's field and the account it is for.
+function liveOf(view) {
+  return (view.ui.accountLive ??= { input: null, id: null, focused: false });
+}
+
+/**
+ * A newly opened account view: a Remove left unanswered asks nothing any
+ * more; the field of a rename given as data is made; a view of an account no
+ * longer connected closes. Nothing in a copy that is not an account view.
+ */
 export function init(view, cx) {
-  if (view.form === "account" && accountOf(view) === null) closeOnce(view);
+  if (view.form !== "account") return;
+  pending = null;
+  if (accountOf(view) === null) closeOnce(view);
+  else if (stateOf(view).renaming && renameInput(view) === null) {
+    startRename(view, cx);
+  }
+}
+
+/** A `headroom.<name>` command: `remove` removes the account waiting for it. */
+export function command(name, view, _cx) {
+  if (name !== "remove" || pending === null) return;
+  const id = pending;
+  pending = null;
+  view.store.remove(id);
+}
+
+/** Rename: the label in the header becomes its field, its text selected. */
+export function startRename(view, _cx) {
+  const reading = accountOf(view);
+  if (reading === null) return;
+  const live = liveOf(view);
+  if (renameInput(view) !== null) {
+    live.input.focus();
+    return;
+  }
+  const input = InputState.new({ value: reading.label });
+  input.set_selected_range({ start: 0, end: reading.label.length });
+  input.on("submit", (_event, cx) => {
+    submitRename(view);
+    cx.notify();
+  });
+  input.on("focus", (_event, cx) => {
+    live.focused = true;
+    cx.notify();
+  });
+  input.on("blur", (_event, cx) => {
+    live.focused = false;
+    cx.notify();
+  });
+  live.input = input;
+  live.id = reading.id;
+  live.focused = true;
+  stateOf(view).renaming = true;
+  input.focus();
+}
+
+/** The label's field while this account is renamed, else null. */
+export function renameInput(view) {
+  const live = liveOf(view);
+  if (!stateOf(view).renaming || live.id !== view.props.account) return null;
+  return live.input;
+}
+
+/** Enter in the field: the account takes the field's text as its label. */
+export function submitRename(view) {
+  const input = renameInput(view);
+  if (input === null) return;
+  const id = liveOf(view).id;
+  const text = input.value();
+  endRename(view);
+  view.store.rename(id, text);
+}
+
+/** Esc in the field: the label stays as it was. */
+export function cancelRename(view) {
+  endRename(view);
+}
+
+function endRename(view) {
+  const live = liveOf(view);
+  live.input = null;
+  live.id = null;
+  live.focused = false;
+  stateOf(view).renaming = false;
+}
+
+/** Sign in again: the connect dialog, this account's provider chosen. */
+export function signInAgain(view) {
+  const reading = accountOf(view);
+  if (reading === null) return;
+  openConnect(view, { provider: reading.provider, account: reading.id });
+}
+
+/**
+ * Remove asks first, with Herdr's own confirm dialog; the dialog's command
+ * comes back to `command` once confirmed.
+ */
+export function askRemove(view) {
+  const reading = accountOf(view);
+  if (reading === null) return;
+  pending = reading.id;
+  view.host.openOverlay({
+    mod: "confirm",
+    kind: "dialog",
+    props: {
+      ...removeQuestion(reading.label),
+      command: { name: "headroom.remove" },
+    },
+  });
 }
 
 // Closes the popup, once; a pane or a block has no overlay to close.
 function closeOnce(view) {
-  const state = (view.ui.account ??= {});
+  const state = stateOf(view);
   if (state.closed || !view.props.overlay) return;
   state.closed = true;
   view.host.closeOverlay(view.props.overlay);
@@ -32,7 +155,7 @@ function closeOnce(view) {
 
 /** Reads this account now; the control is Herdr's spinner until it is done. */
 export function refresh(view, cx) {
-  const state = (view.ui.account ??= {});
+  const state = stateOf(view);
   const reading = accountOf(view);
   if (state.refreshing || reading === null) return;
   state.refreshing = true;
@@ -48,11 +171,13 @@ export function refresh(view, cx) {
   });
 }
 
-// The mark, the label and the plan on one 26 px line; on the right the age
-// of the reading and the refresh control.
+// The mark, the label and the plan on one 26 px line (while renamed, the
+// label's field and no plan); on the right the age of the reading and the
+// refresh control.
 function header(reading, shown, view) {
   const t = view.theme;
   const turning = view.ui.account?.refreshing === true || shown.empty;
+  const input = renameInput(view);
   return h_flex()
     .h(26)
     .mt(12)
@@ -63,30 +188,9 @@ function header(reading, shown, view) {
     .items_center()
     .child(mark(reading.provider, 16))
     .child(
-      h_flex()
-        .flex_1()
-        .min_w(0)
-        .gap(8)
-        .items_baseline()
-        .child(
-          div()
-            .min_w(0)
-            .truncate()
-            .role("heading")
-            .text_size(14)
-            .font_semibold()
-            .text_color(shown.state === "signed-out" ? t.muted : t.foreground)
-            .child(reading.label),
-        )
-        .when(shown.plan !== null, (el) =>
-          el.child(
-            div()
-              .flex_none()
-              .text_size(12)
-              .text_color(t.muted)
-              .child(shown.plan),
-          ),
-        ),
+      input !== null
+        ? renameField(reading, input, view)
+        : title(reading, shown, t),
     )
     .when(shown.age !== null, (el) =>
       el.child(
@@ -118,6 +222,30 @@ function header(reading, shown, view) {
             ? spinner(14, t)
             : svg(REFRESH).size(14).flex_none().text_color(t.muted),
         ),
+    );
+}
+
+// The label and the plan, on one baseline.
+function title(reading, shown, t) {
+  return h_flex()
+    .flex_1()
+    .min_w(0)
+    .gap(8)
+    .items_baseline()
+    .child(
+      div()
+        .min_w(0)
+        .truncate()
+        .role("heading")
+        .text_size(14)
+        .font_semibold()
+        .text_color(shown.state === "signed-out" ? t.muted : t.foreground)
+        .child(reading.label),
+    )
+    .when(shown.plan !== null, (el) =>
+      el.child(
+        div().flex_none().text_size(12).text_color(t.muted).child(shown.plan),
+      ),
     );
 }
 
@@ -265,6 +393,90 @@ function loginLine(login, t) {
     .child(login.text);
 }
 
+// The label's field: Enter renames, Esc leaves the label as it was.
+function renameField(reading, input, view) {
+  const t = view.theme;
+  return div()
+    .flex_1()
+    .min_w(0)
+    .on_key_down((event, cx) => {
+      if (event.key !== "escape") return;
+      cancelRename(view);
+      cx.stop_propagation();
+      cx.notify();
+    })
+    .child(
+      Input.new(input)
+        .accessibility_label(`Name of ${reading.label}`)
+        .h(24)
+        .px(6)
+        .rounded(6)
+        .border_1()
+        .border_color(liveOf(view).focused ? t.accent : t.input)
+        .bg(t.background)
+        .text_size(13)
+        .text_color(t.foreground),
+    );
+}
+
+// The account's own actions, one row of buttons that may wrap: Rename, Sign
+// in again (the solid one for an account that must sign in again) and
+// Remove, set apart at the right in the critical text colour.
+function actions(shown, view) {
+  const t = view.theme;
+  const signedOut = shown.state === "signed-out";
+  return h_flex()
+    .id("account-actions")
+    .flex_none()
+    .flex_wrap()
+    .px(16)
+    .py(12)
+    .gap(8)
+    .items_center()
+    .border_t(1)
+    .border_color(t.border)
+    .child(
+      action("rename", "Rename", t).on_click((_event, cx) => {
+        startRename(view, cx);
+        cx.notify();
+      }),
+    )
+    .child(
+      action("sign-in", "Sign in again", t, { solid: signedOut }).on_click(() =>
+        signInAgain(view),
+      ),
+    )
+    .child(
+      action("remove", "Remove", t, { color: levelText("critical", t) })
+        .ml_auto()
+        .on_click(() => askRemove(view)),
+    );
+}
+
+// A 30 px button, as Connect account is in the detail view, its text in
+// `color`; `solid` makes it the one thing to do.
+function action(id, text, t, { solid = false, color = t.foreground } = {}) {
+  return div()
+    .id(id)
+    .role("button")
+    .flex_none()
+    .h(30)
+    .px(12)
+    .flex()
+    .items_center()
+    .rounded(8)
+    .border_1()
+    .border_color(solid ? t.solid : t.input)
+    .bg(solid ? t.solid : t.raised)
+    .text_size(12.5)
+    .font_medium()
+    .text_color(solid ? t.solid_foreground : color)
+    .whitespace_nowrap()
+    .cursor_pointer()
+    .hover((s) => (solid ? s.opacity(0.88) : s.bg(t.selected)))
+    .child(text);
+}
+
 // The way to the detail view, which the rail and the strip have no other way
 // to reach. It carries the list header's control's name: it opens the same
 // view.
@@ -327,15 +539,6 @@ export function render(view, cx) {
           el.child(loginLine(shown.login, t)),
         ),
     )
+    .child(actions(shown, view))
     .child(detailRow(view));
 }
-
-export function command(_name, _view, _cx) {}
-export function startRename(_view, _cx) {}
-export function renameInput(_view) {
-  return null;
-}
-export function submitRename(_view) {}
-export function cancelRename(_view) {}
-export function signInAgain(_view) {}
-export function askRemove(_view) {}

@@ -1,6 +1,6 @@
-// The account view's logic: the reading it shows, what it draws of it and the
-// popup that opens it. Kept apart from `ui/account.js` so any form can open
-// the view without importing it.
+// The account view's logic: the reading it shows, what it draws of it, the
+// question asked before it is removed and the popup that opens it. Kept apart
+// from `ui/account.js` so any form can open the view without importing it.
 
 import { ageText, clockText, OPEN_MAX, windowsInOrder } from "./detail.js";
 import { levelOf } from "./levels.js";
@@ -30,6 +30,8 @@ export const HEIGHTS = {
   login: 28,
   // Below the last of these.
   bottom: 15,
+  // The 1 px rule and the row of 30 px buttons, 12 above and below.
+  actions: 55,
   // The 1 px rule and the 38 px row that opens the detail view.
   detail: 39,
   // The popup's frame.
@@ -137,7 +139,12 @@ function windowOf(window, now, failed) {
  * `OPEN_MAX`; `account` adds its email line.
  */
 export function accountHeight(reading, account) {
-  let px = HEIGHTS.header + HEIGHTS.bottom + HEIGHTS.detail + HEIGHTS.frame;
+  let px =
+    HEIGHTS.header +
+    HEIGHTS.bottom +
+    HEIGHTS.actions +
+    HEIGHTS.detail +
+    HEIGHTS.frame;
   if (reading) {
     const shape = shapeOf(reading, account);
     if (shape.who.length > 0) px += HEIGHTS.who;
@@ -164,6 +171,10 @@ export function openAccount(view, id) {
   });
 }
 
-export function removeQuestion(_label) {
-  return null;
+/** What the confirm dialog asks before the account `label` is removed. */
+export function removeQuestion(label) {
+  return {
+    title: `Remove ${label}?`,
+    detail: "Its stored login is deleted from this computer.",
+  };
 }
