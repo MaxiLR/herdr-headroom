@@ -8,7 +8,12 @@
 // no longer connected it closes itself.
 import { div, svg } from "gpui-kit";
 import { Input, InputState, h_flex, v_flex } from "gpui-base";
-import { accountOf, accountViewOf, removeQuestion } from "../logic/account.js";
+import {
+  accountHeight,
+  accountOf,
+  accountViewOf,
+  removeQuestion,
+} from "../logic/account.js";
 import { open as openConnect } from "./connect.js";
 import { open as openDetail } from "./detail.js";
 import { bar, levelText, mark, pair, spinner } from "./kit.js";
@@ -504,17 +509,27 @@ function detailRow(view) {
 
 export function render(view, cx) {
   const t = view.theme;
-  const ground = v_flex().id("account-view").size_full().min_h(0).bg(t.popover);
   const reading = accountOf(view);
+  const account =
+    reading === null
+      ? undefined
+      : view.store.accounts().find((entry) => entry.id === reading.id);
+  // As a popup the root is as tall as its opener asked Herdr for: Herdr sizes
+  // a popup to its content. As a pane or a block it fills its place.
+  const root = v_flex().id("account-view");
+  const ground = (
+    view.props.overlay
+      ? root.w_full().h(accountHeight(reading, account))
+      : root.size_full()
+  )
+    .min_h(0)
+    .bg(t.popover);
   // The account went away after the view opened: this draw is the first
   // code to see it.
   if (reading === null) {
     closeOnce(view);
     return ground;
   }
-  const account = view.store
-    .accounts()
-    .find((entry) => entry.id === reading.id);
   const shown = accountViewOf(reading, account, view.now);
   return ground
     .text_size(13)

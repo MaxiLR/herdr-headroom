@@ -493,8 +493,14 @@ function footer(view) {
 export function render(view, cx) {
   const t = view.theme;
   const accounts = view.store.accounts();
-  return v_flex()
-    .size_full()
+  // As a popup the root is as tall as its opener asked Herdr for: Herdr sizes
+  // a popup to its content. As a pane or a block it fills its place.
+  const root = v_flex().id("detail-view");
+  return (
+    view.props.overlay
+      ? root.w_full().h(openHeight(view.readings, accounts))
+      : root.size_full()
+  )
     .min_h(0)
     .bg(t.popover)
     .text_size(13)
