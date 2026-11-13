@@ -7,7 +7,6 @@ import {
   closeOverlay,
   exec,
   layout,
-  nextCommand,
   notify,
   openOverlay,
   props,
@@ -28,9 +27,10 @@ import * as connect from "./ui/connect.js";
 import * as detail from "./ui/detail.js";
 import * as list from "./ui/list.js";
 import * as rail from "./ui/rail.js";
+import * as remove from "./ui/remove.js";
 import * as strip from "./ui/strip.js";
 
-const FORMS = { list, rail, strip, account, detail, connect };
+const FORMS = { list, rail, strip, account, detail, connect, remove };
 const MODULES = Object.values(FORMS);
 
 // Countdowns are in minutes; the store reads the accounts that are due.
@@ -70,14 +70,6 @@ export default class Headroom extends View {
       cx.spawn(async () => {
         await this.store.tick();
       });
-    });
-    cx.spawn(async (cx) => {
-      for (;;) {
-        const name = await nextCommand();
-        const view = this.view();
-        for (const module of MODULES) module.command?.(name, view, cx);
-        cx.notify();
-      }
     });
   }
 

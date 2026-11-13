@@ -13,7 +13,7 @@ import {
   accountHeight,
   accountOf,
   accountViewOf,
-  removeQuestion,
+  openRemove,
 } from "../logic/account.js";
 import { open as openConnect } from "./connect.js";
 import { open as openDetail } from "./detail.js";
@@ -25,12 +25,6 @@ const PACE_LINE = "The line on a bar marks how much of its time has passed.";
 
 // The tracks of windows not read yet.
 const EMPTY = { fraction: 0, level: "normal", pace: null };
-
-// The account a Remove is waiting on Herdr's confirm dialog for, or null.
-// Herdr hands the confirmed command to the shown copies of the mod, not to
-// the one that asked, and maybe to several; module code is shared by every
-// copy, so whichever copy hears it first takes the account, once.
-let pending = null;
 
 // This copy's view, plain data: `renaming` while the label is its field,
 // `refreshing` while this account is read, `closed` once the popup is asked
@@ -45,25 +39,16 @@ function liveOf(view) {
 }
 
 /**
- * A newly opened account view: a Remove left unanswered asks nothing any
- * more; the field of a rename given as data is made; a view of an account no
- * longer connected closes. Nothing in a copy that is not an account view.
+ * A newly opened account view: the field of a rename given as data is made;
+ * a view of an account no longer connected closes. Nothing in a copy that is
+ * not an account view.
  */
 export function init(view, cx) {
   if (view.form !== "account") return;
-  pending = null;
   if (accountOf(view) === null) closeOnce(view);
   else if (stateOf(view).renaming && renameInput(view) === null) {
     startRename(view, cx);
   }
-}
-
-/** A `headroom.<name>` command: `remove` removes the account waiting for it. */
-export function command(name, view, _cx) {
-  if (name !== "remove" || pending === null) return;
-  const id = pending;
-  pending = null;
-  view.store.remove(id);
 }
 
 /** Rename: the label in the header becomes its field, its text selected. */
@@ -138,21 +123,13 @@ export function signInAgain(view) {
 }
 
 /**
- * Remove asks first, with Herdr's own confirm dialog; the dialog's command
- * comes back to `command` once confirmed.
+ * Remove asks first, with the mod's own dialog over this view; the dialog
+ * removes the account, and this view closes once it is gone.
  */
 export function askRemove(view) {
   const reading = accountOf(view);
   if (reading === null) return;
-  pending = reading.id;
-  view.host.openOverlay({
-    mod: "confirm",
-    kind: "dialog",
-    props: {
-      ...removeQuestion(reading.label),
-      command: { name: "headroom.remove" },
-    },
-  });
+  openRemove(view, reading.id);
 }
 
 // Closes the popup, once; a pane or a block has no overlay to close.
