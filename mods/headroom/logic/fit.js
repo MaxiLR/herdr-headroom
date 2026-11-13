@@ -106,13 +106,29 @@ export function fitHeight(needed, last) {
 }
 
 /**
+ * The shared value that remembers the height last asked for each fitted block:
+ * `{ [layout name]: { [block id]: px } }`. Herdr keeps it across restarts, so a
+ * new copy of the mod does not fit a block again, and undo a drag, until the
+ * height its accounts need changes.
+ */
+export const FIT_KEY = "headroom.fit";
+
+/**
  * Resizes the layout block named by `view.props.fit` to `needed`, once per
- * height. Call it from an event handler (`on_size_change`), never in render.
+ * height for that block in the shown layout (`shared("layout")`). Call it from
+ * an event handler (`on_size_change`), never in render.
  */
 export function fitTo(view, needed) {
-  if (!view.props.fit) return;
-  const px = fitHeight(needed, view.ui.fit);
+  const block = view.props.fit;
+  if (!block) return;
+  const { host } = view;
+  const layout = host.shared("layout") ?? "";
+  const remembered = host.shared(FIT_KEY) ?? {};
+  const px = fitHeight(needed, remembered[layout]?.[block]);
   if (px === null) return;
-  view.host.resize(view.props.fit, px);
-  view.ui.fit = px;
+  host.resize(block, px);
+  host.setShared(FIT_KEY, {
+    ...remembered,
+    [layout]: { ...remembered[layout], [block]: px },
+  });
 }

@@ -119,6 +119,13 @@ your own layout, `props.fit` makes the block as tall as its accounts need:
 }
 ```
 
+The mod remembers the height it last asked for, per layout and block, in
+`headroom.fit`, and fits the block again only when the height its accounts
+need changes: an account connected or removed, or one gaining or losing a bar.
+A boundary you drag stays where you put it, across restarts too, until then.
+Folding the sidebar turns the list into the rail, which needs another height,
+so the block is fitted again and a dragged size is lost.
+
 `mod.json` is `{ "place": "none" }`: Herdr docks no copy by itself; the mod
 appears only where a layout puts it.
 
@@ -335,6 +342,8 @@ when an account is connected, read or refreshed.
     or anything else means on.
   - `headroom.notified`: `{ "version": 1, "keys": [...] }`, the toasts already
     posted, each `<account id>|<window id>|<reset time>|<90 or limit>`.
+  - `headroom.fit`: `{ "<layout name>": { "<block id>": <px> } }`, the height
+    last asked for each block given `props.fit`.
 
   No token or email is in shared state. The label is the only personal text
   there; the ids are made of the provider's own account and organization ids.
