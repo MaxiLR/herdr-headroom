@@ -38,7 +38,7 @@ test("a pair row has both bars and the weekly numbers left of the 5-hour ones", 
     left: { word: null, parts: ["41%", "4d 6h"], level: "normal" },
     right: { word: "5-hour", parts: ["62%", "1h 48m"], level: "normal" },
   });
-  assert.deepEqual(row.models, []);
+  assert.equal("models" in row, false);
 });
 
 test("below 220 px the 5-hour numbers lose their word", () => {
@@ -127,41 +127,25 @@ test("at its limit the numbers become At limit and the time left", () => {
   });
 });
 
-test("a per-model window more used than weekly gets its own bar and numbers", () => {
+test("a per-model window ahead of weekly is neither a bar nor spoken", () => {
   const row = listRowOf(
     reading({
       windows: [
         win("7d", 0.41, WEEKLY_RESET),
-        win("5h", 0.62, SHORT_RESET),
-        win("7d:opus", 0.67, WEEKLY_RESET, { label: "Weekly · Opus" }),
+        win("5h", 0.3, SHORT_RESET),
+        win("7d:fable", 0.67, WEEKLY_RESET, { label: "Weekly · Fable" }),
       ],
     }),
     NOW,
     WIDE,
   );
-  assert.equal(row.models.length, 1);
-  assert.equal(row.models[0].bar.fraction, 0.67);
-  near(row.models[0].bar.pace, 66 / 168);
-  assert.deepEqual(row.models[0].numbers, {
-    word: "Opus",
-    parts: ["67%", "4d 6h"],
-    level: "normal",
-  });
-});
-
-test("a per-model window less used than weekly is not on the row", () => {
-  const row = listRowOf(
-    reading({
-      windows: [
-        win("7d", 0.41, WEEKLY_RESET),
-        win("5h", 0.62, SHORT_RESET),
-        win("7d:opus", 0.18, WEEKLY_RESET, { label: "Weekly · Opus" }),
-      ],
-    }),
-    NOW,
-    WIDE,
+  assert.equal("models" in row, false);
+  assert.equal(row.pair.full.fraction, 0.41);
+  assert.equal(row.pair.short.fraction, 0.3);
+  assert.equal(
+    row.spoken,
+    "maxi, Weekly 41% used, resets in 4d 6h, 5-hour 30% used, resets in 1h 48m",
   );
-  assert.deepEqual(row.models, []);
 });
 
 test("a window that has not started has no pace and says not started", () => {
@@ -242,7 +226,7 @@ test("signed out: Sign in again, when the login ended, no bars and no numbers", 
   assert.equal(row.ended, "Login ended Nov 9");
   assert.equal(row.pair, null);
   assert.equal(row.numbers, null);
-  assert.deepEqual(row.models, []);
+  assert.equal("models" in row, false);
 });
 
 test("a login ending within 3 days is said on the label line in the high tone", () => {
@@ -267,5 +251,134 @@ test("a row is spoken with its label, each window's use and its reset", () => {
       WIDE,
     ).spoken,
     "maxi, Sign in again, Login ended Nov 9",
+  );
+});
+
+// Fable, a per-model weekly window, at its limit.
+const fableAtLimit = () => win("7d:fable", 1, WEEKLY_RESET, { atLimit: true });
+const withFable = (windows = reading().windows) =>
+  reading({ windows: [...windows, fableAtLimit()] });
+
+test("a reached per-model limit takes the place of the week's reset time", () => {
+  const row = listRowOf(withFable(), NOW, WIDE);
+  assert.equal(row.limitWords, "Fable at limit");
+  assert.deepEqual(row.numbers, {
+    left: { word: null, parts: ["41%"], level: "normal" },
+    right: { word: "5-hour", parts: ["62%", "1h 48m"], level: "normal" },
+  });
+  assert.doesNotMatch(row.numbers.left.parts.join(" "), /4d 6h/);
+  assert.deepEqual(Object.keys(row.pair).sort(), ["full", "short"]);
+  assert.equal(row.pair.full.fraction, 0.41);
+});
+
+test("below 220 px the 5-hour numbers also lose their reset time beside the words", () => {
+  const row = listRowOf(withFable(), NOW, 200);
+  assert.equal(row.limitWords, "Fable at limit");
+  assert.deepEqual(row.numbers, {
+    left: { word: null, parts: ["41%"], level: "normal" },
+    right: { word: null, parts: ["62%"], level: "normal" },
+  });
+});
+
+test("two models at their limit are counted", () => {
+  const row = listRowOf(
+    reading({
+      windows: [
+        ...reading().windows,
+        fableAtLimit(),
+        win("7d:opus", 1, WEEKLY_RESET, { atLimit: true }),
+      ],
+    }),
+    NOW,
+    WIDE,
+  );
+  assert.equal(row.limitWords, "2 models at limit");
+  assert.deepEqual(row.numbers.left.parts, ["41%"]);
+});
+
+test("weekly only with a reached model reads its percent and the words", () => {
+  const row = listRowOf(
+    withFable([win("7d", 0.23, NOW + 5 * DAY + 2 * HOUR)]),
+    NOW,
+    WIDE,
+  );
+  assert.equal(row.limitWords, "Fable at limit");
+  assert.deepEqual(row.numbers, {
+    left: { word: null, parts: ["23%"], level: "normal" },
+    right: null,
+  });
+});
+
+test("the 5-hour side at its limit is unchanged beside the words", () => {
+  const row = listRowOf(
+    withFable([
+      win("7d", 0.41, WEEKLY_RESET),
+      win("5h", 1, SHORT_RESET, { atLimit: true }),
+    ]),
+    NOW,
+    WIDE,
+  );
+  assert.equal(row.limitWords, "Fable at limit");
+  assert.deepEqual(row.numbers.right, {
+    word: "5-hour",
+    parts: ["At limit", "1h 48m"],
+    level: "limit",
+  });
+});
+
+test("with the weekly window at its limit the row says At limit and no words", () => {
+  const row = listRowOf(
+    withFable([
+      win("7d", 1, WEEKLY_RESET, { atLimit: true }),
+      win("5h", 0.62, SHORT_RESET),
+    ]),
+    NOW,
+    WIDE,
+  );
+  assert.equal(row.limitWords, null);
+  assert.deepEqual(row.numbers.left, {
+    word: null,
+    parts: ["At limit", "4d 6h"],
+    level: "limit",
+  });
+  assert.doesNotMatch(row.spoken, /Fable/);
+});
+
+test("a failed read says nothing of a reached model", () => {
+  const row = listRowOf(
+    reading({
+      status: "stale",
+      fetchedAt: NOW - 12 * MINUTE,
+      error: "network",
+      windows: [...reading().windows, fableAtLimit()],
+    }),
+    NOW,
+    WIDE,
+  );
+  assert.equal(row.limitWords, null);
+  assert.deepEqual(row.numbers.left.parts, ["41%"]);
+  assert.doesNotMatch(row.spoken, /Fable/);
+});
+
+test("a row without a reached model has no words", () => {
+  assert.equal(listRowOf(reading(), NOW, WIDE).limitWords, null);
+});
+
+test("the spoken name keeps the week's reset time and ends with the words", () => {
+  assert.equal(
+    listRowOf(withFable(), NOW, WIDE).spoken,
+    "maxi, Weekly 41% used, resets in 4d 6h, 5-hour 62% used, resets in 1h 48m, Fable at limit",
+  );
+  assert.match(listRowOf(withFable(), NOW, WIDE).spoken, /, Fable at limit$/);
+  assert.match(
+    listRowOf(
+      reading({
+        loginEndsAt: NOW + 2 * DAY,
+        windows: [...reading().windows, fableAtLimit()],
+      }),
+      NOW,
+      WIDE,
+    ).spoken,
+    /Login ends in 2 days, Fable at limit$/,
   );
 });

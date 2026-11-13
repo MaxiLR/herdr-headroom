@@ -22,6 +22,8 @@ export function createHost(api) {
     notify: ({ title, body, level }) => api.notify({ title, body, level }),
     layout: () => api.layout(),
     resize: (id, px) => api.run("layout.resize", { id, px }),
+    show: (id) => api.run("layout.show", { id }),
+    hide: (id) => api.run("layout.hide", { id }),
     openOverlay: (spec) => api.openOverlay(spec),
     closeOverlay: (id) => api.closeOverlay(id),
     // Whether an agent in Herdr is working: usage is being spent.

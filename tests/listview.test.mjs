@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { drawForm, texts, withId } from "./helpers/draw.mjs";
+import { drawForm, texts, themeColour, withId } from "./helpers/draw.mjs";
 import { NOW, reading, win } from "./helpers/fakes.mjs";
 
 const SIZE = { width: 268, height: 300 };
@@ -180,7 +180,7 @@ test("at its limit the numbers read At limit and the time left", (t) => {
   assert.doesNotMatch(all, /97%/);
 });
 
-test("a per-model window ahead of weekly gets a bar and numbers of its own", (t) => {
+test("a per-model window ahead of weekly is not on the row", (t) => {
   const lines = drawForm(t, "list", {
     size: SIZE,
     readings: [
@@ -194,9 +194,8 @@ test("a per-model window ahead of weekly gets a bar and numbers of its own", (t)
     ],
   });
   if (!lines) return;
-  assert.match(sentence(lines), /Opus 67% · 4d 6h/, lines.join("\n"));
-  assert.ok(withId(lines, "account-0-model-0"), lines.join("\n"));
-  assert.ok(withId(lines, "account-0-model-0-pace"), lines.join("\n"));
+  assert.doesNotMatch(sentence(lines), /Opus|67%/, lines.join("\n"));
+  assert.equal(withId(lines, "account-0-model-0"), undefined);
 });
 
 test("a per-model window behind weekly is not on the row", (t) => {
@@ -400,4 +399,166 @@ test("in a short block six accounts scroll under the fixed header", (t) => {
   const header = lines.findIndex((line) => line.trim() === 'text "Limits"');
   const scroll = lines.findIndex((line) => withId([line], "accounts"));
   assert.ok(header >= 0 && header < scroll, lines.join("\n"));
+});
+
+for (const props of [{}, { fit: "headroom" }]) {
+  const name = props.fit ? "with props.fit" : "without props.fit";
+  test(`${name} the list draws a 1 px border line on its top edge`, (t) => {
+    const border = themeColour(t, "border");
+    if (border === null) return;
+    const lines = drawForm(t, "list", {
+      size: SIZE,
+      props,
+      readings: [reading()],
+    });
+    const all = lines.join("\n");
+    const root = withId(lines, "list") ?? "";
+    assert.match(root, /\.border_t\[Number\(1(\.0)?\)\]/, all);
+    assert.ok(
+      root.includes(`.border_color[Str(${JSON.stringify(border)})]`),
+      all,
+    );
+  });
+}
+
+test("a fitted list carries the handler that fits it; an unfitted one none", (t) => {
+  const fitted = drawForm(t, "list", {
+    size: SIZE,
+    props: { fit: "headroom" },
+    readings: [reading(), reading({ id: "claude:b:org", label: "b" })],
+  });
+  if (!fitted) return;
+  assert.ok(
+    fitted.some((line) => line.includes(":on_size_change")),
+    fitted.join("\n"),
+  );
+  const plain = drawForm(t, "list", {
+    size: SIZE,
+    readings: [reading(), reading({ id: "claude:b:org", label: "b" })],
+  });
+  assert.ok(
+    !plain.some((line) => line.includes(":on_size_change")),
+    plain.join("\n"),
+  );
+});
+
+// Fable, a per-model weekly window, at its limit.
+const fableAtLimit = () => win("7d:fable", 1, WEEKLY_RESET, { atLimit: true });
+
+// The colour the drawn `text` is given by the element around it.
+function colourOf(lines, text) {
+  const at = lines.findIndex(
+    (line) => line.trim() === `text ${JSON.stringify(text)}`,
+  );
+  return lines[at - 1]?.match(/\.text_color\[Str\("([^"]*)"\)\]/)?.[1];
+}
+
+test("a reached per-model limit is said in place of the week's reset time", (t) => {
+  const lines = drawForm(t, "list", {
+    size: SIZE,
+    readings: [reading({ windows: [...reading().windows, fableAtLimit()] })],
+  });
+  if (!lines) return;
+  const all = sentence(lines);
+  assert.match(all, /41% · Fable at limit/, lines.join("\n"));
+  assert.doesNotMatch(all, /4d 6h/, lines.join("\n"));
+  assert.match(all, /5-hour 62% · 1h 48m/, lines.join("\n"));
+  assert.deepEqual(
+    ids(lines).filter((id) => /^account-0-(full|short|model)/.test(id)),
+    [
+      "account-0-full",
+      "account-0-full-fill",
+      "account-0-full-pace",
+      "account-0-short",
+      "account-0-short-fill",
+      "account-0-short-pace",
+    ],
+  );
+  assert.match(
+    withId(lines, "account-0") ?? "",
+    /:accessibility_label\[Str\("maxi, Weekly 41% used, resets in 4d 6h, 5-hour 62% used, resets in 1h 48m, Fable at limit"\)\]/,
+  );
+});
+
+test("the words take the critical text colour", (t) => {
+  const lines = drawForm(t, "list", {
+    size: SIZE,
+    readings: [
+      reading({
+        windows: [
+          win("7d", 0.41, WEEKLY_RESET),
+          win("5h", 0.91, SHORT_RESET),
+          fableAtLimit(),
+        ],
+      }),
+    ],
+  });
+  if (!lines) return;
+  const critical = colourOf(lines, "91%");
+  assert.ok(critical, lines.join("\n"));
+  assert.equal(colourOf(lines, "Fable at limit"), critical, lines.join("\n"));
+  assert.notEqual(colourOf(lines, "41%"), critical);
+});
+
+test("two reached models are said as a count", (t) => {
+  const lines = drawForm(t, "list", {
+    size: SIZE,
+    readings: [
+      reading({
+        windows: [
+          ...reading().windows,
+          fableAtLimit(),
+          win("7d:opus", 1, WEEKLY_RESET, { atLimit: true }),
+        ],
+      }),
+    ],
+  });
+  if (!lines) return;
+  assert.match(sentence(lines), /41% · 2 models at limit/, lines.join("\n"));
+});
+
+test("at 200 px the 5-hour numbers keep only their percent beside the words", (t) => {
+  const lines = drawForm(t, "list", {
+    size: { width: 200, height: 300 },
+    readings: [reading({ windows: [...reading().windows, fableAtLimit()] })],
+  });
+  if (!lines) return;
+  const all = sentence(lines);
+  assert.match(all, /41% · Fable at limit 62%/, lines.join("\n"));
+  assert.doesNotMatch(all, /1h 48m|4d 6h|5-hour/, lines.join("\n"));
+});
+
+test("weekly only with a reached model reads its percent and the words", (t) => {
+  const lines = drawForm(t, "list", {
+    size: SIZE,
+    readings: [
+      reading({
+        provider: "codex",
+        windows: [win("7d", 0.23, NOW + 5 * DAY + 2 * HOUR), fableAtLimit()],
+      }),
+    ],
+  });
+  if (!lines) return;
+  const all = sentence(lines);
+  assert.match(all, /23% · Fable at limit/, lines.join("\n"));
+  assert.doesNotMatch(all, /resets in|5d 2h/, lines.join("\n"));
+});
+
+test("with the weekly window at its limit the words are not drawn", (t) => {
+  const lines = drawForm(t, "list", {
+    size: SIZE,
+    readings: [
+      reading({
+        windows: [
+          win("7d", 1, WEEKLY_RESET, { atLimit: true }),
+          win("5h", 0.62, SHORT_RESET),
+          fableAtLimit(),
+        ],
+      }),
+    ],
+  });
+  if (!lines) return;
+  const all = sentence(lines);
+  assert.match(all, /At limit · 4d 6h/, lines.join("\n"));
+  assert.doesNotMatch(all, /Fable/, lines.join("\n"));
 });

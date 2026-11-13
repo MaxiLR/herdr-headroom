@@ -74,6 +74,8 @@ export default class Draw extends View {
       notify: nothing,
       layout: () => fixture.layout ?? null,
       resize: nothing,
+      show: nothing,
+      hide: nothing,
       openOverlay: nothing,
       closeOverlay: nothing,
       openUrl: nothing,
@@ -128,7 +130,7 @@ export function withId(lines, id) {
 // `[name, ...args]` for each call to the store's `refresh`, `rename`, `move`
 // and `remove` (each resolves `{ ok: true }`) and to the host's
 // `openOverlay` (it returns "overlay-2"), `closeOverlay`, `setShared`,
-// `resize` and `openUrl` (it resolves true), in order, read after the form's `render` has run;
+// `resize`, `show`, `hide` and `openUrl` (it resolves true), in order, read after the form's `render` has run;
 // `lines` are the form's own drawn lines.
 export function drawActing(t, form, fixture = {}, steps = "") {
   const lines = drawSource(
@@ -176,6 +178,8 @@ export default class Acting extends View {
       notify: nothing,
       layout: () => fixture.layout ?? null,
       resize: record("resize", null),
+      show: record("show", null),
+      hide: record("hide", null),
       openOverlay: record("openOverlay", "overlay-2"),
       closeOverlay: record("closeOverlay", null),
       openUrl: async (...args) => record("openUrl", true)(...args),
@@ -254,4 +258,22 @@ export function drawClicking(t, form, fixture, id) {
     if (clicked === undefined) throw new Error("no click on " + ${JSON.stringify(id)});
     clicked[1]({}, cx);`,
   );
+}
+
+// The theme's colour `key` (`border`, `chrome`, …) as Herdr prints it, or
+// null (the test skipped) when `herdr-app` is not on PATH.
+export function themeColour(t, key) {
+  const lines = drawSource(
+    t,
+    `import { View, div } from "gpui-kit";
+import { theme } from "herdr";
+
+export default class Colours extends View {
+  render() {
+    return div().child(JSON.stringify(theme()[${JSON.stringify(key)}]));
+  }
+}
+`,
+  );
+  return lines ? JSON.parse(texts(lines)[0]) : null;
 }

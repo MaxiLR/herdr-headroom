@@ -1,15 +1,19 @@
 // The rail: the block folded narrower than 160 px. Each account is its mark
 // and the percent of its tightest window over its pair of bars; hovering it
 // names the account and gives its numbers, a click opens its account view.
-// Only a block given `props.fit` asks for the height its accounts need.
+// A hint on the bottom edge says how many accounts are cut off below. A 1 px
+// line on the top edge shows that the boundary drags. Only a block given
+// `props.fit` asks for the height its accounts need, up to two.
 import { div, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { openAccount } from "../logic/account.js";
 import { alpha } from "../logic/color.js";
+import { fitTo, LINE, RAIL_EDGE, railNeeds } from "../logic/fit.js";
+import { hintCount, moreWords, wheel } from "../logic/hint.js";
 import { railNumber, railTooltip, showsNumber } from "../logic/rail.js";
 import { barOf, rowOf } from "../logic/rows.js";
 import { open as openConnect } from "./connect.js";
-import { fitTo, levelText, mark, pair } from "./kit.js";
+import { dotted, edgeBand, levelText, mark, pair } from "./kit.js";
 
 const PLUS = "mods/workspace-chrome/plus.svg";
 
@@ -36,11 +40,16 @@ function badge(t) {
     .child("!");
 }
 
-// The 16 px line: the mark, and on the right the number (or the badge).
-function line(row, wide, t) {
+// The 16 px line: the mark, with the dot of a per-model limit reached, and on
+// the right the number (or the badge).
+function line(row, index, wide, t) {
   const signedOut = row.state === "signed-out";
-  const icon = mark(row.provider, 14, t).when(signedOut, (el) =>
-    el.opacity(SIGNED_OUT_MARK),
+  const icon = dotted(
+    mark(row.provider, 14, t).when(signedOut, (el) =>
+      el.opacity(SIGNED_OUT_MARK),
+    ),
+    { id: `account-${index}`, size: 14, dot: row.limitWords !== null },
+    t,
   );
   const number = wide ? railNumber(row) : null;
   const end = signedOut
@@ -86,24 +95,43 @@ function bars(row, index, view) {
   );
 }
 
+// Fits a block given `props.fit` to its first two accounts; with none, to
+// what its content measures (`content`, null when that did not change).
+function fit(view, content) {
+  if (view.readings.length > 0) {
+    fitTo(view, railNeeds(view.readings, view.now));
+  } else if (content !== null) {
+    fitTo(view, LINE + content);
+  }
+}
+
 function account(reading, index, view, wide) {
   const t = view.theme;
   const row = rowOf(reading, view.now);
   const words = railTooltip(reading, view.now);
-  return v_flex()
-    .id(`account-${index}`)
-    .role("button")
-    .accessibility_label(words)
-    .tooltip(words)
-    .px(8)
-    .py(6)
-    .gap(4)
-    .rounded(6)
-    .cursor_pointer()
-    .hover((s) => s.bg(t.hover))
-    .on_click(() => openAccount(view, reading.id))
-    .child(line(row, wide, t))
-    .when(row.state !== "signed-out", (el) => el.child(bars(row, index, view)));
+  return (
+    v_flex()
+      .id(`account-${index}`)
+      .role("button")
+      .accessibility_label(words)
+      .tooltip(words)
+      .px(8)
+      .py(6)
+      .gap(4)
+      .rounded(6)
+      .cursor_pointer()
+      .hover((s) => s.bg(t.hover))
+      .on_click(() => openAccount(view, reading.id))
+      // A reorder can change the first two accounts without changing how tall
+      // all of them are together.
+      .when(Boolean(view.props.fit) && index < 2, (el) =>
+        el.on_size_change(() => fit(view, null)),
+      )
+      .child(line(row, index, wide, t))
+      .when(row.state !== "signed-out", (el) =>
+        el.child(bars(row, index, view)),
+      )
+  );
 }
 
 // With no account yet: one quiet control that connects the first.
@@ -127,33 +155,73 @@ function connect(view) {
     .child(svg(PLUS).size(14).flex_none());
 }
 
+// "+3", centred 1 px above the bottom edge, on a band over the accounts,
+// named in full for the pointer and screen readers. It is not a control.
+function hint(count, t) {
+  const words = moreWords(count);
+  return edgeBand({ id: "more-below", height: 16, fade: 6 }, t)
+    .role("label")
+    .accessibility_label(words)
+    .tooltip(words)
+    .child(
+      h_flex()
+        .absolute()
+        .left(0)
+        .right(0)
+        .bottom(1)
+        .h(12)
+        .items_center()
+        .justify_center()
+        .text_size(10.5)
+        .text_color(t.muted)
+        .whitespace_nowrap()
+        .child(`+${count}`),
+    );
+}
+
 export function render(view, cx) {
   const wide = showsNumber(view.size?.width ?? null);
+  const more = hintCount(view, "rail");
   return v_flex()
+    .id("rail")
     .size_full()
     .min_h(0)
     .bg(view.theme.chrome)
+    .border_t(1)
+    .border_color(view.theme.border)
     .child(
       v_flex()
-        .id("accounts")
+        .relative()
         .flex_1()
         .min_h(0)
-        .overflow_y_scrollbar()
         .child(
           v_flex()
-            .id("rail")
-            .flex_none()
-            .py(4)
-            .when(Boolean(view.props.fit), (el) =>
-              el.on_size_change((size) => fitTo(view, size.height)),
-            )
-            .children(
-              view.readings.length === 0
-                ? [connect(view)]
-                : view.readings.map((reading, index) =>
-                    account(reading, index, view, wide),
-                  ),
+            .id("accounts")
+            .flex_1()
+            .min_h(0)
+            .overflow_y_scrollbar()
+            .child(
+              v_flex()
+                .id("rail-accounts")
+                .flex_none()
+                .py(RAIL_EDGE)
+                // Herdr's scroll area keeps its position to itself: the hint
+                // follows the wheel over the accounts.
+                .on_scroll_wheel((event, cx) => {
+                  if (wheel(view, "rail", event.delta.y)) cx.notify();
+                })
+                .when(Boolean(view.props.fit), (el) =>
+                  el.on_size_change((size) => fit(view, size.height)),
+                )
+                .children(
+                  view.readings.length === 0
+                    ? [connect(view)]
+                    : view.readings.map((reading, index) =>
+                        account(reading, index, view, wide),
+                      ),
+                ),
             ),
-        ),
+        )
+        .when(more > 0, (el) => el.child(hint(more, view.theme))),
     );
 }

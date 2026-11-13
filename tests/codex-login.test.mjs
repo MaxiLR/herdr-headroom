@@ -393,3 +393,19 @@ test("refresh failures that are not the token's", async () => {
     assert.ok(!JSON.stringify(result).includes("old-refresh"));
   }
 });
+
+test("the identity's plan reads as words", async () => {
+  const access = jwt({
+    "https://api.openai.com/auth": {
+      chatgpt_account_id: "acct-1",
+      chatgpt_plan_type: "self_serve_business_prolite",
+    },
+    "https://api.openai.com/profile": { email: "maxi@example.com" },
+  });
+  const { io } = signIn({
+    exchange: { status: 200, body: { ...TOKENS, access_token: access } },
+  });
+  const result = await login(io);
+  assert.equal(result.ok, true);
+  assert.equal(result.credentials.identity.plan, "Self serve business prolite");
+});

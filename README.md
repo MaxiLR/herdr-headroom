@@ -23,8 +23,9 @@ from scratch is [`RECIPE.md`](RECIPE.md).
   time for (one that has not started) has no tick and reads "not started".
 - **Time to reset**, as `<1m`, `42m`, `3h 12m` or `2d 4h`.
 - **Only the windows the plan has.** A Codex plan with a weekly window alone
-  shows one bar. Per-model weekly windows are in the detail view, and on an
-  account's row only when one is more used than the general weekly window.
+  shows one bar. An account's row draws the weekly and the 5-hour window only
+  and names a per-model window at its limit; every per-model weekly window and
+  Codex's additional limits are in the account view and the detail view.
 - **Account states.** A read that failed keeps the last reading, dimmed, with
   its age and the reason (`12m old · network`). An account whose login has
   ended shows "Sign in again" and no bars. A Claude account warns in its last 3
@@ -41,7 +42,7 @@ set, else `~/.config/herdr-app`.
 ```sh
 scripts/install.sh --dry-run          # what it would do; changes nothing
 scripts/install.sh                    # install the mod
-scripts/install.sh --layout           # and add the layout "Herdr Headroom"
+scripts/install.sh --layout           # and add the layout herdr-headroom
 scripts/install.sh --layout my-name   # or a layout of another name
 ```
 
@@ -62,28 +63,44 @@ does not exist.
 - **Check.** When `herdr-app` is on `PATH`, it runs `herdr-app check` on the
   installed folder. A failed check prints what `herdr-app` said and exits 1;
   without `herdr-app` the check is skipped with a warning.
-- **Layout** (`--layout`, default name `Herdr Headroom`). It needs `jq`. It
-  writes `<Herdr home>/layouts/<name>.json`: a copy of the home's
-  `layouts/main.json` with one Headroom block added as the last child of
-  `sidebar-lists`, after Spaces and Agents, with the same share
-  (`"size": { "weight": 1 }`) and the same minimum (`"min": 90`). Its boundary
-  drags like theirs, and Herdr remembers the size. Herdr lists a layout by its
-  file name: Settings shows it as written, the palette with its first letter in
+- **Layout** (`--layout`, default name `herdr-headroom`). A name must match
+  `^[A-Za-z0-9_-]+$`: Herdr lists a layout under its file name and switches
+  only to one whose name uses letters, digits, `-` or `_`. Any other name is
+  refused before anything changes, with exit 2. It needs `jq`. It writes
+  `<Herdr home>/layouts/<name>.json`: a copy of the home's `layouts/main.json`
+  with two changes, and nothing else.
+  - **The block.** One Headroom block is added as the last child of
+    `sidebar-lists`, after Spaces and Agents, sized by the mod (`props.fit`,
+    shown under [Using it in your own layout](#using-it-in-your-own-layout)).
+    It is as tall as its header and its accounts need, up to two accounts;
+    with three or more it is 17 px taller, for the hint that says how many
+    more are below. Further accounts scroll, or you drag the block taller. A
+    drag is kept, across restarts too, until the height the block needs
+    changes.
+  - **The status row.** The first block with the id `status` (Herdr's
+    `workspace-status`) is put in a row of its size: the `status` block at a
+    weight of 3, then the `headroom-strip` block, hidden, at a weight of 2,
+    120 px at least and 720 px at most, across a boundary that drags (shown
+    under [The strip's separator](#the-strips-separator)). "Show in status
+    bar" in Accounts and settings shows and hides it. Without a `status`
+    block the layout is written without it, and the step says so.
+
+  Settings shows the layout as written, the palette with its first letter in
   upper case. It never overwrites or edits a layout and never switches to it;
   it prints the command that does:
 
   ```sh
-  herdr-app do layout.switch --name 'Herdr Headroom'
+  herdr-app do layout.switch --name herdr-headroom
   ```
 
   Without `jq`, without `layouts/main.json`, with a `main.json` that is not
   valid JSON or has no `sidebar-lists` node with children, or when the layout
   already exists, it says so, writes no layout and still installs the mod.
 
-  A layout written by the first version of the installer keeps its old
-  placement, a block of its own between `sidebar-lists` and `sidebar-footer`.
-  To replace it, remove `<Herdr home>/layouts/<name>.json` and run `--layout`
-  again.
+  A layout an earlier version of the installer wrote keeps what it was written
+  with; `Herdr Headroom.json` is one, which Herdr cannot show. To replace it,
+  switch to another layout, remove `<Herdr home>/layouts/<name>.json` and run
+  `--layout` again.
 
 The installer binds no key and never reads, copies or removes the vault
 (`<Herdr home>/headroom/`).
@@ -101,74 +118,103 @@ The block the installer adds:
 {
   "id": "headroom",
   "type": "block",
-  "size": { "weight": 1 },
+  "size": { "px": 111 },
   "min": 90,
-  "content": { "mod": "headroom" }
-}
-```
-
-Without `fit` the list never resizes its block: it fills the block it is
-given, the header stays and the accounts scroll under it. In a fixed spot of
-your own layout, `props.fit` makes the block as tall as its accounts need:
-
-```json
-{
-  "id": "headroom",
-  "type": "block",
   "content": { "mod": "headroom", "props": { "fit": "headroom" } }
 }
 ```
+
+`props.fit` names the block the copy is in, and the list and the rail resize
+it (`layout.resize`) to the line on their top edge, the list's header and the
+first two accounts. In the list that is 111 px for one account with one bar,
+120 px for one with both bars and 190 px for two; with three or more it is
+207 px, 17 px taller for the hint ("3 more"). In the rail it is 97 px for two
+accounts with both bars, 103 px with the hint ("+3"). An empty list fits its
+"No accounts yet" and its button. Further accounts scroll under the header, or
+you drag the block taller. A layout of your own gets the same from `fit`: room
+for two accounts.
+
+The mod remembers the height it last asked for, per layout and block, in
+`headroom.fit`, and fits the block again only when the height it needs
+changes: an account connected, removed or moved into the first two, one
+gaining or losing a bar, or a third account arriving or the last one past two
+leaving. A boundary you drag stays where you put it, across restarts too,
+until then. Folding the sidebar turns the list into the rail, which needs
+another height, so the block is fitted again and a dragged size is lost.
+
+Without `fit` the list and the rail never resize their block: they fill the
+block they are given, the header stays and the accounts scroll under it.
 
 `mod.json` is `{ "place": "none" }`: Herdr docks no copy by itself; the mod
 appears only where a layout puts it.
 
 ### Props
 
-| Prop      | Values                                                         | What it does                                                                                                                                                                                                                                                           |
-| --------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `form`    | `auto` (default), `list`, `rail`, `strip`, `detail`, `account` | The form to draw. With `auto`, or none, the block's measured size decides.                                                                                                                                                                                             |
-| `account` | the account's id, `<provider>:<account id>:<organization id>`  | The account the account view shows, with `form: "account"`. The ids are in `headroom.readings`.                                                                                                                                                                        |
-| `fit`     | the `id` of the block holding this copy                        | The list and the rail resize that block (`layout.resize`) to the height their accounts need, from 48 px (a strip's height, so a folded rail unfolds to the list again) up to 329 px (four accounts); past that the accounts scroll. The strip never resizes its block. |
+| Prop      | Values                                                         | What it does                                                                                                                                                                                                                                                                                                 |
+| --------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `form`    | `auto` (default), `list`, `rail`, `strip`, `detail`, `account` | The form to draw. With `auto`, or none, the block's measured size decides.                                                                                                                                                                                                                                   |
+| `account` | the account's id, `<provider>:<account id>:<organization id>`  | The account the account view shows, with `form: "account"`. The ids are in `headroom.readings`.                                                                                                                                                                                                              |
+| `fit`     | the `id` of the block holding this copy                        | The list and the rail resize that block (`layout.resize`) to the line, the header and their first two accounts, at least 48 px (a strip's height, so a folded rail unfolds to the list again); with three or more accounts, 17 px more for the hint, and the rest scroll. The strip never resizes its block. |
 
 The connect dialog is the same mod opened as a dialog with a `connect` prop
-(`{ provider, account }` when it signs an account in again), and Herdr gives
-every overlay an `overlay` prop; a layout sets neither.
+(`{ provider, account }` when it signs an account in again), the remove dialog
+the same with a `remove` prop (the id of the account it asks about), and Herdr
+gives every overlay an `overlay` prop; a layout sets none of them.
 
-The mod binds no key. Its one command, `headroom.remove`, is the one Herdr's
-confirm dialog sends once a removal is confirmed; sent at any other time it
-does nothing.
+The mod binds no key and has no command of its own.
 
 ### Forms
 
 With `form` set to `auto`, before its first measure the block is a list; after:
 
-- **Rail** when the block is narrower than 160 px (Herdr's folded sidebar):
-  each account's mark and the percent of its tightest window, over its pair of
-  bars. Below 60 px wide the percent is left out and the mark is centred.
-  Hovering an account names it and gives its numbers.
-- **Strip** when the block is under 48 px tall (a status bar): one line with an
-  item per account. When the line is too narrow the labels go first, then the
-  bars; the marks and percents stay.
-- **List** otherwise: a "Limits" header and, per account, its mark and label,
-  a full bar for the weekly window over a thin one for the 5-hour window, and
-  one line of numbers. Below 220 px wide the 5-hour numbers lose their word.
+- **Rail** when the block is narrower than 160 px (Herdr's folded sidebar): a
+  1 px line on its top edge, then each account's mark and the percent of the
+  fuller of its weekly and 5-hour window (`5h` beside it when that is the
+  5-hour one), over its pair of bars. A red dot on the mark says a per-model
+  window is at its limit. When accounts are cut off below, `+3` on the bottom
+  edge says how many. Below 60 px wide the percent is left out and the mark is
+  centred. Hovering an account names it and gives its numbers, and the model
+  at its limit.
+- **Strip** when the block is under 48 px tall (a status bar): a 1 px line on
+  its top edge and one line with an item per account: its mark, label, bars
+  and the percent of the fuller of its weekly and 5-hour window, and the red
+  dot on the mark for a per-model window at its limit. When the line is too
+  narrow the labels go first, then the bars; the marks and percents stay.
+- **List** otherwise: a 1 px line on its top edge, a "Limits" header and, per
+  account, its mark and label, two bars at most (a full bar for the weekly
+  window over a thin one for the 5-hour window), and one line of numbers. A
+  per-model window has no bar on the row: when one is at its limit, its words
+  follow the week's percent in place of the reset time (`41% · Fable at
+limit`, or `2 models at limit`). When accounts are cut off below, "3 more"
+  and a chevron on the bottom edge say how many; the count follows the wheel.
+  Below 220 px wide the 5-hour numbers lose their word.
 - **Account**, only when `form` is `account` with an `account`: that account
   alone. Its mark, label and plan, the age of its reading (`Read 2m ago`, or a
   failed read's `12m old · network`) with a refresh control that reads it
-  again, and its email and organization. Then every window the plan has, each
-  with its percentage, its time to reset and the reset's clock time; when a
-  Claude login ends; each account state as the list shows it (empty tracks
-  before the first read, the last bars dimmed after a failed read, no bars and
-  "Login ended …" for an account that must sign in again); and, when a bar has
-  its pace mark, the line "The line on a bar marks how much of its time has
-  passed." Under them its actions, Rename, Sign in again and Remove, and a last
-  row, "Accounts and settings", that opens the detail view. It closes itself
-  when its account is no longer connected.
-- **Detail**, only when `form` is `detail`: every window of every account, the
-  reset's clock time, when a login ends, the refresh control, the
-  notifications switch and Connect account. Each account has an up and a down
-  arrow that move it in the order. From 520 px wide each window is one line;
-  below 340 px the clock time is left out.
+  again, and its email and organization. Then every window the plan has, per
+  model and Codex's additional limits too, each with its percentage, its time
+  to reset and the reset's clock time; when a Claude login ends; each account
+  state as the list shows it (empty tracks before the first read, the last
+  bars dimmed after a failed read, no bars and "Login ended …" for an account
+  that must sign in again); and, when a bar has its pace mark, the line "The
+  line on a bar marks how much of its time has passed." Under them its
+  actions, Rename, Sign in again and Remove, and a last row, "Accounts and
+  settings", that opens the detail view. Remove asks first with the mod's own
+  dialog, over the view, with Cancel and a red Remove. The view closes itself
+  when it opens another view (the connect dialog, the detail view) and when
+  its account is no longer connected.
+- **Detail**, only when `form` is `detail`: the one place to manage every
+  account. Every window of every account, per model and Codex's additional
+  limits too, the reset's clock time, when a login ends, the refresh control,
+  the notifications switch, "Show in status bar" (only when the shown layout
+  has a block with the id `headroom-strip`; it shows and hides that block) and
+  Connect account. Each account has an up and a down arrow that move it in
+  the order, and beside them Rename and Remove behind three dots ("Rename or
+  remove"): Rename turns the label into a field in place, Remove asks as the
+  account view does. From 520 px wide each window is one line; below 340 px
+  the clock time is left out and Connect account is a square with the plus
+  alone. It closes itself when it opens an account view or the connect
+  dialog.
 
 A click on an account in the list, the rail, the strip or the detail view
 opens its account view as a 380 px popup. The list's header control and the
@@ -183,17 +229,35 @@ The copy finds its own block by `props.fit`; without `fit`, by being the only
 block of the `headroom` mod in the layout. When it cannot tell (no layout, two
 Headroom blocks and no `fit`), it draws no rule.
 
-A strip in a status bar row:
+The status row the installer writes from Herdr's 28 px status block. The strip
+follows `status`, so once "Show in status bar" shows it, it starts with the
+rule:
 
 ```json
 {
-  "type": "block",
-  "id": "headroom-strip",
+  "id": "status-row",
+  "type": "row",
   "size": { "px": 28 },
-  "content": {
-    "mod": "headroom",
-    "props": { "form": "strip", "fit": "headroom-strip" }
-  }
+  "children": [
+    {
+      "id": "status",
+      "type": "block",
+      "size": { "weight": 3 },
+      "content": { "mod": "workspace-status" }
+    },
+    {
+      "id": "headroom-strip",
+      "type": "block",
+      "hidden": true,
+      "size": { "weight": 2 },
+      "min": 120,
+      "max": 720,
+      "content": {
+        "mod": "headroom",
+        "props": { "form": "strip", "fit": "headroom-strip" }
+      }
+    }
+  ]
 }
 ```
 
@@ -260,12 +324,13 @@ last 3 days. A Codex login does not end on its own. When a provider rejects a
 login, the account shows "Sign in again"; its stored login is kept until it
 signs in again or is removed.
 
-An account's view holds its own actions. "Sign in again" opens the connect
-dialog at the account's provider, and signing in replaces the account's login.
-Rename turns the label into a field: Enter keeps the new label, Esc leaves it
-as it was. Remove asks first, in Herdr's confirm dialog ("Remove work?" / "Its
-stored login is deleted from this computer."), then deletes the account's
-login from the vault.
+An account's view holds its own actions, and the detail view holds Rename and
+Remove for every account. "Sign in again" opens the connect dialog at the
+account's provider, and signing in replaces the account's login. Rename turns
+the label into a field: Enter keeps the new label, Esc leaves it as it was.
+Remove asks first, in the mod's own dialog ("Remove work?" / "Its stored login
+is deleted from this computer.", Cancel and a red Remove; Enter removes, Esc
+cancels), then deletes the account's login from the vault.
 
 Readings are fetched for every account every 5 minutes while it is idle, and
 more often while it is active: a Claude account every 2 minutes, a Codex
@@ -319,7 +384,9 @@ when an account is connected, read or refreshed.
   `{ "version": 1, "accounts": [...] }`. Each account holds its `id`
   (`<provider>:<account id>:<organization id>`), `provider`, `label`,
   `position`, `accessToken`, `refreshToken`, `expiresAt`, `signedInAt` and
-  `identity` (`accountId`, `organizationId`, `email`, `organization`, `plan`).
+  `identity` (`accountId`, `organizationId`, `email`, `organization`, `plan`;
+  a Codex plan as words, `Self serve business prolite` for
+  `self_serve_business_prolite`).
   The folder is made 0700 and the file is created empty and set to 0600 before
   the first token is written; the file's mode is checked after every write and
   set to 0600 again when it is not. When the folder or file cannot be made
@@ -335,6 +402,8 @@ when an account is connected, read or refreshed.
     or anything else means on.
   - `headroom.notified`: `{ "version": 1, "keys": [...] }`, the toasts already
     posted, each `<account id>|<window id>|<reset time>|<90 or limit>`.
+  - `headroom.fit`: `{ "<layout name>": { "<block id>": <px> } }`, the height
+    last asked for each block given `props.fit`.
 
   No token or email is in shared state. The label is the only personal text
   there; the ids are made of the provider's own account and organization ids.
@@ -342,9 +411,10 @@ when an account is connected, read or refreshed.
 - **Nothing in `localStorage`**, and nothing written anywhere else. The mod
   also reads Herdr's shipped icons (`mods/workspace-chrome/spinner.svg`,
   `mods/workspace-chrome/plus.svg`, `mods/workspace-chrome/chevron-left.svg`,
-  `mods/workspace-chrome/chevron-right.svg`) and its own in
+  `mods/workspace-chrome/chevron-right.svg`,
+  `mods/workspace-chrome/chevron-down.svg`) and its own in
   `mods/headroom/icons/` (`chatgpt.svg`, `claude.svg`, `arrow-up.svg`,
-  `arrow-down.svg`, `more.svg`, `refresh.svg`).
+  `arrow-down.svg`, `more.svg`, `pencil.svg`, `refresh.svg`, `trash.svg`).
 
 ### Programs it runs
 

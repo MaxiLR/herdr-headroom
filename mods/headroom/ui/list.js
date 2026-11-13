@@ -1,18 +1,22 @@
 // The list: a "Limits" header and, per account, its mark and label, the pair
 // of bars (weekly full, 5-hour thin) and one quiet line of numbers. A click on
 // an account opens its account view; the header's control opens the detail
-// view. The header stays; what does not fit scrolls under it. Only a block
-// given `props.fit` asks for the height its accounts need, up to four.
+// view. The header stays; what does not fit scrolls under it, and a hint on
+// the bottom edge says how many accounts are cut off below. A 1 px line on
+// the top edge shows that the boundary drags. Only a block given `props.fit`
+// asks for the height its accounts need, up to two.
 import { div, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { openAccount } from "../logic/account.js";
+import { fitTo, HEADER, LINE, LIST_BELOW, listNeeds } from "../logic/fit.js";
+import { hintCount, moreWords, wheel } from "../logic/hint.js";
 import { listRowOf } from "../logic/list.js";
 import { open as openConnect } from "./connect.js";
 import { open as openDetail } from "./detail.js";
-import { bar, fitTo, levelText, mark, moreIcon, pair } from "./kit.js";
+import { edgeBand, levelText, mark, moreIcon, pair } from "./kit.js";
 
-const HEADER = 41;
 const PLUS = "mods/workspace-chrome/plus.svg";
+const CHEVRON = "mods/workspace-chrome/chevron-down.svg";
 
 function header(view) {
   const t = view.theme;
@@ -149,24 +153,34 @@ function labelLine(row, index, view) {
 }
 
 // One side of the numbers line: `5-hour 62% · 1h 48m`, the first part in its
-// level's colour, the separators in `dim`.
-function numbers({ word, parts, level }, t) {
+// level's colour, the separators in `dim`. `words`, a reached per-model limit,
+// follow in the critical colour and are cut with an ellipsis when they do not
+// fit.
+function numbers({ word, parts, level }, words, t) {
   const [first, ...rest] = parts;
+  const dot = () => div().text_color(t.dim).child("·");
   return h_flex()
     .min_w(0)
     .gap(4)
     .items_baseline()
     .when(word !== null, (el) => el.child(div().mr(1).child(word)))
     .child(div().text_color(levelText(level, t)).child(first))
-    .children(
-      rest.flatMap((part) => [
-        div().text_color(t.dim).child("·"),
-        div().child(part),
-      ]),
+    .children(rest.flatMap((part) => [dot(), div().child(part)]))
+    .when(words !== null, (el) =>
+      el
+        .child(dot())
+        .child(
+          div()
+            .min_w(0)
+            .truncate()
+            .text_color(levelText("critical", t))
+            .child(words),
+        ),
     );
 }
 
-function numbersLine(left, right, t) {
+// The week's side, with the words, gives way before the 5-hour side does.
+function numbersLine(left, right, words, t) {
   return h_flex()
     .h(14)
     .mt(6)
@@ -176,100 +190,147 @@ function numbersLine(left, right, t) {
     .text_size(11)
     .text_color(t.muted)
     .whitespace_nowrap()
-    .when(left !== null, (el) => el.child(numbers(left, t)))
-    .when(right !== null, (el) => el.child(numbers(right, t)));
+    .when(left !== null, (el) => el.child(numbers(left, words, t)))
+    .when(right !== null, (el) =>
+      el.child(numbers(right, null, t).flex_none()),
+    );
+}
+
+// Fits a block given `props.fit` to its first two accounts; with none, to
+// what its content measures (`content`, null when that did not change).
+function fit(view, content) {
+  if (view.readings.length > 0) {
+    fitTo(view, listNeeds(view.readings, view.now));
+  } else if (content !== null) {
+    fitTo(view, LINE + HEADER + content);
+  }
 }
 
 function account(reading, index, view) {
   const t = view.theme;
   const row = listRowOf(reading, view.now, view.size?.width ?? null);
   const id = `account-${index}`;
-  return v_flex()
-    .id(id)
-    .role("button")
-    .accessibility_label(row.spoken)
-    .flex_none()
-    .px(8)
-    .pb(9)
-    .rounded(8)
-    .cursor_pointer()
-    .hover((s) => s.bg(t.hover))
-    .on_click(() => openAccount(view, reading.id))
-    .child(labelLine(row, index, view))
-    .when(row.ended !== null, (el) =>
-      el.child(
-        div()
-          .h(14)
-          .text_size(11)
-          .text_color(t.muted)
-          .whitespace_nowrap()
-          .child(row.ended),
-      ),
-    )
-    .when(row.pair !== null, (el) =>
-      el.child(
-        pair(
-          {
-            id,
-            full: row.pair.full,
-            short: row.pair.short,
-            dimmed: row.dimmed,
-          },
-          t,
+  return (
+    v_flex()
+      .id(id)
+      .role("button")
+      .accessibility_label(row.spoken)
+      .flex_none()
+      .px(8)
+      .pb(9)
+      .rounded(8)
+      .cursor_pointer()
+      .hover((s) => s.bg(t.hover))
+      .on_click(() => openAccount(view, reading.id))
+      // A reorder can change the first two accounts without changing how tall
+      // all of them are together.
+      .when(Boolean(view.props.fit) && index < 2, (el) =>
+        el.on_size_change(() => fit(view, null)),
+      )
+      .child(labelLine(row, index, view))
+      .when(row.ended !== null, (el) =>
+        el.child(
+          div()
+            .h(14)
+            .text_size(11)
+            .text_color(t.muted)
+            .whitespace_nowrap()
+            .child(row.ended),
         ),
-      ),
-    )
-    .when(row.numbers !== null, (el) =>
-      el.child(numbersLine(row.numbers.left, row.numbers.right, t)),
-    )
-    .children(
-      row.models.flatMap((model, k) => [
-        div()
-          .mt(7)
-          .child(
-            bar(
-              {
-                ...model.bar,
-                id: `${id}-model-${k}`,
-                dimmed: row.dimmed,
-              },
-              t,
-            ),
+      )
+      .when(row.pair !== null, (el) =>
+        el.child(
+          pair(
+            {
+              id,
+              full: row.pair.full,
+              short: row.pair.short,
+              dimmed: row.dimmed,
+            },
+            t,
           ),
-        numbersLine(model.numbers, null, t),
-      ]),
+        ),
+      )
+      .when(row.numbers !== null, (el) =>
+        el.child(
+          numbersLine(row.numbers.left, row.numbers.right, row.limitWords, t),
+        ),
+      )
+  );
+}
+
+// "3 more" and Herdr's chevron, centred 11 px above the bottom edge, on a band
+// over the accounts. It is not a control.
+function hint(count, t) {
+  return edgeBand({ id: "more-below", height: 34, fade: 8 }, t)
+    .role("label")
+    .accessibility_label(`${moreWords(count)} below`)
+    .child(
+      h_flex()
+        .absolute()
+        .left(0)
+        .right(0)
+        .bottom(11)
+        .h(14)
+        .gap(5)
+        .items_center()
+        .justify_center()
+        .child(
+          div()
+            .text_size(11)
+            .text_color(t.muted)
+            .whitespace_nowrap()
+            .child(`${count} more`),
+        )
+        .child(svg(CHEVRON).size(11).flex_none().text_color(t.dim)),
     );
 }
 
 export function render(view, cx) {
   const t = view.theme;
+  const more = hintCount(view, "list");
   return v_flex()
+    .id("list")
     .size_full()
     .min_h(0)
     .bg(t.chrome)
+    .border_t(1)
+    .border_color(t.border)
     .child(header(view))
     .child(
       v_flex()
-        .id("accounts")
+        .relative()
         .flex_1()
         .min_h(0)
-        .overflow_y_scrollbar()
         .child(
           v_flex()
-            .id("accounts-content")
-            .flex_none()
-            .w_full()
-            .px(8)
-            .pb(8)
-            .when(Boolean(view.props.fit), (el) =>
-              el.on_size_change((size) => fitTo(view, HEADER + size.height)),
-            )
-            .when(view.readings.length === 0, (el) => el.child(empty(view)))
-            .children(
-              view.readings.map((reading, index) =>
-                account(reading, index, view),
-              ),
+            .id("accounts")
+            .flex_1()
+            .min_h(0)
+            .overflow_y_scrollbar()
+            .child(
+              v_flex()
+                .id("accounts-content")
+                .flex_none()
+                .w_full()
+                .px(8)
+                .pb(LIST_BELOW)
+                // Herdr's scroll area keeps its position to itself: the hint
+                // follows the wheel over the accounts.
+                .on_scroll_wheel((event, cx) => {
+                  if (wheel(view, "list", event.delta.y)) cx.notify();
+                })
+                .when(Boolean(view.props.fit), (el) =>
+                  el.on_size_change((size) => fit(view, size.height)),
+                )
+                .when(view.readings.length === 0, (el) => el.child(empty(view)))
+                .children(
+                  view.readings.map((reading, index) =>
+                    account(reading, index, view),
+                  ),
+                ),
             ),
-        ),
+        )
+        .when(more > 0, (el) => el.child(hint(more, t))),
     );
 }

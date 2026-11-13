@@ -4,13 +4,20 @@
 // email and organization), every window the plan has, each with its name over
 // its bar and one quiet line of numbers under it, the line about the pace mark
 // and when its login ends; then the account's own actions (Rename, Sign in
-// again, Remove), and its last row opens the detail view. When its account is
-// no longer connected it closes itself.
+// again, Remove), and its last row opens the detail view. As a popup it closes
+// itself before it opens another view, and when its account is no longer
+// connected.
 import { div, svg } from "gpui-kit";
-import { Input, InputState, h_flex, v_flex } from "gpui-base";
-import { accountOf, accountViewOf, removeQuestion } from "../logic/account.js";
+import { h_flex, v_flex } from "gpui-base";
+import {
+  accountHeight,
+  accountOf,
+  accountViewOf,
+  openRemove,
+} from "../logic/account.js";
 import { open as openConnect } from "./connect.js";
 import { open as openDetail } from "./detail.js";
+import { labelField, labelInput } from "./field.js";
 import { bar, levelText, mark, pair, spinner } from "./kit.js";
 
 const CHEVRON = "mods/workspace-chrome/chevron-right.svg";
@@ -19,12 +26,6 @@ const PACE_LINE = "The line on a bar marks how much of its time has passed.";
 
 // The tracks of windows not read yet.
 const EMPTY = { fraction: 0, level: "normal", pace: null };
-
-// The account a Remove is waiting on Herdr's confirm dialog for, or null.
-// Herdr hands the confirmed command to the shown copies of the mod, not to
-// the one that asked, and maybe to several; module code is shared by every
-// copy, so whichever copy hears it first takes the account, once.
-let pending = null;
 
 // This copy's view, plain data: `renaming` while the label is its field,
 // `refreshing` while this account is read, `closed` once the popup is asked
@@ -39,25 +40,16 @@ function liveOf(view) {
 }
 
 /**
- * A newly opened account view: a Remove left unanswered asks nothing any
- * more; the field of a rename given as data is made; a view of an account no
- * longer connected closes. Nothing in a copy that is not an account view.
+ * A newly opened account view: the field of a rename given as data is made;
+ * a view of an account no longer connected closes. Nothing in a copy that is
+ * not an account view.
  */
 export function init(view, cx) {
   if (view.form !== "account") return;
-  pending = null;
   if (accountOf(view) === null) closeOnce(view);
   else if (stateOf(view).renaming && renameInput(view) === null) {
     startRename(view, cx);
   }
-}
-
-/** A `headroom.<name>` command: `remove` removes the account waiting for it. */
-export function command(name, view, _cx) {
-  if (name !== "remove" || pending === null) return;
-  const id = pending;
-  pending = null;
-  view.store.remove(id);
 }
 
 /** Rename: the label in the header becomes its field, its text selected. */
@@ -69,19 +61,11 @@ export function startRename(view, _cx) {
     live.input.focus();
     return;
   }
-  const input = InputState.new({ value: reading.label });
-  input.set_selected_range({ start: 0, end: reading.label.length });
-  input.on("submit", (_event, cx) => {
-    submitRename(view);
-    cx.notify();
-  });
-  input.on("focus", (_event, cx) => {
-    live.focused = true;
-    cx.notify();
-  });
-  input.on("blur", (_event, cx) => {
-    live.focused = false;
-    cx.notify();
+  const input = labelInput(reading.label, {
+    submit: () => submitRename(view),
+    focus: (focused) => {
+      live.focused = focused;
+    },
   });
   live.input = input;
   live.id = reading.id;
@@ -120,29 +104,25 @@ function endRename(view) {
   stateOf(view).renaming = false;
 }
 
-/** Sign in again: the connect dialog, this account's provider chosen. */
+/**
+ * Sign in again: the popup closes, then the connect dialog opens with this
+ * account's provider chosen.
+ */
 export function signInAgain(view) {
   const reading = accountOf(view);
   if (reading === null) return;
+  closeOnce(view);
   openConnect(view, { provider: reading.provider, account: reading.id });
 }
 
 /**
- * Remove asks first, with Herdr's own confirm dialog; the dialog's command
- * comes back to `command` once confirmed.
+ * Remove asks first, with the mod's own dialog over this view; the dialog
+ * removes the account, and this view closes once it is gone.
  */
 export function askRemove(view) {
   const reading = accountOf(view);
   if (reading === null) return;
-  pending = reading.id;
-  view.host.openOverlay({
-    mod: "confirm",
-    kind: "dialog",
-    props: {
-      ...removeQuestion(reading.label),
-      command: { name: "headroom.remove" },
-    },
-  });
+  openRemove(view, reading.id);
 }
 
 // Closes the popup, once; a pane or a block has no overlay to close.
@@ -395,28 +375,15 @@ function loginLine(login, t) {
 
 // The label's field: Enter renames, Esc leaves the label as it was.
 function renameField(reading, input, view) {
-  const t = view.theme;
-  return div()
-    .flex_1()
-    .min_w(0)
-    .on_key_down((event, cx) => {
-      if (event.key !== "escape") return;
-      cancelRename(view);
-      cx.stop_propagation();
-      cx.notify();
-    })
-    .child(
-      Input.new(input)
-        .accessibility_label(`Name of ${reading.label}`)
-        .h(24)
-        .px(6)
-        .rounded(6)
-        .border_1()
-        .border_color(liveOf(view).focused ? t.accent : t.input)
-        .bg(t.background)
-        .text_size(13)
-        .text_color(t.foreground),
-    );
+  return labelField(
+    input,
+    {
+      label: reading.label,
+      focused: liveOf(view).focused,
+      cancel: () => cancelRename(view),
+    },
+    view.theme,
+  );
 }
 
 // The account's own actions, one row of buttons that may wrap: Rename, Sign
@@ -497,24 +464,37 @@ function detailRow(view) {
     .text_color(t.muted)
     .cursor_pointer()
     .hover((s) => s.bg(t.hover))
-    .on_click(() => openDetail(view))
+    .on_click(() => {
+      closeOnce(view);
+      openDetail(view);
+    })
     .child(div().flex_1().min_w(0).truncate().child("Accounts and settings"))
     .child(svg(CHEVRON).size(14).flex_none().text_color(t.muted));
 }
 
 export function render(view, cx) {
   const t = view.theme;
-  const ground = v_flex().id("account-view").size_full().min_h(0).bg(t.popover);
   const reading = accountOf(view);
+  const account =
+    reading === null
+      ? undefined
+      : view.store.accounts().find((entry) => entry.id === reading.id);
+  // As a popup the root is as tall as its opener asked Herdr for: Herdr sizes
+  // a popup to its content. As a pane or a block it fills its place.
+  const root = v_flex().id("account-view");
+  const ground = (
+    view.props.overlay
+      ? root.w_full().h(accountHeight(reading, account))
+      : root.size_full()
+  )
+    .min_h(0)
+    .bg(t.popover);
   // The account went away after the view opened: this draw is the first
   // code to see it.
   if (reading === null) {
     closeOnce(view);
     return ground;
   }
-  const account = view.store
-    .accounts()
-    .find((entry) => entry.id === reading.id);
   const shown = accountViewOf(reading, account, view.now);
   return ground
     .text_size(13)

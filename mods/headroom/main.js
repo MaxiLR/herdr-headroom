@@ -7,7 +7,6 @@ import {
   closeOverlay,
   exec,
   layout,
-  nextCommand,
   notify,
   openOverlay,
   props,
@@ -20,6 +19,7 @@ import {
   writeTextFile,
 } from "herdr";
 import { chooseForm } from "./logic/form.js";
+import { drawn } from "./logic/hint.js";
 import { createHost } from "./logic/host.js";
 import { PREFS_KEY, published } from "./logic/publish.js";
 import { sharedStore } from "./logic/store.js";
@@ -28,9 +28,10 @@ import * as connect from "./ui/connect.js";
 import * as detail from "./ui/detail.js";
 import * as list from "./ui/list.js";
 import * as rail from "./ui/rail.js";
+import * as remove from "./ui/remove.js";
 import * as strip from "./ui/strip.js";
 
-const FORMS = { list, rail, strip, account, detail, connect };
+const FORMS = { list, rail, strip, account, detail, connect, remove };
 const MODULES = Object.values(FORMS);
 
 // Countdowns are in minutes; the store reads the accounts that are due.
@@ -71,14 +72,6 @@ export default class Headroom extends View {
         await this.store.tick();
       });
     });
-    cx.spawn(async (cx) => {
-      for (;;) {
-        const name = await nextCommand();
-        const view = this.view();
-        for (const module of MODULES) module.command?.(name, view, cx);
-        cx.notify();
-      }
-    });
   }
 
   view() {
@@ -99,6 +92,7 @@ export default class Headroom extends View {
 
   render(cx) {
     const view = this.view();
+    drawn(view);
     return div()
       .id("root")
       .size_full()

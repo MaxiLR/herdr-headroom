@@ -97,8 +97,13 @@ async function objectOf(response) {
   return body;
 }
 
-const capitalized = (text) =>
-  isText(text) ? text[0].toUpperCase() + text.slice(1) : null;
+// A plan as words: `self_serve_business_prolite` reads `Self serve business
+// prolite`. A plan that is not text is null.
+function planWords(plan) {
+  if (!isText(plan)) return null;
+  const words = plan.replaceAll("_", " ");
+  return words[0].toUpperCase() + words.slice(1);
+}
 
 // The payload of a JWT, unverified, or null.
 function claimsOf(token) {
@@ -126,7 +131,7 @@ function identityOf(tokens) {
       organizationId: auth.chatgpt_account_id,
       email: isText(email) ? email : null,
       organization: null,
-      plan: capitalized(auth.chatgpt_plan_type),
+      plan: planWords(auth.chatgpt_plan_type),
     };
   }
   throw new Failure("unexpected");
@@ -296,7 +301,7 @@ export async function read(credentials, io) {
       ...windowsOf(usage.rate_limit, now, (length) => length),
       ...additional.flatMap((entry) => additionalWindows(entry, now)),
     ];
-    return { ok: true, windows, plan: capitalized(usage.plan_type) };
+    return { ok: true, windows, plan: planWords(usage.plan_type) };
   } catch (error) {
     return failed(error);
   }

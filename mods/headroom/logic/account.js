@@ -1,6 +1,7 @@
 // The account view's logic: the reading it shows, what it draws of it, the
-// question asked before it is removed and the popup that opens it. Kept apart
-// from `ui/account.js` so any form can open the view without importing it.
+// popup that opens it and the dialog that asks before an account is removed.
+// Kept apart from `ui/account.js` so any form can open them without importing
+// it.
 
 import { ageText, clockText, OPEN_MAX, windowsInOrder } from "./detail.js";
 import { levelOf } from "./levels.js";
@@ -8,7 +9,7 @@ import { untilReset } from "./pace.js";
 import { barOf, isThin, rowOf, stateOf } from "./rows.js";
 import { failedText, loginText, percentText, shortDate } from "./words.js";
 
-/** The popup's width. */
+/** The popup's width, and the remove dialog's. */
 const WIDTH = 380;
 
 // The heights the account view draws, in px.
@@ -171,7 +172,20 @@ export function openAccount(view, id) {
   });
 }
 
-/** What the confirm dialog asks before the account `label` is removed. */
+/**
+ * Asks before the account `id` is removed, with the mod's own dialog over
+ * the view that asks; the dialog removes it on Remove or Enter.
+ */
+export function openRemove(view, id) {
+  view.host.openOverlay({
+    mod: "headroom",
+    kind: "dialog",
+    width: WIDTH,
+    props: { remove: id },
+  });
+}
+
+/** What the remove dialog asks before the account `label` is removed. */
 export function removeQuestion(label) {
   return {
     title: `Remove ${label}?`,

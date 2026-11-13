@@ -1,6 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { drawForm, texts, withId } from "./helpers/draw.mjs";
+import {
+  drawForm,
+  drawSource,
+  texts,
+  themeColour,
+  withId,
+} from "./helpers/draw.mjs";
 import { NOW, reading, win } from "./helpers/fakes.mjs";
 
 const MINUTE = 60 * 1000;
@@ -219,3 +225,140 @@ test("with no accounts the strip offers to connect one", (t) => {
   assert.deepEqual(texts(lines), ["Connect account"], all);
   assert.match(withId(lines, "connect-account") ?? "", /:on_click/, all);
 });
+
+// The theme's border colour, as Herdr prints it.
+function borderColour(t) {
+  const lines = drawSource(
+    t,
+    `import { View, div } from "gpui-kit";
+import { theme } from "herdr";
+
+export default class Colours extends View {
+  render() {
+    return div().child(JSON.stringify({ border: theme().border }));
+  }
+}
+`,
+  );
+  return lines ? JSON.parse(texts(lines)[0]).border : null;
+}
+
+for (const [name, fixture] of [
+  ["three accounts at 640 px", { width: 640, readings: THREE }],
+  ["three accounts at 250 px", { width: 250, readings: THREE }],
+  ["no accounts", { width: 640, readings: [] }],
+]) {
+  test(`${name}: the strip draws a 1 px border line on its top edge`, (t) => {
+    const border = borderColour(t);
+    if (border === null) return;
+    const lines = drawForm(t, "strip", {
+      size: { width: fixture.width, height: 28 },
+      readings: fixture.readings,
+      layout: AFTER,
+    });
+    if (!lines) return;
+    const all = lines.join("\n");
+    const strip = withId(lines, "strip") ?? "";
+    assert.match(strip, /\.border_t\[Number\(1(\.0)?\)\]/, all);
+    assert.ok(
+      strip.includes(`.border_color[Str(${JSON.stringify(border)})]`),
+      all,
+    );
+  });
+}
+
+// maxi at 41 % weekly and 62 % 5-hour, with Fable's weekly window, which the
+// item has no bar for, at its limit.
+const GENERAL = [
+  win("7d", 0.41, NOW + 4 * DAY + 6 * HOUR),
+  win("5h", 0.62, NOW + HOUR + 48 * MINUTE),
+];
+const FABLE = win("7d:fable", 1, NOW + 4 * DAY + 6 * HOUR, { atLimit: true });
+const fableAtLimit = (overrides = {}) =>
+  reading({ windows: [...GENERAL, FABLE], ...overrides });
+const FABLE_WORDS =
+  "maxi: Weekly 41% · 4d 6h, 5-hour 62% · 1h 48m, Fable at limit";
+
+const fills = (lines, index) =>
+  lines.filter((line) =>
+    new RegExp(`:id\\[Str\\("account-${index}-[^"]*-fill"\\)\\]`).test(line),
+  );
+
+// What each density draws of the three accounts, with the dot or without.
+for (const [width, drawn, barsPerAccount] of [
+  [640, ["maxi", "62%", "5h", "maxi · Terac", "91%", "5h", "maxilr", "23%"], 2],
+  [400, ["62%", "5h", "91%", "5h", "23%"], 2],
+  [250, ["62%", "5h", "91%", "5h", "23%"], 0],
+]) {
+  test(`at ${width} px a per-model limit reached puts a 5 px blocked dot on the mark`, (t) => {
+    const blocked = themeColour(t, "blocked");
+    if (blocked === null) return;
+    const lines = drawForm(t, "strip", {
+      size: { width, height: 28 },
+      readings: [fableAtLimit(), ...THREE.slice(1)],
+      layout: ALONE,
+    });
+    const all = lines.join("\n");
+    assert.deepEqual(texts(lines), drawn, all);
+    const dot = withId(lines, "account-0-dot");
+    assert.ok(dot, all);
+    assert.match(dot, /\.size\[Number\(5(\.0)?\)\]/, all);
+    assert.ok(dot.includes(`.bg[Str(${JSON.stringify(blocked)})]`), all);
+    assert.equal(withId(lines, "account-1-dot"), undefined, all);
+    assert.equal(withId(lines, "account-2-dot"), undefined, all);
+    const account = withId(lines, "account-0") ?? "";
+    assert.ok(
+      account.includes(`:tooltip[Str(${JSON.stringify(FABLE_WORDS)})]`),
+      all,
+    );
+    assert.ok(
+      account.includes(
+        `:accessibility_label[Str(${JSON.stringify(FABLE_WORDS)})]`,
+      ),
+      all,
+    );
+    assert.equal(fills(lines, 0).length, barsPerAccount, all);
+  });
+}
+
+for (const [name, readingOf] of [
+  ["no per-model limit reached", () => reading()],
+  [
+    "weekly at its limit too",
+    () =>
+      reading({
+        windows: [
+          win("7d", 0.41, NOW + 4 * DAY + 6 * HOUR, { atLimit: true }),
+          GENERAL[1],
+          FABLE,
+        ],
+      }),
+  ],
+  [
+    "a failed read",
+    () =>
+      fableAtLimit({
+        status: "error",
+        error: "network",
+        fetchedAt: NOW - 12 * MINUTE,
+      }),
+  ],
+  ["a first read", () => fableAtLimit({ status: "stale", fetchedAt: null })],
+  ["a signed-out account", () => fableAtLimit({ status: "signed-out" })],
+]) {
+  test(`${name}: the strip draws no dot`, (t) => {
+    for (const width of [640, 250]) {
+      const lines = drawForm(t, "strip", {
+        size: { width, height: 28 },
+        readings: [readingOf()],
+        layout: ALONE,
+      });
+      if (!lines) return;
+      assert.equal(
+        withId(lines, "account-0-dot"),
+        undefined,
+        `${width} px\n${lines.join("\n")}`,
+      );
+    }
+  });
+}

@@ -1,12 +1,12 @@
 // The small drawing kit every form is built from: the bar with its pace
-// mark, the pair of bars, the provider marks, the spinner and the fonts.
-import { div, svg } from "gpui-kit";
+// mark, the pair of bars, the provider marks and their dot, the spinner, the
+// band on a scrolling area's bottom edge and the fonts.
+import { Background, div, PathBuilder, svg } from "gpui-kit";
 import { v_flex } from "gpui-base";
 import { settings } from "herdr";
-import { levelFill, track } from "../logic/color.js";
+import { alpha, levelFill, track } from "../logic/color.js";
 
 export { levelFill, levelText, track } from "../logic/color.js";
-export { fitTo } from "../logic/fit.js";
 
 /** Herdr's own ring spinner, so a wait reads as it does in Herdr. */
 const SPINNER = "mods/workspace-chrome/spinner.svg";
@@ -43,6 +43,13 @@ const HALO = 1.5;
 // The least a fill that is not empty is drawn at, so 1 % still shows.
 const MIN_FILL = 3;
 
+// The dot of a reached limit the row has no bar for: 5 px, its box 2 px above
+// the mark's and 3 px beyond it, in a ring of the ground as wide as the pace
+// mark's halo.
+const DOT = 5;
+const DOT_RISE = 2;
+const DOT_REACH = 3;
+
 /** A provider's mark, `size` px, in `t`'s colours, named for screen readers. */
 export function mark(provider, size, t) {
   const { path, label, color } = MARKS[provider];
@@ -51,6 +58,26 @@ export function mark(provider, size, t) {
     .flex_none()
     .text_color(color(t))
     .accessibility_label(label);
+}
+
+/**
+ * `icon`, a mark `size` px, with the dot of a reached limit on its upper
+ * right corner when `dot`: `<id>-dot`, in `blocked`, ringed by a disc of
+ * `ground` (`chrome` by default) behind it. It takes no room; without the
+ * dot `icon` is drawn as it is.
+ */
+export function dotted(icon, { id, size, dot, ground }, t) {
+  if (!dot) return icon;
+  const ring = div()
+    .absolute()
+    .top(-(DOT_RISE + HALO))
+    .right(-(DOT_REACH + HALO))
+    .size(DOT + 2 * HALO)
+    .p(HALO)
+    .rounded_full()
+    .bg(ground ?? t.chrome)
+    .child(div().id(`${id}-dot`).size(DOT).rounded_full().bg(t.blocked));
+  return div().relative().flex_none().size(size).child(icon).child(ring);
 }
 
 /**
@@ -186,6 +213,53 @@ export function mono() {
 /** Three dots, drawn, in the quiet text colour: a menu or settings control. */
 export function moreIcon(size, t) {
   return svg(MORE).size(size).flex_none().text_color(t.muted);
+}
+
+// A rectangle filling its box, to paint a gradient on.
+function fill() {
+  return PathBuilder.fill()
+    .move_to("0%", "0%")
+    .line_to("100%", "0%")
+    .line_to("100%", "100%")
+    .line_to("0%", "100%")
+    .close()
+    .build();
+}
+
+/**
+ * A band `id` on the bottom edge of the box it is put in (made `relative`),
+ * over what scrolls there: `height` px, the whole width, in `chrome` with its
+ * top `fade` px fading from clear, so what passes under it fades instead of
+ * being cut. It takes no press and no wheel; what is under it keeps them.
+ */
+export function edgeBand({ id, height, fade }, t) {
+  const clear = alpha(t.chrome, 0);
+  return v_flex()
+    .id(id)
+    .absolute()
+    .left(0)
+    .right(0)
+    .bottom(0)
+    .h(height)
+    .child(
+      div()
+        .relative()
+        .flex_none()
+        .w_full()
+        .h(fade)
+        .child(
+          window
+            .paint_path(
+              fill(),
+              Background.linear_gradient(180, clear, t.chrome),
+            )
+            .absolute()
+            .top(0)
+            .left(0)
+            .size_full(),
+        ),
+    )
+    .child(div().flex_1().w_full().bg(t.chrome));
 }
 
 function clamp(share) {

@@ -16,7 +16,7 @@ import {
   stripSeparator,
 } from "../logic/strip.js";
 import { open as openConnect } from "./connect.js";
-import { levelText, mark, pair } from "./kit.js";
+import { dotted, levelText, mark, pair } from "./kit.js";
 
 // A signed-out account's mark is faded; a failed read's bars are dimmed by
 // the pair itself.
@@ -89,8 +89,16 @@ function account(reading, row, item, index, density, view) {
     .hover((s) => s.bg(t.hover))
     .on_click(() => openAccount(view, reading.id))
     .child(
-      mark(row.provider, STRIP.mark, t).when(item.badge, (el) =>
-        el.opacity(SIGNED_OUT_MARK),
+      dotted(
+        mark(row.provider, STRIP.mark, t).when(item.badge, (el) =>
+          el.opacity(SIGNED_OUT_MARK),
+        ),
+        {
+          id: `account-${index}`,
+          size: STRIP.mark,
+          dot: row.limitWords !== null,
+        },
+        t,
       ),
     )
     .when(density === "full", (el) =>
@@ -148,6 +156,8 @@ export function render(view, cx) {
     .gap(STRIP.gap)
     .items_center()
     .bg(t.chrome)
+    .border_t(1)
+    .border_color(t.border)
     .text_size(STRIP.text)
     .text_color(t.muted)
     .when(separator, (el) =>

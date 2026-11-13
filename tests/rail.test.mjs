@@ -51,7 +51,7 @@ test("a weekly-only row shows its weekly percent with no tag", () => {
   assert.deepEqual(railNumber(row), { text: "23%", tag: "", level: "normal" });
 });
 
-test("a row whose tightest is a per-model window shows that window's percent", () => {
+test("a per-model window ahead of weekly never gives the number", () => {
   const row = rowOf(
     reading({
       windows: [
@@ -62,7 +62,7 @@ test("a row whose tightest is a per-model window shows that window's percent", (
     }),
     NOW,
   );
-  assert.deepEqual(railNumber(row), { text: "67%", tag: "", level: "normal" });
+  assert.deepEqual(railNumber(row), { text: "41%", tag: "", level: "normal" });
 });
 
 test("a signed-out row and a first read show no number", () => {
@@ -89,7 +89,7 @@ test("a weekly-only tooltip says when its one window resets", () => {
   );
 });
 
-test("a per-model window that is the tightest is named in the tooltip", () => {
+test("the tooltip gives the weekly and the 5-hour numbers only", () => {
   assert.equal(
     railTooltip(
       reading({
@@ -101,7 +101,7 @@ test("a per-model window that is the tightest is named in the tooltip", () => {
       }),
       NOW,
     ),
-    "maxi: Weekly 41% · 4d 6h, 5-hour 30% · 1h 48m, Opus 67% · 4d 6h",
+    "maxi: Weekly 41% · 4d 6h, 5-hour 30% · 1h 48m",
   );
 });
 
@@ -146,4 +146,52 @@ test("the number is shown at 76 px and 159 px and dropped at 44 px", () => {
 
 test("before its size is known the rail shows the number", () => {
   assert.equal(showsNumber(null), true);
+});
+
+// Fable's weekly window, at its limit; the row has no bar for it.
+const FABLE = win("7d:fable", 1, WEEKLY_RESET, { atLimit: true });
+const OPUS = win("7d:opus", 1, WEEKLY_RESET, { atLimit: true });
+const GENERAL = [win("7d", 0.41, WEEKLY_RESET), win("5h", 0.62, SHORT_RESET)];
+
+test("a per-model window at its limit ends the tooltip with its name", () => {
+  assert.equal(
+    railTooltip(reading({ windows: [...GENERAL, FABLE] }), NOW),
+    "maxi: Weekly 41% · 4d 6h, 5-hour 62% · 1h 48m, Fable at limit",
+  );
+});
+
+test("several per-model windows at their limit are counted in the tooltip", () => {
+  assert.equal(
+    railTooltip(reading({ windows: [...GENERAL, FABLE, OPUS] }), NOW),
+    "maxi: Weekly 41% · 4d 6h, 5-hour 62% · 1h 48m, 2 models at limit",
+  );
+});
+
+test("with weekly at its limit too the tooltip names no model", () => {
+  const words = railTooltip(
+    reading({
+      windows: [
+        win("7d", 0.41, WEEKLY_RESET, { atLimit: true }),
+        win("5h", 0.62, SHORT_RESET),
+        FABLE,
+      ],
+    }),
+    NOW,
+  );
+  assert.doesNotMatch(words, /Fable/);
+  assert.doesNotMatch(words, /at limit$/);
+});
+
+test("a failed read, a first read and a signed-out account name no model", () => {
+  for (const overrides of [
+    { status: "error", error: "network", fetchedAt: NOW - 12 * MINUTE },
+    { status: "stale", fetchedAt: null },
+    { status: "signed-out" },
+  ]) {
+    const words = railTooltip(
+      reading({ windows: [...GENERAL, FABLE], ...overrides }),
+      NOW,
+    );
+    assert.doesNotMatch(words, /Fable/, JSON.stringify(overrides));
+  }
 });

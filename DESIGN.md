@@ -98,6 +98,21 @@ components:
     typography: "{typography.block-header}"
     height: "41px"
     padding: "14px 12px 5px 16px"
+  edge-line:
+    backgroundColor: "{colors.border}"
+    height: "1px"
+    width: "100%"
+  hint:
+    backgroundColor: "{colors.chrome}"
+    textColor: "{colors.muted}"
+    typography: "{typography.numbers}"
+    height: "34px"
+    width: "100%"
+  limit-dot:
+    backgroundColor: "{colors.blocked}"
+    rounded: "{rounded.bar}"
+    width: "5px"
+    height: "5px"
   button-primary:
     backgroundColor: "{colors.solid}"
     textColor: "{colors.solid-foreground}"
@@ -134,6 +149,18 @@ components:
     rounded: "{rounded.row}"
     height: "30px"
     padding: "0 12px"
+  button-danger:
+    backgroundColor: "{colors.blocked}"
+    textColor: "{colors.solid-foreground}"
+    rounded: "{rounded.row}"
+    height: "32px"
+    padding: "0 14px"
+  button-connect-square:
+    backgroundColor: "{colors.raised}"
+    textColor: "{colors.foreground}"
+    rounded: "{rounded.row}"
+    width: "30px"
+    height: "30px"
   field:
     backgroundColor: "{colors.background}"
     textColor: "{colors.foreground}"
@@ -158,6 +185,26 @@ components:
     width: "22px"
     height: "22px"
   arrow-control-hover:
+    backgroundColor: "{colors.hover}"
+  more-control:
+    textColor: "{colors.muted}"
+    rounded: "{rounded.control}"
+    width: "22px"
+    height: "22px"
+  more-control-hover:
+    backgroundColor: "{colors.hover}"
+  account-menu:
+    backgroundColor: "{colors.popover}"
+    textColor: "{colors.foreground}"
+    rounded: "10px"
+    width: "176px"
+    padding: "5px"
+  account-menu-item:
+    textColor: "{colors.foreground}"
+    rounded: "7px"
+    height: "31px"
+    padding: "0 8px"
+  account-menu-item-hover:
     backgroundColor: "{colors.hover}"
   switch-on:
     backgroundColor: "{colors.accent}"
@@ -193,10 +240,10 @@ The values in the frontmatter are the graphite theme (Herdr's default dark). The
 
 **Key Characteristics:**
 
-- Thickness names the window: a full 6 px bar for a weekly window, a 3 px bar for the 5-hour one, 6 px apart.
+- Thickness names the window: a full 6 px bar for a weekly window, a 3 px bar for the 5-hour one, 6 px apart. Two bars at most on a row; a reached per-model limit is said in words, or as a dot on the mark where there is no room for words.
 - Colour only for trouble; a level is always paired with its number or the words "At limit".
 - A 2 px pace tick centred on its bar, reaching 2 px above and below it, with a ground-coloured halo, says whether an account is burning faster than its window.
-- The providers' own logos: the ChatGPT logo in `foreground`, Claude's spark in Claude's orange (`#D97757`), the one colour not taken from the theme. Herdr's own spinner, scrollbar, confirm dialog and toasts; no brand, logo or palette of the mod's own.
+- The providers' own logos: the ChatGPT logo in `foreground`, Claude's spark in Claude's orange (`#D97757`), the one colour not taken from the theme. Herdr's own spinner, icons, scrollbar and toasts, and the layout of its dialogs; no brand, logo or palette of the mod's own.
 - Native motion only: fills and ticks slide with `.transition`, waits spin with `.spin(900)`.
 
 ## Colors
@@ -206,9 +253,9 @@ Herdr's theme, used by role name; the mod adds only two computed values (the tra
 ### Primary
 
 - **Working Amber** (`working`): the fill of a bar from 75 % used (high level), and the tint of the compact "!" badge and the Codex wait spinner.
-- **Blocked Coral** (`blocked`): the fill of a bar from 90 % used (critical level) and at its limit.
+- **Blocked Coral** (`blocked`): the fill of a bar from 90 % used (critical level) and at its limit; the dot of a reached per-model limit in the rail and the strip; the ground and border of the Remove button in Remove's dialog.
 - **Working Amber, Readable** (`working-text`): the number beside a high bar and the "Login ends in 2 days" warning. Computed as `working` mixed 22 % toward `foreground` (`mix()` in `logic/color.js`), because plain `working` falls to 4.3:1 on paper's `chrome`.
-- **Blocked Coral, Readable** (`blocked-text`): the number beside a critical bar, "At limit", and sign-in errors in the connect dialog. `blocked` mixed 22 % toward `foreground`.
+- **Blocked Coral, Readable** (`blocked-text`): the number beside a critical bar, "At limit", the words of a reached per-model limit ("Fable at limit"), Remove in the account view and in the three-dot menu, and sign-in errors in the connect dialog. `blocked` mixed 22 % toward `foreground`.
 
 ### Secondary
 
@@ -221,15 +268,15 @@ Herdr's theme, used by role name; the mod adds only two computed values (the tra
 ### Neutral
 
 - **Chrome** (`chrome`): the ground of the list, the rail and the strip, the sidebar's own colour. The pace tick's halo is this colour there.
-- **Popover** (`popover`): the ground of the detail view, the account view and the connect dialog. The pace tick's halo is this colour in those views.
+- **Popover** (`popover`): the ground of the detail view, the account view, the three-dot menu, Remove's dialog and the connect dialog. The pace tick's halo is this colour in those views.
 - **Background** (`background`): the inside of fields and of the Codex code box in the dialog.
 - **Raised** (`raised`): secondary buttons and the small Copy/Open buttons.
 - **Foreground** (`foreground`): labels and titles; the pace tick itself; the ChatGPT logo.
 - **Muted** (`muted`): every number, reset, status word, hint, normal-level fill, and icon. 4.8:1 or better on every ground in graphite and paper.
-- **Dim** (`dim`): only where Herdr's own mods use it: the "Limits" header, the "·" separators, "Esc", field labels, the strip separator and the "5h" tag in the rail.
+- **Dim** (`dim`): only where Herdr's own mods use it: the "Limits" header, the "·" separators, "Esc", field labels, the strip separator, the "5h" tag in the rail and the hint's chevron.
 - **Track** (`track`): the empty part of every bar, `foreground` at 10 % alpha, in light and dark alike (`raised` vanishes on paper's `chrome`).
-- **Border, Input, Hover, Selected** (`border`, `input`, `hover`, `selected`): section rules in the detail view, control outlines, hover grounds and the pressed secondary button.
-- **Solid** (`solid` / `solid-foreground`): the one primary button in a dialog (Connect), and Sign in again in the account view of an account that must sign in again.
+- **Border, Input, Hover, Selected** (`border`, `input`, `hover`, `selected`): the 1 px line on the top edge of the list, the rail and the strip, section rules in the detail view, control outlines, hover grounds and the pressed secondary button.
+- **Solid** (`solid` / `solid-foreground`): the one primary button in a dialog (Connect), and Sign in again in the account view of an account that must sign in again. `solid-foreground` is also the text of the Remove button in Remove's dialog.
 
 ### Named Rules
 
@@ -248,12 +295,12 @@ Herdr's theme, used by role name; the mod adds only two computed values (the tra
 
 ### Hierarchy
 
-- **Dialog title** (600, 15 px): the connect dialog's title, as Herdr's prompt and confirm dialogs.
+- **Dialog title** (600, 15 px): the connect dialog's title and Remove's question, as Herdr's prompt and confirm dialogs.
 - **Detail title** (600, 14 px): "Limits" at the top of the detail view, and the account's label at the top of its account view.
 - **Label** (400, 13 px; 500 in the detail view): an account's label; dialog body text.
-- **Window line** (400, 12 px): each window's name, percentage, reset and clock time in the detail view, and each window's name in the account view; hints run at 12 to 12.8 px.
+- **Window line** (400, 12 px): each window's name, percentage, reset and clock time in the detail view, and each window's name in the account view; hints and the three-dot menu's words run at 12 to 12.8 px.
 - **Block header** (500, 11.5 px, `dim`): "Limits" over the list, matching Herdr's "Spaces" and "Agents".
-- **Numbers** (400, 11 px, `muted` or a level colour): the quiet line under the bars, the rail's percentage and status words on the label line.
+- **Numbers** (400, 11 px, `muted` or a level colour): the quiet line under the bars, the rail's percentage, status words on the label line and the list's hint ("3 more").
 - **Strip** (400, 11.8 px, `muted`): the status-bar line, matching Herdr's status bar.
 - **Code** (JetBrains Mono 500, 22 px): the Codex device code. **Address** (JetBrains Mono 400, 11.5 px, `muted`): the sign-in address.
 
@@ -265,20 +312,22 @@ Herdr's theme, used by role name; the mod adds only two computed values (the tra
 
 ## Layout
 
-The mod picks a form from its block's measured size (`logic/form.js`): **rail** narrower than 160 px; otherwise **strip** under 48 px tall; otherwise **list**. The account view, the detail view and the connect dialog are opened as overlays, not picked.
+The mod picks a form from its block's measured size (`logic/form.js`): **rail** narrower than 160 px; otherwise **strip** under 48 px tall; otherwise **list**. The account view, the detail view, Remove's dialog and the connect dialog are opened as overlays, not picked.
 
-- **List.** A 41 px header, then accounts 8 px in from the block's edges, as Herdr's rows are. Per account: a 26 px label line (14 px mark, 8 px gap, 13 px label, the note right-aligned), the pair of bars 6 px apart, 6 px, a 14 px line of numbers (weekly on the left, "5-hour" on the right), then 9 px. Below about 220 px the 5-hour numbers drop their word. The list fills the block it is given: the header stays and the accounts scroll under it with Herdr's scrollbar. Only with `props.fit` does the block ask its layout for exactly the height its accounts need (via `fitTo`), up to 329 px (four accounts). It never collapses. A click on an account opens its account view.
-- **Rail.** 8 px by 6 px per account: a 16 px line with the mark and the tightest window's percentage (plus "5h" in `dim` when that is the 5-hour window), then a 5 px and 3 px pair, 4 px apart. Under 60 px the number drops and the mark centres over the bars.
-- **Strip.** One 28 px line, 14 px padding each side, items 16 px apart and their parts 6 px apart: a 12 px mark, the label, a 44 px wide pair (5 px and 3 px, 4 px apart), the percentage. Labels drop first, then bars; marks and percentages always stay. A 1 px by 14 px `dim` rule leads the strip only when another block precedes it in its row.
+- **List.** A 1 px `border` line on the top edge, as Herdr's Agents list draws, then a 41 px header, then accounts 8 px in from the block's edges, as Herdr's rows are. Per account: a 26 px label line (14 px mark, 8 px gap, 13 px label, the note right-aligned), the pair of bars 6 px apart, 6 px, a 14 px line of numbers (weekly on the left, "5-hour" on the right), then 9 px. Below about 220 px the 5-hour numbers drop their word. The list fills the block it is given: the header stays and the accounts scroll under it with Herdr's scrollbar. Only with `props.fit` does the block ask its layout for the height it needs (via `fitTo`): the line, the header and its first two accounts as drawn (70 px with both bars, 61 px with one, 49 px signed out, 50 px not read yet), then 8 px under them, or 25 px when more are cut off, for the hint. That height is remembered per layout and block in `headroom.fit`, and the block is asked again only when the needed height changes, so a dragged size holds, across restarts too. It never collapses. A click on an account opens its account view.
+- **The hint.** Whenever an account is not fully in view below, a 34 px band lies on the bottom edge of the scrolling area, the whole width, over the accounts: its top 8 px fade from clear to `chrome` (`linear_gradient`), the rest is `chrome`, so an account passing under it fades instead of being cut. In it a 14 px line, 11 px above the edge and centred in the block: "3 more" at 11 px in `muted`, then, 5 px after it, Herdr's 11 px `chevron-down` in `dim`. Spoken "3 more accounts below"; it is not a control. Fitted and at the top, the band covers only the second account's 9 px of padding and the 25 px under it. It goes when the last account is in view.
+- **Rail.** The same 1 px `border` line on the top edge, then the accounts, 4 px under it. 8 px by 6 px per account: a 16 px line with the mark and the percentage of the fuller of the weekly and the 5-hour window (plus "5h" in `dim` when that is the 5-hour one), then a 5 px and 3 px pair, 4 px apart. Under 60 px the number drops and the mark centres over the bars. Fitted, it asks for the line, 4 px, its first two accounts (44 px with both bars, 37 px with one, 28 px signed out) and 4 px, or 10 px when more are cut off: 97 px and 103 px for accounts with both bars. Its hint is a 16 px band on the bottom edge, its top 6 px fading, with "+3" centred 1 px above the edge at 10.5 px in `muted`; hover and spoken name: "3 more accounts".
+- **Strip.** One 28 px line under a 1 px `border` line on its top edge, as Herdr's status bar draws, 14 px padding each side, items 16 px apart and their parts 6 px apart: a 12 px mark, the label, a 44 px wide pair (5 px and 3 px, 4 px apart), the percentage. Labels drop first, then bars; marks and percentages always stay. A 1 px by 14 px `dim` rule leads the strip only when another block precedes it in its row. In the installed layout it is two fifths of the status bar (weights 3 and 2 beside Herdr's `status` block), 120 to 720 px, across a boundary that drags, and hidden until Show in status bar turns it on. It never resizes its block.
 - **Account view.** A 380 px popup of one account, as tall as its content up to 640 px, on `popover`. A 26 px header 12 px down and 16 px in (16 px mark, the label at 14 px semibold and the plan, the reading's age and a 26 px refresh control), the email and organization under it, 40 px in. Then each window 13 px apart: its name at 12 px, the bar 6 px below, a 14 px line of numbers 6 px below that (percentage and reset on the left, clock time on the right). Then the pace line 14 px below and the login line 12 px below, 16 px in. Then, each after a 1 px `border` rule, the row of 30 px actions (16 px by 12 px, 8 px apart, Remove pushed right) and the 38 px "Accounts and settings" row.
-- **Detail view.** A 380 px popup (also a dialog or pane). Sections are 16 px in, separated by 1 px `border` rules; windows stack name-line over bar, 11 px apart. From 520 px each window is one line (name 120 px, bar flexible, percentage 56 px, reset 104 px, clock 66 px); under 340 px the clock time drops. With two accounts or more, each label line ends in an up and a down arrow. A click on an account opens its account view.
+- **Detail view.** A 380 px popup (also a dialog or pane), as tall as its content up to 640 px; past that the accounts scroll between its header and its footer. Sections are 16 px in, separated by 1 px `border` rules; windows stack name-line over bar, 11 px apart. From 520 px each window is one line (name 120 px, bar flexible, percentage 56 px, reset 104 px, clock 66 px); under 340 px the clock time drops. Each label line ends in the three dots; with two accounts or more, an up and a down arrow come before them, 2 px apart. A click on an account opens its account view. The footer, 16 px by 12 px after a 1 px `border` rule: the switches in a column at the left, 10 px apart, and Connect account at the right, centred on them.
+- **Remove's dialog.** Herdr's dialog layout, 380 px wide: 18 px padding, the title line, 6 px, the detail, 20 px, the button row at the right.
 - **Connect dialog.** Herdr's dialog layout: 18 px padding, 36 px fields, 32 px buttons, 20 px above the button row.
 
 Accounts stay in the person's own order; nothing is sorted by usage.
 
 ## Elevation & Depth
 
-Flat. The list, rail and strip sit on `chrome` with no shadow, border or card around an account; hover lays Herdr's translucent `hover` ground over the row. Depth comes from Herdr's overlay frame: the account view, the detail view and the connect dialog lift onto `popover`, and their frame and shadow are Herdr's, not the mod's. The mod draws no shadow of its own.
+Flat. The list, rail and strip sit on `chrome` with no shadow, border or card around an account; hover lays Herdr's translucent `hover` ground over the row. Depth comes from Herdr's overlay frame: the account view, the detail view, Remove's dialog and the connect dialog lift onto `popover`, and their frame and shadow are Herdr's, not the mod's. The single shadow the mod draws itself is gpui's `shadow_lg` under the three-dot menu, which floats over the detail view.
 
 ### Named Rules
 
@@ -286,7 +335,7 @@ Flat. The list, rail and strip sit on `chrome` with no shadow, border or card ar
 
 ## Shapes
 
-Bars are fully rounded capsules (`rounded_full`), and so is every fill; a non-empty fill is drawn at least 3 px wide so 1 % still shows. The pace tick is a 2 px capsule inside a 1.5 px ground-coloured halo box, centred on its bar and reaching 2 px above and below it (1 px in the rail and the strip); the pair's bars are 6 px apart (4 px in the rail and the strip), so the two ticks never touch. Interactive grounds use small, consistent radii: 4 px badge, 5 px strip item, 6 px icon controls and the rename field, 8 px rows and buttons, 9 px fields and choices.
+Bars are fully rounded capsules (`rounded_full`), and so is every fill; a non-empty fill is drawn at least 3 px wide so 1 % still shows. The pace tick is a 2 px capsule inside a 1.5 px ground-coloured halo box, centred on its bar and reaching 2 px above and below it (1 px in the rail and the strip); the pair's bars are 6 px apart (4 px in the rail and the strip), so the two ticks never touch. The dot of a reached limit is a 5 px disc in a 1.5 px ring of the ground, as wide as the tick's halo. Interactive grounds use small, consistent radii: 4 px badge, 5 px strip item, 6 px icon controls and the rename field, 7 px menu rows, 8 px rows and buttons, 9 px fields and choices, 10 px the menu.
 
 ## Components
 
@@ -299,24 +348,28 @@ The memorable thing: a full bar over a thin one, thickness naming the window so 
 - **Pace mark:** 2 px `foreground` tick at the share of the window's time elapsed, centred on its bar and reaching 2 px above and below it (1 px in the rail and the strip), haloed in the ground colour (`chrome` in the sidebar, `popover` in the account view and the detail view). No tick for a window that has not started.
 - **States:** a window the plan lacks is not drawn (a weekly-only plan shows one bar). First read: empty tracks, no numbers. Read failed: bars at 40 % opacity, no ticks. Signed out: no bars.
 - **Motion:** fill width and tick position transition over 400 ms ease-out.
-- **Per-model window:** shown on the row only when more used than the general weekly window, as its own full bar under the pair, 7 px down.
+- **Two bars at most:** a row in the list, the rail and the strip draws the weekly and the 5-hour window only. Per-model windows and Codex's additional limits are bars in the account view and the detail view.
 
 ### Account Row
 
 - **List:** 8 px side padding, 8 px radius, `hover` ground on hover, whole row is a button labelled with its spoken summary; a click opens the account's account view.
+- **A reached per-model limit, in the list:** the words, in the critical text colour (`blocked-text`), take the place of the week's reset time on the line of numbers: "41% · Fable at limit", "41% · 2 models at limit". Below 220 px the 5-hour side loses its reset time too while the words are shown; the words are cut with an ellipsis only when they still do not fit. The row's spoken name ends with them. Nothing is said when the weekly window is itself at its limit, nor for a failed read, an account not read yet or one that must sign in again.
 - **Label line notes:** "12m old · network" in `muted` for a failed read; "Login ends in 2 days" in `working-text`; "Sign in again" in `accent` (underlined on hover) with the label falling to `muted` and "Login ended Nov 9" under it.
 - **Rail and strip:** a signed-out mark at 45 % opacity with Herdr's 14 px "!" badge (`working` at 15 % alpha, `working-text` glyph). A tooltip names the account and both windows. A click opens the account's account view.
-- **Detail view:** the whole section is a button with the `hover` ground; a click opens the account's account view. Its label line ends in two 22 px arrows (Move up, Move down) with 14 px icons in `muted`, 6 px radius, `hover` ground on hover; an arrow the account cannot move along is at 35 % opacity and does nothing.
+- **The dot:** a reached per-model limit is a 5 px `blocked` dot ringed 1.5 px in the ground colour on the mark's upper right corner, its box 2 px above the mark's and 3 px beyond it, in the rail and the strip. It takes no room, so it is there at every width; the tooltip and the spoken name end with the words. The dot has one meaning and is never in the list, where the words are.
+- **Detail view:** the whole section is a button with the `hover` ground; a click opens the account's account view. Its label line ends in two 22 px arrows (Move up, Move down) with 14 px icons in `muted`, 6 px radius, `hover` ground on hover, when there are two accounts or more; an arrow the account cannot move along is at 35 % opacity and does nothing. Then the three dots, which open the three-dot menu and not the account view.
 
 ### Buttons
 
 - **Shape:** 8 px radius, 32 px tall, 14 px horizontal, 12.5 px medium.
 - **Primary:** `solid` ground, `solid-foreground` text and border; one per dialog (Connect). Disabled at 45 % opacity while the code field is empty; shows Herdr's spinner while checking.
 - **Secondary:** `raised` ground, `input` border, `foreground` text (Cancel). Hover drops opacity to 0.88.
-- **Connect account:** 30 px (28 px in the empty list), `raised` ground (none in the list), `input` border, a 12 to 14 px plus icon in `muted`; `selected` or `hover` on hover.
+- **Connect account:** 30 px (28 px in the empty list), `raised` ground (none in the list), `input` border, a 12 to 14 px plus icon in `muted`; `selected` or `hover` on hover. In the detail view below 340 px it is a 30 px square with the 14 px plus alone, in `foreground` because it is then the whole label, named "Connect account" in its tooltip and accessibility label.
+- **Danger:** Remove in Remove's dialog: 32 px, `blocked` ground and border, `solid-foreground` text, a pair that holds 5:1 or better in all five shipped themes; 0.88 opacity on hover.
 - **Account actions:** 30 px, 8 px radius, 12 px horizontal, 12.5 px medium, `raised` ground, `input` border, `selected` on hover: Rename, Sign in again and, at the right, Remove in `blocked-text`. Sign in again is solid (`solid` ground and border, `solid-foreground` text, 0.88 opacity on hover) when the account must sign in again.
 - **Mini:** 26 px, 6 px radius, `raised`, 12 px: Copy (turns to "Copied") and Open.
-- **Icon controls:** 22 to 26 px square, 6 px radius, `hover` ground on hover, a tooltip and accessibility label ("Accounts and settings", "Refresh", "Move up", "Move down").
+- **Icon controls:** 22 to 26 px square, 6 px radius, `hover` ground on hover, a tooltip and accessibility label ("Accounts and settings", "Refresh", "Move up", "Move down", "Rename or remove").
+- **Three dots:** the 22 px three-dot control right of an account's arrows in the detail view, 2 px after them (alone with one account): the mod's 14 px `more` icon in `muted` (`foreground` while its menu is open), the `hover` ground under the pointer and while its menu is open.
 
 ### Inputs / Fields
 
@@ -331,12 +384,29 @@ The memorable thing: a full bar over a thin one, thickness naming the window so 
 - **Windows:** each window's name at 12 px in `foreground`, its bar at the full width (thin for the 5-hour window), then the percentage (or "At limit") in its level's text colour, "resets in 4d 6h" or "not started", and the clock time on the right, 11 px in `muted`. A failed read's bars are dimmed with their percentages only; before the first read, a pair of empty tracks; signed out, no bars.
 - **Pace line:** when a bar carries its pace mark, an 18 px key (a 6 px bar half full, its tick at its middle) leads "The line on a bar marks how much of its time has passed." at 11.5 px in `muted`, wrapping rather than losing words.
 - **Login line:** "Login ends Dec 5" at 11.5 px in `muted`; "Login ends in 2 days" in `working-text` in its last 3 days; "Login ended Nov 9" when signed out.
-- **Actions:** Rename, Sign in again, Remove (the account action buttons). Remove confirms through Herdr's own confirm dialog. The view closes itself when its account is no longer connected.
+- **Actions:** Rename, Sign in again, Remove (the account action buttons). Remove asks with the mod's own dialog, Remove's dialog, over this view.
 - **Accounts and settings:** the last row, 38 px, 12 px in `muted` with a 14 px chevron on the right, `hover` ground on hover; it opens the detail view.
+- **Height and closing:** as tall as its content up to 640 px. It closes itself when it opens another view (the detail view, the connect dialog for Sign in again), and when its account is no longer connected. The detail view, as a popup, closes itself when it opens another view too.
+
+### Three-Dot Menu
+
+- **Surface:** gpui-base's `Popover` under the three dots, anchored at their top right, 2 px down: 176 px, `popover` ground, `input` border, 10 px radius, `shadow_lg`, 5 px of padding, 12.8 px text. A press outside or Esc closes it.
+- **Rows:** two 31 px rows with 8 px at their sides and a 7 px radius, the `hover` ground under the pointer; in each a 14 px icon, 9 px, then the word. A pencil in `muted` and "Rename" in `foreground`; a trash can and "Remove", both in `blocked-text`. The icons are the mod's own, drawn as its arrows are.
+- **Rename** closes the menu and puts the rename field in place of the label and the plan, up to the arrows; Enter keeps, Esc leaves. **Remove** closes the menu and asks with Remove's dialog.
+
+### Remove's Dialog
+
+The mod's own dialog, laid out as Herdr's confirm dialog is; the account view's Remove and the three-dot menu's Remove both ask with it, over the view that asked.
+
+- **Title:** "Remove maxi · Terac?" at 15 px semibold in `foreground`, with "Esc" at 11 px in `dim` at its right. The title is not red: one red thing says which button is the dangerous one.
+- **Detail:** "Its stored login is deleted from this computer." at 13 px in `muted`, 6 px under the title.
+- **Buttons:** two 32 px buttons at the right, 8 px apart, 20 px under the detail: Cancel (secondary) and Remove (danger: `blocked` ground and border, `solid-foreground` text).
+- **Keys and closing:** 18 px of padding. Enter removes, Esc cancels. It closes once the account is removed, and when its account is no longer connected.
 
 ### Switch
 
-- **Notifications:** 30 by 18 px, 9 px radius; on: `accent` track and `accent-foreground` knob; off: `input` track and `muted` knob. The 14 px knob slides 160 ms ease-out. Its label, "Notify at 90% and at the limit", sits beside it in `muted`.
+- **Notifications:** 30 by 18 px, 9 px radius; on: `accent` track and `accent-foreground` knob; off: `input` track and `muted` knob. The 14 px knob slides 160 ms ease-out. Its label, "Notify at 90% and at the limit", sits beside it at 12 px in `muted`, 10 px from it.
+- **Show in status bar:** the second line, 10 px under the first: the same switch and the same 12 px `muted` label. On while the strip's block is shown, off while it is hidden; turning it shows or hides that block. Not drawn when the shown layout has no `headroom-strip` block.
 
 ### Spinner
 
@@ -352,7 +422,7 @@ Herdr's own ring (`mods/workspace-chrome/spinner.svg`), turning with `.spin(900)
 - **Do** mix level colours 22 % toward `foreground` for text, so every readable number holds 4.5:1 on graphite and paper.
 - **Do** draw only the windows a plan reports; a weekly-only account has one bar.
 - **Do** draw each account with its provider's own logo: the ChatGPT logo in `foreground`, Claude's spark in Claude's orange.
-- **Do** reuse Herdr's assets: spinner, plus and chevron icons, scrollbar, confirm dialog, toasts.
+- **Do** reuse Herdr's assets: spinner, plus and chevron icons, scrollbar, toasts, and the layout of its dialogs.
 - **Do** move a bar to a new reading with `.transition`; nothing pulses or redraws on a timer for motion.
 
 ### Don't:
@@ -364,3 +434,4 @@ Herdr's own ring (`mods/workspace-chrome/spinner.svg`), turning with `.spin(900)
 - **Don't** use terminal glyphs, block characters or warning symbols; write the state as words.
 - **Don't** use `dim` for anything a person must read beyond where Herdr's own mods use it.
 - **Don't** add a collapse control to the list, or a grouping setting.
+- **Don't** draw a third bar on a row, or the dot of a reached limit in the list.

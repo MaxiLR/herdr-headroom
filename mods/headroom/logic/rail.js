@@ -3,13 +3,7 @@
 
 import { levelOf } from "./levels.js";
 import { rowOf } from "./rows.js";
-import {
-  failedText,
-  modelName,
-  numbersText,
-  percentText,
-  tagOf,
-} from "./words.js";
+import { failedText, numbersText, percentText, tagOf } from "./words.js";
 
 /** The narrowest rail, in px, with room for the number beside the mark. */
 export const NUMBER_MIN_WIDTH = 60;
@@ -29,28 +23,30 @@ export function railNumber(row) {
 
 /**
  * The tooltip, and the spoken name, of `reading`'s account at `now`:
- * `maxi: Weekly 41% · 4d 6h, 5-hour 62% · 1h 48m`.
+ * `maxi: Weekly 41% · 4d 6h, 5-hour 62% · 1h 48m`, ending with the per-model
+ * windows at their limit, the dot's meaning: `…, Fable at limit`.
  */
 export function railTooltip(reading, now) {
   const row = rowOf(reading, now);
   if (row.state === "signed-out") return `${row.label}: Sign in again`;
-  const windows = [row.weekly, row.short, ...row.models].filter(Boolean);
+  const windows = [row.weekly, row.short].filter(Boolean);
   if (row.state === "first" || windows.length === 0) {
     return `${row.label}: Not read yet`;
   }
   const failed = row.state === "failed";
   const alone = windows.length === 1;
   const numbers = windows
-    .map((window) => {
-      const name = row.models.includes(window)
-        ? modelName(window)
-        : window.label;
-      return `${name} ${numbersText(window, now, { alone, failed })}`;
-    })
+    .map(
+      (window) =>
+        `${window.label} ${numbersText(window, now, { alone, failed })}`,
+    )
     .join(", ");
-  return failed
-    ? `${row.label}: ${numbers} · Read failed: ${failedText(reading, now)}`
-    : `${row.label}: ${numbers}`;
+  if (failed) {
+    return `${row.label}: ${numbers} · Read failed: ${failedText(reading, now)}`;
+  }
+  return row.limitWords === null
+    ? `${row.label}: ${numbers}`
+    : `${row.label}: ${numbers}, ${row.limitWords}`;
 }
 
 /** True when a rail `width` px wide (null: not measured yet) has the number. */

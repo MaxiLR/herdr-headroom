@@ -253,3 +253,16 @@ test("a body that is not an object is unexpected", async () => {
     assert.deepEqual(result, { ok: false, kind: "unexpected" }, String(body));
   }
 });
+
+test("the plan reads as words", async () => {
+  const planOf = async (plan_type) => {
+    const body = { ...fixture("five-hour-weekly"), plan_type };
+    const { result } = await readWith(() => ({ status: 200, body }));
+    return result.plan;
+  };
+  assert.equal(
+    await planOf("self_serve_business_prolite"),
+    "Self serve business prolite",
+  );
+  assert.equal(await planOf("plus"), "Plus");
+});
