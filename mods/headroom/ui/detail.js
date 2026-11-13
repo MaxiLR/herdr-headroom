@@ -2,7 +2,8 @@
 // a login ends; a click on an account opens its account view; the refresh
 // control, the notifications switch and Connect account. A 380 px popup from
 // the list's header and from the account view's last row; also a dialog or a
-// pane, where from 520 px each window is one line.
+// pane, where from 520 px each window is one line. As a popup it closes itself
+// before it opens another view.
 import { div, svg } from "gpui-kit";
 import { Switch, h_flex, v_flex } from "gpui-base";
 import { openAccount } from "../logic/account.js";
@@ -53,6 +54,15 @@ export function open(view) {
     height: openHeight(view.readings, view.store.accounts()),
     props: { form: "detail" },
   });
+}
+
+// Closes the popup, once, before it opens another view; a pane or a block has
+// no overlay to close.
+function closeSelf(view) {
+  const state = (view.ui.detail ??= {});
+  if (state.closed || !view.props.overlay) return;
+  state.closed = true;
+  view.host.closeOverlay(view.props.overlay);
 }
 
 // Reads every account now; the control is Herdr's spinner until it is done.
@@ -175,6 +185,7 @@ function labelLine(reading, row, index, view) {
           .hover((s) => s.underline())
           .on_click((_event, cx) => {
             cx.stop_propagation();
+            closeSelf(view);
             openConnect(view, {
               provider: reading.provider,
               account: reading.id,
@@ -377,7 +388,10 @@ function section(reading, index, account, view) {
     .border_color(t.border)
     .cursor_pointer()
     .hover((s) => s.bg(t.hover))
-    .on_click(() => openAccount(view, reading.id))
+    .on_click(() => {
+      closeSelf(view);
+      openAccount(view, reading.id);
+    })
     .child(labelLine(reading, row, index, view))
     .when(who !== null, (el) => el.child(who))
     .children(
@@ -484,7 +498,10 @@ function footer(view) {
         .text_color(t.foreground)
         .cursor_pointer()
         .hover((s) => s.bg(t.selected))
-        .on_click(() => openConnect(view, {}))
+        .on_click(() => {
+          closeSelf(view);
+          openConnect(view, {});
+        })
         .child(svg(PLUS).size(14).flex_none().text_color(t.muted))
         .child("Connect account"),
     );

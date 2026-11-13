@@ -4,8 +4,9 @@
 // email and organization), every window the plan has, each with its name over
 // its bar and one quiet line of numbers under it, the line about the pace mark
 // and when its login ends; then the account's own actions (Rename, Sign in
-// again, Remove), and its last row opens the detail view. When its account is
-// no longer connected it closes itself.
+// again, Remove), and its last row opens the detail view. As a popup it closes
+// itself before it opens another view, and when its account is no longer
+// connected.
 import { div, svg } from "gpui-kit";
 import { Input, InputState, h_flex, v_flex } from "gpui-base";
 import {
@@ -125,10 +126,14 @@ function endRename(view) {
   stateOf(view).renaming = false;
 }
 
-/** Sign in again: the connect dialog, this account's provider chosen. */
+/**
+ * Sign in again: the popup closes, then the connect dialog opens with this
+ * account's provider chosen.
+ */
 export function signInAgain(view) {
   const reading = accountOf(view);
   if (reading === null) return;
+  closeOnce(view);
   openConnect(view, { provider: reading.provider, account: reading.id });
 }
 
@@ -502,7 +507,10 @@ function detailRow(view) {
     .text_color(t.muted)
     .cursor_pointer()
     .hover((s) => s.bg(t.hover))
-    .on_click(() => openDetail(view))
+    .on_click(() => {
+      closeOnce(view);
+      openDetail(view);
+    })
     .child(div().flex_1().min_w(0).truncate().child("Accounts and settings"))
     .child(svg(CHEVRON).size(14).flex_none().text_color(t.muted));
 }
