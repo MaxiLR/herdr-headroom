@@ -128,6 +128,15 @@ test("openHeight grows with the accounts and stops at the most a popup takes", (
   assert.equal(openHeight(many), 640);
 });
 
+test("openHeight counts the footer's second switch: 28 px more", () => {
+  assert.equal(openHeight([reading()]), 229);
+  assert.equal(openHeight([reading()], [], { strip: true }), 257);
+  const many = Array.from({ length: 20 }, (_, index) =>
+    reading({ id: `claude:${index}` }),
+  );
+  assert.equal(openHeight(many, [], { strip: true }), 640);
+});
+
 test("openHeight leaves out the login line of an account not read yet", () => {
   const first = { status: "stale", fetchedAt: null, windows: [] };
   assert.equal(

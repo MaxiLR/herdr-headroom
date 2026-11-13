@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { drawForm, withId } from "./helpers/draw.mjs";
+import { drawActing, drawForm, withId } from "./helpers/draw.mjs";
 import { NOW, reading, win } from "./helpers/fakes.mjs";
 
 const MINUTE = 60 * 1000;
@@ -90,6 +90,54 @@ test("the detail view of one account as a popup is 229 px", (t) => {
   if (!lines) return;
   // 46 + 49 + 39 + 36 + 57 + 2
   assert.equal(rootHeight(lines, "detail-view"), 229, show(lines));
+});
+
+// A layout with the strip's block, hidden: the footer draws Show in status
+// bar under the notifications switch.
+const withStrip = {
+  id: "root",
+  type: "column",
+  children: [
+    {
+      id: "status-row",
+      type: "row",
+      children: [
+        { id: "status", type: "block", content: { mod: "workspace-status" } },
+        {
+          id: "headroom-strip",
+          type: "block",
+          hidden: true,
+          content: { mod: "headroom", props: { form: "strip" } },
+        },
+      ],
+    },
+  ],
+};
+
+test("the detail view of one account with Show in status bar is 257 px", (t) => {
+  const lines = drawForm(t, "detail", {
+    props: { form: "detail", overlay: "overlay-1" },
+    size: { width: 380, height: 640 },
+    readings: [reading()],
+    accounts: [],
+    layout: withStrip,
+  });
+  if (!lines) return;
+  // 229 + 10 + 18
+  assert.equal(rootHeight(lines, "detail-view"), 257, show(lines));
+});
+
+test("the detail view's opener asks for Show in status bar's line: 257 px", (t) => {
+  const result = drawActing(
+    t,
+    "detail",
+    { readings: [reading()], layout: withStrip },
+    "form.open(view);",
+  );
+  if (!result) return;
+  const [name, spec] = result.calls[0] ?? [];
+  assert.equal(name, "openOverlay", JSON.stringify(result.calls));
+  assert.equal(spec.height, 257);
 });
 
 test("the detail view of twenty accounts as a popup stops at 640 px", (t) => {

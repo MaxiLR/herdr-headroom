@@ -69,6 +69,18 @@ test("resize runs layout.resize with the block and its size", () => {
   ]);
 });
 
+test("show runs layout.show with the block", () => {
+  const { api: given, calls } = api({ platform: "macos" });
+  createHost(given).show("headroom-strip");
+  assert.deepEqual(calls.run, [["layout.show", { id: "headroom-strip" }]]);
+});
+
+test("hide runs layout.hide with the block", () => {
+  const { api: given, calls } = api({ platform: "macos" });
+  createHost(given).hide("headroom-strip");
+  assert.deepEqual(calls.run, [["layout.hide", { id: "headroom-strip" }]]);
+});
+
 test("home is the app's folder", () => {
   const { api: given } = api({ platform: "macos" });
   assert.equal(createHost(given).home, "/home/test/.config/herdr-app");

@@ -49,6 +49,8 @@ export function fakeHost({
     closed: [],
     opened: [],
     resizes: [],
+    // `["show", id]` and `["hide", id]`, for each block shown or hidden.
+    visibility: [],
     sleeps: [],
     presented: [],
     // Whether an agent in Herdr is working.
@@ -97,6 +99,14 @@ export function fakeHost({
     layout: () => layout,
     resize(id, px) {
       host.resizes.push({ id, px });
+      return null;
+    },
+    show(id) {
+      host.visibility.push(["show", id]);
+      return null;
+    },
+    hide(id) {
+      host.visibility.push(["hide", id]);
       return null;
     },
     openOverlay(spec) {
