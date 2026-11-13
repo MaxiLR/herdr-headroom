@@ -6,7 +6,6 @@ import { settings } from "herdr";
 import { levelFill, track } from "../logic/color.js";
 
 export { levelFill, levelText, track } from "../logic/color.js";
-export { fitTo } from "../logic/fit.js";
 
 /** Herdr's own ring spinner, so a wait reads as it does in Herdr. */
 const SPINNER = "mods/workspace-chrome/spinner.svg";

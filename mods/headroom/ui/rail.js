@@ -1,15 +1,17 @@
 // The rail: the block folded narrower than 160 px. Each account is its mark
 // and the percent of its tightest window over its pair of bars; hovering it
 // names the account and gives its numbers, a click opens its account view.
-// Only a block given `props.fit` asks for the height its accounts need.
+// A 1 px line on the top edge shows that the boundary drags. Only a block
+// given `props.fit` asks for the height its accounts need, up to two.
 import { div, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { openAccount } from "../logic/account.js";
 import { alpha } from "../logic/color.js";
+import { fitTo, LINE, railNeeds } from "../logic/fit.js";
 import { railNumber, railTooltip, showsNumber } from "../logic/rail.js";
 import { barOf, rowOf } from "../logic/rows.js";
 import { open as openConnect } from "./connect.js";
-import { fitTo, levelText, mark, pair } from "./kit.js";
+import { levelText, mark, pair } from "./kit.js";
 
 const PLUS = "mods/workspace-chrome/plus.svg";
 
@@ -86,24 +88,43 @@ function bars(row, index, view) {
   );
 }
 
+// Fits a block given `props.fit` to its first two accounts; with none, to
+// what its content measures (`content`, null when that did not change).
+function fit(view, content) {
+  if (view.readings.length > 0) {
+    fitTo(view, railNeeds(view.readings, view.now));
+  } else if (content !== null) {
+    fitTo(view, LINE + content);
+  }
+}
+
 function account(reading, index, view, wide) {
   const t = view.theme;
   const row = rowOf(reading, view.now);
   const words = railTooltip(reading, view.now);
-  return v_flex()
-    .id(`account-${index}`)
-    .role("button")
-    .accessibility_label(words)
-    .tooltip(words)
-    .px(8)
-    .py(6)
-    .gap(4)
-    .rounded(6)
-    .cursor_pointer()
-    .hover((s) => s.bg(t.hover))
-    .on_click(() => openAccount(view, reading.id))
-    .child(line(row, wide, t))
-    .when(row.state !== "signed-out", (el) => el.child(bars(row, index, view)));
+  return (
+    v_flex()
+      .id(`account-${index}`)
+      .role("button")
+      .accessibility_label(words)
+      .tooltip(words)
+      .px(8)
+      .py(6)
+      .gap(4)
+      .rounded(6)
+      .cursor_pointer()
+      .hover((s) => s.bg(t.hover))
+      .on_click(() => openAccount(view, reading.id))
+      // A reorder can change the first two accounts without changing how tall
+      // all of them are together.
+      .when(Boolean(view.props.fit) && index < 2, (el) =>
+        el.on_size_change(() => fit(view, null)),
+      )
+      .child(line(row, wide, t))
+      .when(row.state !== "signed-out", (el) =>
+        el.child(bars(row, index, view)),
+      )
+  );
 }
 
 // With no account yet: one quiet control that connects the first.
@@ -130,9 +151,12 @@ function connect(view) {
 export function render(view, cx) {
   const wide = showsNumber(view.size?.width ?? null);
   return v_flex()
+    .id("rail")
     .size_full()
     .min_h(0)
     .bg(view.theme.chrome)
+    .border_t(1)
+    .border_color(view.theme.border)
     .child(
       v_flex()
         .id("accounts")
@@ -141,11 +165,11 @@ export function render(view, cx) {
         .overflow_y_scrollbar()
         .child(
           v_flex()
-            .id("rail")
+            .id("rail-accounts")
             .flex_none()
             .py(4)
             .when(Boolean(view.props.fit), (el) =>
-              el.on_size_change((size) => fitTo(view, size.height)),
+              el.on_size_change((size) => fit(view, size.height)),
             )
             .children(
               view.readings.length === 0

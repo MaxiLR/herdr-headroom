@@ -1,17 +1,18 @@
 // The list: a "Limits" header and, per account, its mark and label, the pair
 // of bars (weekly full, 5-hour thin) and one quiet line of numbers. A click on
 // an account opens its account view; the header's control opens the detail
-// view. The header stays; what does not fit scrolls under it. Only a block
-// given `props.fit` asks for the height its accounts need, up to four.
+// view. The header stays; what does not fit scrolls under it. A 1 px line on
+// the top edge shows that the boundary drags. Only a block given `props.fit`
+// asks for the height its accounts need, up to two.
 import { div, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { openAccount } from "../logic/account.js";
+import { fitTo, HEADER, LINE, listNeeds } from "../logic/fit.js";
 import { listRowOf } from "../logic/list.js";
 import { open as openConnect } from "./connect.js";
 import { open as openDetail } from "./detail.js";
-import { fitTo, levelText, mark, moreIcon, pair } from "./kit.js";
+import { levelText, mark, moreIcon, pair } from "./kit.js";
 
-const HEADER = 41;
 const PLUS = "mods/workspace-chrome/plus.svg";
 
 function header(view) {
@@ -180,56 +181,76 @@ function numbersLine(left, right, t) {
     .when(right !== null, (el) => el.child(numbers(right, t)));
 }
 
+// Fits a block given `props.fit` to its first two accounts; with none, to
+// what its content measures (`content`, null when that did not change).
+function fit(view, content) {
+  if (view.readings.length > 0) {
+    fitTo(view, listNeeds(view.readings, view.now));
+  } else if (content !== null) {
+    fitTo(view, LINE + HEADER + content);
+  }
+}
+
 function account(reading, index, view) {
   const t = view.theme;
   const row = listRowOf(reading, view.now, view.size?.width ?? null);
   const id = `account-${index}`;
-  return v_flex()
-    .id(id)
-    .role("button")
-    .accessibility_label(row.spoken)
-    .flex_none()
-    .px(8)
-    .pb(9)
-    .rounded(8)
-    .cursor_pointer()
-    .hover((s) => s.bg(t.hover))
-    .on_click(() => openAccount(view, reading.id))
-    .child(labelLine(row, index, view))
-    .when(row.ended !== null, (el) =>
-      el.child(
-        div()
-          .h(14)
-          .text_size(11)
-          .text_color(t.muted)
-          .whitespace_nowrap()
-          .child(row.ended),
-      ),
-    )
-    .when(row.pair !== null, (el) =>
-      el.child(
-        pair(
-          {
-            id,
-            full: row.pair.full,
-            short: row.pair.short,
-            dimmed: row.dimmed,
-          },
-          t,
+  return (
+    v_flex()
+      .id(id)
+      .role("button")
+      .accessibility_label(row.spoken)
+      .flex_none()
+      .px(8)
+      .pb(9)
+      .rounded(8)
+      .cursor_pointer()
+      .hover((s) => s.bg(t.hover))
+      .on_click(() => openAccount(view, reading.id))
+      // A reorder can change the first two accounts without changing how tall
+      // all of them are together.
+      .when(Boolean(view.props.fit) && index < 2, (el) =>
+        el.on_size_change(() => fit(view, null)),
+      )
+      .child(labelLine(row, index, view))
+      .when(row.ended !== null, (el) =>
+        el.child(
+          div()
+            .h(14)
+            .text_size(11)
+            .text_color(t.muted)
+            .whitespace_nowrap()
+            .child(row.ended),
         ),
-      ),
-    )
-    .when(row.numbers !== null, (el) =>
-      el.child(numbersLine(row.numbers.left, row.numbers.right, t)),
-    );
+      )
+      .when(row.pair !== null, (el) =>
+        el.child(
+          pair(
+            {
+              id,
+              full: row.pair.full,
+              short: row.pair.short,
+              dimmed: row.dimmed,
+            },
+            t,
+          ),
+        ),
+      )
+      .when(row.numbers !== null, (el) =>
+        el.child(numbersLine(row.numbers.left, row.numbers.right, t)),
+      )
+  );
 }
 
 export function render(view, cx) {
   const t = view.theme;
   return v_flex()
+    .id("list")
     .size_full()
     .min_h(0)
     .bg(t.chrome)
+    .border_t(1)
+    .border_color(t.border)
     .child(header(view))
     .child(
       v_flex()
@@ -245,7 +266,7 @@ export function render(view, cx) {
             .px(8)
             .pb(8)
             .when(Boolean(view.props.fit), (el) =>
-              el.on_size_change((size) => fitTo(view, HEADER + size.height)),
+              el.on_size_change((size) => fit(view, size.height)),
             )
             .when(view.readings.length === 0, (el) => el.child(empty(view)))
             .children(
