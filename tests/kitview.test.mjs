@@ -9,7 +9,7 @@ function drawKit(t, pieces) {
     t,
     `import { View } from "gpui-kit";
 import { v_flex } from "gpui-base";
-import { theme } from "herdr";
+import { theme, themes } from "herdr";
 import { bar, pair, mark, spinner, moreIcon } from "./ui/kit.js";
 
 export default class Draw extends View {
@@ -113,12 +113,56 @@ test("a pair with both windows draws the full bar over the thin one", (t) => {
 });
 
 test("each provider's mark carries the provider's name", (t) => {
-  const lines = drawKit(t, `[mark("claude", 14), mark("codex", 12)]`);
+  const lines = drawKit(t, `[mark("claude", 14, t), mark("codex", 12, t)]`);
   if (!lines) return;
   const all = lines.join("\n");
   assert.equal(labelled(lines, "Claude").length, 1, all);
   assert.equal(labelled(lines, "Codex").length, 1, all);
 });
+
+// The marks drawn with one theme's colours: `name` is a theme of `themes()`.
+function drawMarks(t, name) {
+  return drawKit(
+    t,
+    `(() => {
+      const c = themes().find((each) => each.name === ${JSON.stringify(name)}).colors;
+      return [mark("codex", 14, c), mark("claude", 14, c)];
+    })()`,
+  );
+}
+
+const svgLine = (lines, file) =>
+  lines.find((line) =>
+    line.trimStart().startsWith(`svg "mods/headroom/icons/${file}"`),
+  );
+const tint = (line) => line?.match(/\.text_color\[Str\("([^"]*)"\)\]/)?.[1];
+
+for (const [name, foreground] of [
+  ["graphite", "#eeeeef"],
+  ["paper", "#1b1b1e"],
+]) {
+  test(`in ${name}, Codex's mark is the ChatGPT logo in the theme's text colour`, (t) => {
+    const lines = drawMarks(t, name);
+    if (!lines) return;
+    const all = lines.join("\n");
+    const line = svgLine(lines, "chatgpt.svg");
+    assert.ok(line, all);
+    assert.match(line, /\.size\[Number\(14\.0\)\]/);
+    assert.equal(tint(line), foreground, line);
+    assert.ok(line.includes(':accessibility_label[Str("Codex")]'), line);
+  });
+
+  test(`in ${name}, Claude's mark is the spark in Claude's orange`, (t) => {
+    const lines = drawMarks(t, name);
+    if (!lines) return;
+    const all = lines.join("\n");
+    const line = svgLine(lines, "claude.svg");
+    assert.ok(line, all);
+    assert.match(line, /\.size\[Number\(14\.0\)\]/);
+    assert.equal(tint(line)?.toLowerCase(), "#d97757", line);
+    assert.ok(line.includes(':accessibility_label[Str("Claude")]'), line);
+  });
+}
 
 test("the spinner and the more icon draw where no asset is installed", (t) => {
   const lines = drawKit(t, `[spinner(12, t), moreIcon(14, t)]`);
