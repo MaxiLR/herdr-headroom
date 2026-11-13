@@ -1,10 +1,11 @@
 // The strip: the block in a status bar, under 48 px tall. One line with an
 // item per account: its mark, its label, its pair of bars and the percent of
 // its tightest window. A rule sets it apart from a block before it in its
-// row; labels, then bars, give way when the line is too narrow. A click
-// opens the detail view; the strip never resizes its block.
+// row; labels, then bars, give way when the line is too narrow. A click on
+// an account opens its account view; the strip never resizes its block.
 import { div } from "gpui-kit";
 import { h_flex } from "gpui-base";
+import { openAccount } from "../logic/account.js";
 import { alpha } from "../logic/color.js";
 import { railTooltip } from "../logic/rail.js";
 import { barOf, rowOf } from "../logic/rows.js";
@@ -15,7 +16,6 @@ import {
   stripSeparator,
 } from "../logic/strip.js";
 import { open as openConnect } from "./connect.js";
-import { open as openDetail } from "./detail.js";
 import { levelText, mark, pair } from "./kit.js";
 
 // A signed-out account's mark is faded; a failed read's bars are dimmed by
@@ -86,7 +86,7 @@ function account(reading, row, item, index, density, view) {
     .rounded(5)
     .cursor_pointer()
     .hover((s) => s.bg(t.hover))
-    .on_click(() => openDetail(view))
+    .on_click(() => openAccount(view, reading.id))
     .child(
       mark(row.provider, STRIP.mark).when(item.badge, (el) =>
         el.opacity(SIGNED_OUT_MARK),

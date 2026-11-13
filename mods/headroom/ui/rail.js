@@ -1,13 +1,13 @@
 // The rail: the block folded narrower than 160 px. Each account is its mark
 // and the percent of its tightest window over its pair of bars; hovering it
-// names the account and gives its numbers, a click opens the detail view.
+// names the account and gives its numbers, a click opens its account view.
 import { div, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
+import { openAccount } from "../logic/account.js";
 import { alpha } from "../logic/color.js";
 import { railNumber, railTooltip, showsNumber } from "../logic/rail.js";
 import { barOf, rowOf } from "../logic/rows.js";
 import { open as openConnect } from "./connect.js";
-import { open as openDetail } from "./detail.js";
 import { fitTo, levelText, mark, pair } from "./kit.js";
 
 const PLUS = "mods/workspace-chrome/plus.svg";
@@ -99,7 +99,7 @@ function account(reading, index, view, wide) {
     .rounded(6)
     .cursor_pointer()
     .hover((s) => s.bg(t.hover))
-    .on_click(() => openDetail(view))
+    .on_click(() => openAccount(view, reading.id))
     .child(line(row, wide, t))
     .when(row.state !== "signed-out", (el) => el.child(bars(row, index, view)));
 }

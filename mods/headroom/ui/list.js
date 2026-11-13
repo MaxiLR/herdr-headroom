@@ -1,9 +1,11 @@
 // The list: a "Limits" header and, per account, its mark and label, the pair
-// of bars (weekly full, 5-hour thin) and one quiet line of numbers. The block
-// asks for the height its accounts need; past four they scroll under the
-// header.
+// of bars (weekly full, 5-hour thin) and one quiet line of numbers. A click on
+// an account opens its account view; the header's control opens the detail
+// view. The block asks for the height its accounts need; past four they
+// scroll under the header.
 import { div, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
+import { openAccount } from "../logic/account.js";
 import { listRowOf } from "../logic/list.js";
 import { open as openConnect } from "./connect.js";
 import { open as openDetail } from "./detail.js";
@@ -192,7 +194,7 @@ function account(reading, index, view) {
     .rounded(8)
     .cursor_pointer()
     .hover((s) => s.bg(t.hover))
-    .on_click(() => openDetail(view))
+    .on_click(() => openAccount(view, reading.id))
     .child(labelLine(row, index, view))
     .when(row.ended !== null, (el) =>
       el.child(

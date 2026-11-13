@@ -1,7 +1,8 @@
 // The detail view: every window of every account, when each resets and when
 // a login ends; the refresh control, the notifications switch and Connect
-// account. A 380 px popup from the list, the rail or the strip; also a dialog
-// or a pane, where from 520 px each window is one line.
+// account. A 380 px popup from the list's header and from the account view's
+// last row; also a dialog or a pane, where from 520 px each window is one
+// line.
 import { div, svg } from "gpui-kit";
 import { Switch, h_flex, v_flex } from "gpui-base";
 import {

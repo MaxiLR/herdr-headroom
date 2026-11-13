@@ -22,13 +22,14 @@ import { chooseForm } from "./logic/form.js";
 import { createHost } from "./logic/host.js";
 import { PREFS_KEY, published } from "./logic/publish.js";
 import { sharedStore } from "./logic/store.js";
+import * as account from "./ui/account.js";
 import * as connect from "./ui/connect.js";
 import * as detail from "./ui/detail.js";
 import * as list from "./ui/list.js";
 import * as rail from "./ui/rail.js";
 import * as strip from "./ui/strip.js";
 
-const FORMS = { list, rail, strip, detail, connect };
+const FORMS = { list, rail, strip, account, detail, connect };
 const MODULES = Object.values(FORMS);
 
 // Countdowns are in minutes; readings are due every five.
