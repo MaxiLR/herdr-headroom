@@ -179,3 +179,90 @@ test("a fitted rail carries the handler that fits it; an unfitted one none", (t)
     plain.join("\n"),
   );
 });
+
+// maxi at 41 % weekly and 62 % 5-hour, with Fable's weekly window, which the
+// row has no bar for, at its limit.
+const GENERAL = [
+  win("7d", 0.41, NOW + 4 * DAY + 6 * HOUR),
+  win("5h", 0.62, NOW + HOUR + 48 * MINUTE),
+];
+const FABLE = win("7d:fable", 1, NOW + 4 * DAY + 6 * HOUR, { atLimit: true });
+const fableAtLimit = (overrides = {}) =>
+  reading({ windows: [...GENERAL, FABLE], ...overrides });
+const FABLE_WORDS =
+  "maxi: Weekly 41% · 4d 6h, 5-hour 62% · 1h 48m, Fable at limit";
+
+const fills = (lines) =>
+  lines.filter((line) => /:id\[Str\("[^"]*-fill"\)\]/.test(line));
+
+for (const size of [MAC, LINUX]) {
+  test(`at ${size.width} px a per-model limit reached puts a 5 px blocked dot on the mark`, (t) => {
+    const blocked = themeColour(t, "blocked");
+    if (blocked === null) return;
+    const lines = drawForm(t, "rail", { size, readings: [fableAtLimit()] });
+    const all = lines.join("\n");
+    const dot = withId(lines, "account-0-dot");
+    assert.ok(dot, all);
+    assert.match(dot, /\.size\[Number\(5(\.0)?\)\]/, all);
+    assert.ok(dot.includes(`.bg[Str(${JSON.stringify(blocked)})]`), all);
+    const account = withId(lines, "account-0") ?? "";
+    assert.ok(
+      account.includes(`:tooltip[Str(${JSON.stringify(FABLE_WORDS)})]`),
+      all,
+    );
+    assert.ok(
+      account.includes(
+        `:accessibility_label[Str(${JSON.stringify(FABLE_WORDS)})]`,
+      ),
+      all,
+    );
+    assert.equal(fills(lines).length, 2, all);
+  });
+}
+
+for (const [name, readingOf] of [
+  ["no per-model limit reached", () => reading()],
+  [
+    "weekly at its limit too",
+    () =>
+      reading({
+        windows: [
+          win("7d", 0.41, NOW + 4 * DAY + 6 * HOUR, { atLimit: true }),
+          GENERAL[1],
+          FABLE,
+        ],
+      }),
+  ],
+  [
+    "a failed read",
+    () =>
+      fableAtLimit({
+        status: "error",
+        error: "network",
+        fetchedAt: NOW - 12 * MINUTE,
+      }),
+  ],
+  ["a first read", () => fableAtLimit({ status: "stale", fetchedAt: null })],
+  ["a signed-out account", () => fableAtLimit({ status: "signed-out" })],
+]) {
+  test(`${name}: the rail draws no dot`, (t) => {
+    for (const size of [MAC, LINUX]) {
+      const lines = drawForm(t, "rail", { size, readings: [readingOf()] });
+      if (!lines) return;
+      assert.equal(
+        withId(lines, "account-0-dot"),
+        undefined,
+        `${size.width} px\n${lines.join("\n")}`,
+      );
+    }
+  });
+}
+
+test("the list of a per-model limit reached draws no dot: it has the words", (t) => {
+  const lines = drawForm(t, "list", {
+    size: { width: 268, height: 300 },
+    readings: [fableAtLimit()],
+  });
+  if (!lines) return;
+  assert.equal(withId(lines, "account-0-dot"), undefined, lines.join("\n"));
+});
