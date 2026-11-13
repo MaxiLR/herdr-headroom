@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { FIT_MAX, fitHeight, fitTo } from "../mods/headroom/logic/fit.js";
+import { chooseForm } from "../mods/headroom/logic/form.js";
 
 test("a block asks at most for the height of four accounts", () => {
   assert.equal(FIT_MAX, 320);
@@ -51,4 +52,20 @@ test("fitTo asks nothing of a block without props.fit", () => {
   fitTo(view, 245);
   assert.deepEqual(asked, []);
   assert.equal(view.ui.fit, undefined);
+});
+
+// A folded sidebar's rail can be shorter than a strip: 36 px with no account
+// yet, 45 px with one weekly-only account. Fitted to that, the block would
+// stay a strip once the sidebar unfolds, and the strip never fits it again.
+test("a fitted block is never shorter than a strip, so it unfolds to the list", () => {
+  assert.equal(fitHeight(36, null), 48);
+  assert.equal(fitHeight(45, null), 48);
+  assert.equal(fitHeight(36, 48), null);
+  const { view, asked } = fakeView({ fit: "headroom-block" });
+  fitTo(view, 36);
+  assert.deepEqual(asked, [["headroom-block", 48]]);
+  assert.equal(
+    chooseForm({ fit: "headroom-block" }, { width: 268, height: 48 }),
+    "list",
+  );
 });

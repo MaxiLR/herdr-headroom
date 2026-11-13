@@ -748,3 +748,76 @@ test("a file that cannot be made 0600 already at the path keeps no token", async
     [],
   );
 });
+
+// --- A save refused after the first one says why, wherever it came from.
+
+const REFUSED_TOAST = {
+  title: "Could not keep the logins private, so nothing was stored",
+  body: "Accounts may be gone after Herdr restarts.",
+  level: "error",
+};
+
+// A host whose file is 0600 until `refuse.now` is set, then never again.
+function losingHost() {
+  const refuse = { now: false };
+  const host = fakeHost({
+    exec: (command) =>
+      command === "stat"
+        ? { code: 0, stdout: refuse.now ? "644\n" : "600\n", stderr: "" }
+        : { code: 0, stdout: "", stderr: "" },
+  });
+  return { host, refuse };
+}
+
+test("a rename, move or remove the vault refuses posts why as an error toast", async () => {
+  for (const act of [
+    (store) => store.rename(MAXI_ID, "Home"),
+    (store) => store.move(TERAC_ID, -1),
+    (store) => store.remove(MAXI_ID),
+  ]) {
+    const { host, refuse } = losingHost();
+    const store = createStore(host, {
+      providers: acme([signIn(1), signIn(2, TERAC)]),
+    });
+    await store.start();
+    await store.connect("acme", {});
+    await store.connect("acme", {});
+    refuse.now = true;
+    assert.deepEqual(await act(store), { ok: false, kind: "vault" });
+    assert.deepEqual(host.toasts, [REFUSED_TOAST]);
+  }
+});
+
+test("a refreshed login the vault refuses posts why as an error toast", async () => {
+  const { host, refuse } = losingHost();
+  const providers = acme([signIn(1)]);
+  providers.acme.refresh = async () => ({
+    ok: true,
+    credentials: {
+      accessToken: "access-secret-9",
+      refreshToken: "refresh-secret-9",
+      expiresAt: host.now() + 7200000,
+    },
+  });
+  const store = createStore(host, { providers });
+  await store.start();
+  await store.connect("acme", {});
+  refuse.now = true;
+  // Past the login's expiry, so the next read refreshes it first.
+  host.clock.now += 3600000;
+  await store.tick();
+  assert.equal(host.files[VAULT].includes("refresh-secret-9"), false);
+  assert.deepEqual(host.toasts, [REFUSED_TOAST]);
+});
+
+test("a sign-in the vault refuses says why in its dialog, not in a toast", async () => {
+  const { host, refuse } = losingHost();
+  const store = createStore(host, { providers: acme([signIn(1)]) });
+  await store.start();
+  refuse.now = true;
+  assert.deepEqual(await store.connect("acme", {}), {
+    ok: false,
+    kind: "vault",
+  });
+  assert.deepEqual(host.toasts, []);
+});
