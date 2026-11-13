@@ -14,10 +14,11 @@
 # beside mods/, is never read, copied or removed. When herdr-app is on PATH,
 # the installed mod is checked with `herdr-app check`. No key is bound.
 #
-# --layout [name] (default main-headroom) writes layouts/<name>.json: the
+# --layout [name] (default "Herdr Headroom") writes layouts/<name>.json: the
 # home's layouts/main.json with the headroom block added to the sidebar column,
-# right after sidebar-lists. It needs jq, never overwrites a layout and never
-# switches to it; it prints the command that does.
+# right after sidebar-lists. Herdr lists a layout under its file name. It needs
+# jq, never overwrites a layout and never switches to it; it prints the command
+# that does.
 #
 # It prints one line per step: a mark, the step and what happened. --dry-run
 # prints what each step would do, with every file it would change, add or
@@ -78,7 +79,7 @@ usage() {
 
 dry_run=0
 want_layout=0
-layout_name=main-headroom
+layout_name="Herdr Headroom"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run) dry_run=1 ;;
@@ -189,7 +190,17 @@ if [[ $want_layout -eq 1 ]]; then
   fi
 fi
 
-switch_command="herdr-app do layout.switch --name $layout_name"
+# shell_word <text>: the text as one shell word, quoted only when it has to be.
+shell_word() {
+  local plain='^[A-Za-z0-9_@%+=:,./-]+$' quote="'" escaped="'\\''"
+  if [[ "$1" =~ $plain ]]; then
+    printf '%s' "$1"
+  else
+    printf "'%s'" "${1//$quote/$escaped}"
+  fi
+}
+
+switch_command="herdr-app do layout.switch --name $(shell_word "$layout_name")"
 
 # layout_report <written|would write>: the layout step's line.
 layout_report() {

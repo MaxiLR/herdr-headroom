@@ -418,13 +418,13 @@ test("--dry-run with --layout changes nothing and names the layout", (t) => {
   assert.equal(result.status, 0, result.output);
   assert.deepEqual(snapshot(box.herdr), before);
   assert.ok(
-    result.output.includes(layoutPath(box, "main-headroom")),
+    result.output.includes(layoutPath(box, "Herdr Headroom")),
     result.output,
   );
   assert.equal(existsSync(join(box.root, "herdr-app.args")), false);
 });
 
-test("--layout writes main-headroom.json: main.json with the headroom block added", (t) => {
+test("--layout writes Herdr Headroom.json: main.json with the headroom block added", (t) => {
   const box = sandbox(t);
   const main = writeMain(box);
 
@@ -432,7 +432,7 @@ test("--layout writes main-headroom.json: main.json with the headroom block adde
 
   assert.equal(result.status, 0, result.output);
   const written = JSON.parse(
-    readFileSync(layoutPath(box, "main-headroom"), "utf8"),
+    readFileSync(layoutPath(box, "Herdr Headroom"), "utf8"),
   );
   assert.deepEqual(written, headroomLayout());
   assert.deepEqual(
@@ -441,17 +441,45 @@ test("--layout writes main-headroom.json: main.json with the headroom block adde
   );
   assert.equal(readFileSync(layoutPath(box, "main"), "utf8"), main);
   assert.ok(
-    result.output.includes("herdr-app do layout.switch --name main-headroom"),
+    result.output.includes(
+      "herdr-app do layout.switch --name 'Herdr Headroom'",
+    ),
     result.output,
   );
   assert.deepEqual(readdirSync(join(box.herdr, "layouts")).sort(), [
-    "main-headroom.json",
+    "Herdr Headroom.json",
     "main.json",
   ]);
   assert.deepEqual(
     snapshot(installed(box)),
     snapshot(repoMod, { skipGenerated: true }),
   );
+});
+
+test("the printed switch command, run in a shell, names the layout as one argument", (t) => {
+  const box = sandbox(t);
+  writeMain(box);
+  const log = fakeHerdr(box, 0);
+
+  const result = run(box, ["--layout"]);
+
+  assert.equal(result.status, 0, result.output);
+  const printed = result.output
+    .split("\n")
+    .find((line) => line.includes("herdr-app do layout.switch"));
+  assert.ok(printed, result.output);
+  const command = printed.slice(printed.indexOf("herdr-app do"));
+  const switched = spawnSync("/bin/sh", ["-c", command], {
+    encoding: "utf8",
+    env: { PATH: [box.bin, "/usr/bin", "/bin"].join(":") },
+  });
+  assert.equal(switched.status, 0, switched.stderr);
+  assert.deepEqual(readFileSync(log, "utf8").trimEnd().split("\n"), [
+    "do",
+    "layout.switch",
+    "--name",
+    "Herdr Headroom",
+  ]);
 });
 
 test("--layout with a name writes that layout", (t) => {
@@ -465,7 +493,7 @@ test("--layout with a name writes that layout", (t) => {
     JSON.parse(readFileSync(layoutPath(box, "work"), "utf8")),
     headroomLayout(),
   );
-  assert.equal(existsSync(layoutPath(box, "main-headroom")), false);
+  assert.equal(existsSync(layoutPath(box, "Herdr Headroom")), false);
   assert.equal(readFileSync(layoutPath(box, "main"), "utf8"), main);
   assert.ok(
     result.output.includes("herdr-app do layout.switch --name work"),
@@ -483,7 +511,7 @@ test("--layout followed by another option uses the default name", (t) => {
   assert.equal(result.status, 0, result.output);
   assert.deepEqual(snapshot(box.herdr), before);
   assert.ok(
-    result.output.includes(layoutPath(box, "main-headroom")),
+    result.output.includes(layoutPath(box, "Herdr Headroom")),
     result.output,
   );
 });
@@ -492,15 +520,15 @@ test("an existing layout is left byte for byte and the output says so", (t) => {
   const box = sandbox(t);
   writeMain(box);
   const mine = '{"id":"root","type":"row","children":[]}';
-  writeFileSync(layoutPath(box, "main-headroom"), mine);
+  writeFileSync(layoutPath(box, "Herdr Headroom"), mine);
 
   const result = run(box, ["--layout"]);
 
   assert.equal(result.status, 0, result.output);
-  assert.equal(readFileSync(layoutPath(box, "main-headroom"), "utf8"), mine);
+  assert.equal(readFileSync(layoutPath(box, "Herdr Headroom"), "utf8"), mine);
   assert.match(result.output, /already exists/i);
   assert.ok(
-    result.output.includes(layoutPath(box, "main-headroom")),
+    result.output.includes(layoutPath(box, "Herdr Headroom")),
     result.output,
   );
   assert.deepEqual(
@@ -546,7 +574,7 @@ for (const [what, main, said] of [
     assert.equal(result.status, 0, result.output);
     assert.match(result.output, said);
     assert.match(result.output, /no layout/i);
-    assert.equal(existsSync(layoutPath(box, "main-headroom")), false);
+    assert.equal(existsSync(layoutPath(box, "Herdr Headroom")), false);
     if (text !== null) {
       assert.equal(readFileSync(layoutPath(box, "main"), "utf8"), text);
     }

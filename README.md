@@ -38,7 +38,7 @@ set, else `~/.config/herdr-app`.
 ```sh
 scripts/install.sh --dry-run          # what it would do; changes nothing
 scripts/install.sh                    # install the mod
-scripts/install.sh --layout           # and add the layout main-headroom
+scripts/install.sh --layout           # and add the layout "Herdr Headroom"
 scripts/install.sh --layout my-name   # or a layout of another name
 ```
 
@@ -59,14 +59,16 @@ does not exist.
 - **Check.** When `herdr-app` is on `PATH`, it runs `herdr-app check` on the
   installed folder. A failed check prints what `herdr-app` said and exits 1;
   without `herdr-app` the check is skipped with a warning.
-- **Layout** (`--layout`, default name `main-headroom`). It needs `jq`. It
+- **Layout** (`--layout`, default name `Herdr Headroom`). It needs `jq`. It
   writes `<Herdr home>/layouts/<name>.json`: a copy of the home's
   `layouts/main.json` with one Headroom block added to the `sidebar` column,
-  right after `sidebar-lists` and before `sidebar-footer`. It never overwrites a
-  layout and never switches to it; it prints the command that does:
+  right after `sidebar-lists` and before `sidebar-footer`. Herdr lists a layout
+  under its file name, so the name is what Settings and the palette show. It
+  never overwrites a layout and never switches to it; it prints the command
+  that does:
 
   ```sh
-  herdr-app do layout.switch --name main-headroom
+  herdr-app do layout.switch --name 'Herdr Headroom'
   ```
 
   Without `jq`, without `layouts/main.json`, with a `main.json` that is not
