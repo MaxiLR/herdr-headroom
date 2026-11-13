@@ -21,11 +21,10 @@ const MARKS = {
 // A new reading slides the fill and the pace mark there natively.
 const MOTION = { duration: 400, easing: "ease-out" };
 
-// The pace mark: a 2 px tick reaching 3 px beyond its bar on its own side
-// (1 px on the other), in a 1.5 px halo of the ground behind it.
+// The pace mark: a 2 px tick reaching the same distance beyond its bar above
+// and below, in a 1.5 px halo of the ground behind it.
 const TICK = 2;
-const REACH = 3;
-const NEAR = 1;
+const REACH = 2;
 const HALO = 1.5;
 
 // The least a fill that is not empty is drawn at, so 1 % still shows.
@@ -40,9 +39,9 @@ export function mark(provider, size) {
 /**
  * One bar at the full width. The track is `id`, the fill `<id>-fill`, the
  * pace mark `<id>-pace`. `fraction` and `pace` are shares of the window (0 to
- * 1); `pace` null, or `dimmed`, draws no mark. `tick`: the side the mark
- * reaches out on, `above` or `below`; both when not given. `ground`: the
- * colour behind the bar, for the mark's halo (`chrome` by default).
+ * 1); `pace` null, or `dimmed`, draws no mark. `reach`: the px the mark
+ * reaches beyond the bar, above and below. `ground`: the colour behind the
+ * bar, for the mark's halo (`chrome` by default).
  */
 export function bar(
   {
@@ -52,7 +51,7 @@ export function bar(
     pace = null,
     thin = false,
     height,
-    tick,
+    reach = REACH,
     dimmed = false,
     ground,
   },
@@ -77,19 +76,17 @@ export function bar(
     .bg(track(t))
     .child(fill)
     .when(pace !== null && pace !== undefined && !dimmed, (el) =>
-      el.child(paceMark(id, clamp(pace), tick, ground ?? t.chrome, t)),
+      el.child(paceMark(id, clamp(pace), reach, ground ?? t.chrome, t)),
     )
     .when(dimmed, (el) => el.opacity(0.4));
 }
 
-function paceMark(id, pace, tick, ground, t) {
-  const above = tick === "below" ? NEAR : REACH;
-  const below = tick === "above" ? NEAR : REACH;
+function paceMark(id, pace, reach, ground, t) {
   return div()
     .id(`${id}-pace`)
     .absolute()
-    .top(-(above + HALO))
-    .bottom(-(below + HALO))
+    .top(-(reach + HALO))
+    .bottom(-(reach + HALO))
     .left(percent(pace))
     .ml(-(TICK / 2 + HALO))
     .w(TICK + 2 * HALO)
@@ -106,13 +103,22 @@ function paceMark(id, pace, tick, ground, t) {
 }
 
 /**
- * The pair: the full bar (`<id>-full`, its tick above) over the thin one
- * (`<id>-short`, its tick below), `gap` px apart. `full` and `short` are
- * `{ fraction, level, pace }`, or null for a window the plan does not have:
- * it is not drawn at all.
+ * The pair: the full bar (`<id>-full`) over the thin one (`<id>-short`), `gap`
+ * px apart, each pace mark reaching `reach` px beyond its bar. `full` and
+ * `short` are `{ fraction, level, pace }`, or null for a window the plan does
+ * not have: it is not drawn at all.
  */
 export function pair(
-  { id, full, short, heights = [6, 3], gap = 4, dimmed = false, ground },
+  {
+    id,
+    full,
+    short,
+    heights = [6, 3],
+    gap = 6,
+    reach = REACH,
+    dimmed = false,
+    ground,
+  },
   t,
 ) {
   const bars = [];
@@ -123,7 +129,7 @@ export function pair(
           ...full,
           id: `${id}-full`,
           height: heights[0],
-          tick: "above",
+          reach,
           dimmed,
           ground,
         },
@@ -139,7 +145,7 @@ export function pair(
           id: `${id}-short`,
           thin: true,
           height: heights[1],
-          tick: "below",
+          reach,
           dimmed,
           ground,
         },
