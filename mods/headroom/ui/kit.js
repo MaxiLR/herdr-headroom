@@ -1,6 +1,6 @@
 // The small drawing kit every form is built from: the bar with its pace
 // mark, the pair of bars, the provider marks, the spinner and the fonts.
-import { div, image, svg } from "gpui-kit";
+import { div, svg } from "gpui-kit";
 import { v_flex } from "gpui-base";
 import { settings } from "herdr";
 import { levelFill, track } from "../logic/color.js";
@@ -12,10 +12,23 @@ export { fitTo } from "../logic/fit.js";
 const SPINNER = "mods/workspace-chrome/spinner.svg";
 const MORE = "mods/headroom/icons/more.svg";
 
-// Herdr's own provider marks, drawn in their colours, with the spoken name.
+// Claude's orange, the colour of its spark: the one colour in the mod that
+// does not come from `theme()`, so the spark reads as Claude's in every theme.
+const CLAUDE_ORANGE = "#D97757";
+
+// The providers' logos, with the spoken name: the ChatGPT logo in the theme's
+// text colour for Codex, Claude's spark in Claude's orange.
 const MARKS = {
-  claude: { path: "icons/claude.svg", label: "Claude" },
-  codex: { path: "icons/codex.svg", label: "Codex" },
+  claude: {
+    path: "mods/headroom/icons/claude.svg",
+    label: "Claude",
+    color: () => CLAUDE_ORANGE,
+  },
+  codex: {
+    path: "mods/headroom/icons/chatgpt.svg",
+    label: "Codex",
+    color: (t) => t.foreground,
+  },
 };
 
 // A new reading slides the fill and the pace mark there natively.
@@ -30,10 +43,14 @@ const HALO = 1.5;
 // The least a fill that is not empty is drawn at, so 1 % still shows.
 const MIN_FILL = 3;
 
-/** A provider's mark, `size` px, named for screen readers. */
-export function mark(provider, size) {
-  const { path, label } = MARKS[provider];
-  return image(path).size(size).flex_none().accessibility_label(label);
+/** A provider's mark, `size` px, in `t`'s colours, named for screen readers. */
+export function mark(provider, size, t) {
+  const { path, label, color } = MARKS[provider];
+  return svg(path)
+    .size(size)
+    .flex_none()
+    .text_color(color(t))
+    .accessibility_label(label);
 }
 
 /**

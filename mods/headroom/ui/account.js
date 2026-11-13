@@ -186,7 +186,7 @@ function header(reading, shown, view) {
     .flex_none()
     .gap(8)
     .items_center()
-    .child(mark(reading.provider, 16))
+    .child(mark(reading.provider, 16, t))
     .child(
       input !== null
         ? renameField(reading, input, view)

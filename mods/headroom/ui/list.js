@@ -109,7 +109,7 @@ function labelLine(row, index, view) {
     .h(26)
     .gap(8)
     .items_center()
-    .child(mark(row.provider, 14))
+    .child(mark(row.provider, 14, t))
     .child(
       div()
         .flex_1()

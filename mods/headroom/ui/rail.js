@@ -39,7 +39,7 @@ function badge(t) {
 // The 16 px line: the mark, and on the right the number (or the badge).
 function line(row, wide, t) {
   const signedOut = row.state === "signed-out";
-  const icon = mark(row.provider, 14).when(signedOut, (el) =>
+  const icon = mark(row.provider, 14, t).when(signedOut, (el) =>
     el.opacity(SIGNED_OUT_MARK),
   );
   const number = wide ? railNumber(row) : null;

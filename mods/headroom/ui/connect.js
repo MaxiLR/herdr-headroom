@@ -232,7 +232,7 @@ function choice(view, provider, t) {
       choose(view, provider, cx);
       cx.notify();
     })
-    .child(mark(provider, 22))
+    .child(mark(provider, 22, t))
     .child(
       v_flex()
         .flex_1()

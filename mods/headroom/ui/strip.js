@@ -89,7 +89,7 @@ function account(reading, row, item, index, density, view) {
     .hover((s) => s.bg(t.hover))
     .on_click(() => openAccount(view, reading.id))
     .child(
-      mark(row.provider, STRIP.mark).when(item.badge, (el) =>
+      mark(row.provider, STRIP.mark, t).when(item.badge, (el) =>
         el.opacity(SIGNED_OUT_MARK),
       ),
     )

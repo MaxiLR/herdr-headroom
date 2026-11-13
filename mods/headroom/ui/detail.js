@@ -135,7 +135,7 @@ function labelLine(reading, row, index, view) {
     .h(24)
     .gap(8)
     .items_center()
-    .child(mark(reading.provider, 16))
+    .child(mark(reading.provider, 16, t))
     .child(
       div()
         .min_w(0)
