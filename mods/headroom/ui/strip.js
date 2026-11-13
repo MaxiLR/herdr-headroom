@@ -148,6 +148,8 @@ export function render(view, cx) {
     .gap(STRIP.gap)
     .items_center()
     .bg(t.chrome)
+    .border_t(1)
+    .border_color(t.border)
     .text_size(STRIP.text)
     .text_color(t.muted)
     .when(separator, (el) =>
