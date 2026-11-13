@@ -32,7 +32,7 @@ test("an account cut off by part of its height counts as below", () => {
 });
 
 test("accounts drawn from an offset are counted from it", () => {
-  // The rail's accounts start 4 px down: the second ends at 148, past 145.
-  assert.equal(moreBelow(SIX, 145, 0, 4), 5);
+  // The rail's accounts start 4 px down: the second ends at 144, past 140.
+  assert.equal(moreBelow(SIX, 140, 0, 4), 5);
   assert.equal(moreBelow(SIX, 148, 0, 4), 4);
 });
