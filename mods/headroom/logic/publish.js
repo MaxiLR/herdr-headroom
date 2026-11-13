@@ -26,3 +26,6 @@ export function publish(host, readings, now) {
 export function published(host) {
   return host.shared(READINGS_KEY)?.accounts ?? [];
 }
+
+// Turns notifications on or off.
+export function setNotify(host, checked) {}

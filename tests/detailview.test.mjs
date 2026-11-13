@@ -288,7 +288,8 @@ test("the notifications switch is on when notifications are", (t) => {
   );
   const control = notifySwitch(lines) ?? "";
   assert.match(control, /:checked\[Bool\(true\)\]/, show(lines));
-  assert.match(control, /:on_click/);
+  assert.match(control, /:on_change\(fn\)/, show(lines));
+  assert.doesNotMatch(control, /:on_click/, show(lines));
   assert.match(
     control,
     /:accessibility_label\[Str\("Notify at 90% and at the limit"\)\]/,
@@ -303,6 +304,8 @@ test("the notifications switch is drawn off when notifications are off", (t) => 
     /:checked\[Bool\(false\)\]/,
     show(lines),
   );
+  assert.match(notifySwitch(lines) ?? "", /:on_change\(fn\)/, show(lines));
+  assert.doesNotMatch(notifySwitch(lines) ?? "", /:on_click/, show(lines));
 });
 
 test("sign in again: the control, when the login ended, no windows", (t) => {
