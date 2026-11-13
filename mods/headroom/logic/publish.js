@@ -28,4 +28,6 @@ export function published(host) {
 }
 
 // Turns notifications on or off.
-export function setNotify(host, checked) {}
+export function setNotify(host, checked) {
+  host.setShared(PREFS_KEY, { notify: checked });
+}

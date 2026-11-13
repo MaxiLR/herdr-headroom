@@ -12,7 +12,7 @@ import {
 } from "../logic/detail.js";
 import { levelOf } from "../logic/levels.js";
 import { untilReset } from "../logic/pace.js";
-import { PREFS_KEY } from "../logic/publish.js";
+import { setNotify } from "../logic/publish.js";
 import { barOf, isThin, rowOf } from "../logic/rows.js";
 import {
   failedText,
@@ -384,7 +384,10 @@ function notifySwitch(view) {
     .rounded(9)
     .bg(on ? t.accent : t.input)
     .cursor_pointer()
-    .on_click(() => view.host.setShared(PREFS_KEY, { notify: !on }))
+    .on_change((checked, cx) => {
+      setNotify(view.host, checked);
+      cx.notify();
+    })
     .child(
       div()
         .absolute()
