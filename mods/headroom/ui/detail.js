@@ -15,6 +15,7 @@ import {
   windowsInOrder,
 } from "../logic/detail.js";
 import { levelOf } from "../logic/levels.js";
+import { listRowOf } from "../logic/list.js";
 import { untilReset } from "../logic/pace.js";
 import { setNotify } from "../logic/publish.js";
 import { barOf, isThin, rowOf } from "../logic/rows.js";
@@ -366,6 +367,8 @@ function section(reading, index, account, view) {
   const login = loginLine(reading, row, view);
   return v_flex()
     .id(`account-${index}`)
+    .role("button")
+    .accessibility_label(listRowOf(reading, view.now, width).spoken)
     .flex_none()
     .pt(11)
     .pb(13)
