@@ -8,16 +8,16 @@ is in that window, and one line of numbers: the percent used and the time until
 the window resets. Bars turn the theme's working colour from 75 % and its
 blocked colour from 90 %, and a toast says so at 90 % and at the limit. The
 same mod folds into a rail of marks and percents, a one-line strip for a status
-bar, and a detail view with every window, the sign-ins and the account
-management.
+bar, a view of each account alone with its own actions, and a detail view with
+every window of every account.
 
 ![Headroom](preview.png)
 
 ## What you see
 
-Every colour is a `theme()` colour by name; nothing is a fixed hex. Text is the
-theme's UI font unless it says mono, which is the terminal font
-(`settings().font_family`, else `JetBrains Mono`).
+Every colour is a `theme()` colour by name but one: Claude's orange, `#D97757`,
+on Claude's spark. Text is the theme's UI font unless it says mono, which is
+the terminal font (`settings().font_family`, else `JetBrains Mono`).
 
 **Bars, everywhere.** A rounded track, `foreground` at 10 % opacity, with a
 rounded fill from the left. Full bars are 6 px tall (5 px in the rail and the
@@ -25,20 +25,23 @@ strip), thin bars 3 px. A fill that is not empty is at least 3 px wide. Fill by
 level: normal `muted`, high `working`, critical and limit `blocked`. The number
 beside a bar: normal `muted`; the other levels their fill colour mixed 22 %
 toward `foreground`. The pace mark is a 2 px wide `foreground` tick in a 1.5 px
-halo of the colour behind the bar; it reaches 3 px beyond the bar on its own
-side (above a full bar, below a thin one) and 1 px on the other. A failed
-read's bars are at 40 % opacity with no pace mark. Provider marks are Herdr's
-`icons/claude.svg` and `icons/codex.svg` in their own colours.
+halo of the colour behind the bar, centred on the bar: it reaches 2 px beyond
+it above and below (1 px in the rail and the strip). A failed read's bars are
+at 40 % opacity with no pace mark. Provider marks are the providers' own
+logos, from the mod's own `mods/headroom/icons/`: the ChatGPT logo
+(`chatgpt.svg`) in `foreground` for Codex, Claude's spark (`claude.svg`) in
+`#D97757` for Claude.
 
 **List** (the default; a sidebar block, 268 px wide in Herdr's `main`). Ground
 `chrome`.
 
 - Header, 41 px: "Limits" at 11.5 px medium in `dim` on the left (16 px in, 14
   px from the top); on the right a 22 px control with three dots (14 px,
-  `muted`), tooltip "Accounts and settings", `hover` ground.
+  `muted`), tooltip "Accounts and settings", `hover` ground, that opens the
+  detail view.
 - Each account, 8 px in from the block and 8 px of its own padding, 9 px below:
   a 26 px label line (14 px mark, 8 px gap, the label at 13 px in `foreground`,
-  and on the right a note at 11 px), then the pair of bars 4 px apart, then a
+  and on the right a note at 11 px), then the pair of bars 6 px apart, then a
   14 px numbers line 6 px below at 11 px in `muted`: the weekly window's
   numbers on the left (`41% · 4d 6h`), the 5-hour window's on the right
   (`5-hour 62% · 1h 48m`); the percent in its level's number colour, the `·`
@@ -54,27 +57,31 @@ read's bars are at 40 % opacity with no pace mark. Provider marks are Herdr's
   Claude or Codex account to see how close it is to its limits." (12 px,
   `muted`), and a 28 px "Connect account" button with Herdr's plus icon, a
   1 px `input` border and 8 px corners.
-- Past four accounts the block stops growing (320 px) and the accounts scroll
-  under the header.
+- The list fills its block; the header stays and the accounts scroll under it.
+  Only with `fit` does the block grow with its accounts, up to 329 px (four
+  accounts), past which they scroll.
+- A click on an account opens its account view.
 
 **Rail** (a block narrower than 160 px; Herdr's folded sidebar). Ground
 `chrome`, 4 px top and bottom. Each account, 8 px by 6 px of padding: a 16 px
 line with the 14 px mark on the left and the percent of its tightest window on
 the right (11 px, its level's number colour), then `5h` in `dim` at 10.5 px when
-the 5-hour window is the tightest; under it the pair of bars, 3 px apart. Below
+the 5-hour window is the tightest; under it the pair of bars, 4 px apart. Below
 60 px wide only the mark, centred. A signed-out account: the mark at 45 %
 opacity and a 14 px "!" badge (10.5 px bold in the high number colour on
 `working` at 15 %), no bars. No accounts: one 28 px control with the plus icon.
+A click on an account opens its account view.
 
 **Strip** (a block under 48 px tall; a status bar, 28 px tall in Herdr's
 `main`). Ground `chrome`, text 11.8 px in `muted`, 14 px padding each side. One
 line of 22 px items, 16 px apart: the 12 px mark, the label, the 44 px wide
-pair of bars (5 px and 3 px), the percent of the tightest window and the `5h`
-tag at 10.5 px, 6 px between parts. When another shown block comes before it
-in its row, it starts with a 1 px by 14 px rule in `dim` (2 px from the edge,
-16 px before the first item). When the line is too narrow the labels go first,
-then the bars. A signed-out account: the faded mark and the "!" badge. No
-accounts: the words "Connect account".
+pair of bars (5 px and 3 px, 4 px apart), the percent of the tightest window and
+the `5h` tag at 10.5 px, 6 px between parts. When another shown block comes
+before it in its row, it starts with a 1 px by 14 px rule in `dim` (2 px from
+the edge, 16 px before the first item). When the line is too narrow the labels
+go first, then the bars. A signed-out account: the faded mark and the "!"
+badge. No accounts: the words "Connect account". A click on an account opens
+its account view.
 
 **Detail view** (a 380 px popup; also a dialog or a pane). Ground `popover`,
 text 13 px.
@@ -82,11 +89,13 @@ text 13 px.
 - Header, 46 px: "Limits" at 14 px semibold, `Read 2m ago` (or `Read just
 now`) at 11.5 px in `muted`, and a 26 px refresh control with a 14 px icon.
 - Each account, separated by a 1 px `border` rule, 16 px in, 11 px above and 13
-  px below: a 24 px line with the 16 px mark, the label at 13 px medium, the
-  plan at 12 px in `muted` (`Plus`), a spacer, why the last read failed or
-  "Sign in again" in `accent`, and a 26 px three-dot menu control. Then the
-  email and organization at 11.5 px in `muted` (`name@example.com · Example`),
-  24 px in.
+  px below, the whole of it a button with the `hover` ground that opens its
+  account view: a 24 px line with the 16 px mark, the label at 13 px medium,
+  the plan at 12 px in `muted` (`Plus`), a spacer, why the last read failed or
+  "Sign in again" in `accent`, and, with two accounts or more, two 22 px arrows
+  (14 px icons in `muted`; at 35 % and doing nothing where the account cannot
+  move). Then the email and organization at 11.5 px in `muted`
+  (`name@example.com · Example`), 24 px in.
 - Each window: a 16 px line at 12 px with its name in `muted`, the percent (or
   "At limit") in its level's number colour, `resets in 4d 6h` (or `not
 started`) and the reset's clock time (`16:20` today, else `Mon 20:30`) at
@@ -102,11 +111,34 @@ started`) and the reset's clock time (`16:20` today, else `Mon 20:30`) at
   30 px "Connect account" button on `raised` with an `input` border.
 - The popup is as tall as its accounts, at most 640 px; past that they scroll.
 
-**Account menu.** A 176 px popover under the three dots, `popover` ground,
-`input` border, 10 px corners, a large shadow: Rename, Move up, Move down,
-Sign in again, a 1 px rule, Remove (in the critical number colour). Items 30
-px, 12.8 px text; a disabled item is `dim`. Rename turns the label into a 24 px
-field with the text selected.
+**Account view** (a 380 px popup, as tall as its content up to 640 px; past
+that its windows scroll). Ground `popover`, text 13 px.
+
+- Header, 12 px down, 16 px in: a 26 px line with the 16 px mark, the label at
+  14 px semibold (`muted` when signed out), the plan at 12 px in `muted`, and
+  on the right the age of the reading at 11.5 px in `muted` (`Read 2m ago`, or
+  `12m old · network` after a failed read) and a 26 px refresh control. Under
+  it, 40 px in, the email and organization at 11.5 px in `muted`.
+- Each window, 13 px below the last, 16 px in: its name at 12 px in
+  `foreground`, its bar 6 px below (full, or thin for the 5-hour window), and 6
+  px below that a 14 px line at 11 px in `muted`: the percent (or "At limit")
+  in its level's number colour, `·` in `dim`, `resets in 4d 6h` (or `not
+started`), and the clock time on the right. A failed read: the bars dimmed,
+  the percents alone. Not read yet: a pair of empty tracks. Signed out: no
+  bars.
+- When a bar carries its pace mark, 14 px below: an 18 px key (a full bar half
+  filled, its tick at the middle) and "The line on a bar marks how much of its
+  time has passed." at 11.5 px in `muted`.
+- `Login ends Dec 5` at 11.5 px, 12 px below, in the high number colour in its
+  last 3 days (`Login ends in 2 days`); `Login ended Nov 9` for a signed-out
+  account.
+- Actions, after a 1 px `border` rule, 16 px by 12 px, 8 px apart: 30 px
+  buttons with 8 px corners on `raised` with an `input` border, 12.5 px medium:
+  Rename, Sign in again (on `solid` for a signed-out account) and, at the
+  right, Remove in the critical number colour. Rename turns the label into a
+  24 px field with the text selected.
+- Last, after a 1 px `border` rule, a 38 px row: "Accounts and settings" at 12
+  px in `muted`, a chevron on the right.
 
 **Connect dialog** (a 420 px dialog). Ground `popover`, 18 px padding. Title at
 15 px semibold ("Connect an account", "Connect Claude", "Connect Codex"), `Esc`
@@ -148,17 +180,19 @@ window with no reset time has not started: no mark, and `not started`.
 - Login ending (Claude, last 3 days): the note `Login ends in 2 days`.
 - Signed out (the provider refused the refresh): "Sign in again", no bars.
 
-**Clicks.** An account in the list, the rail or the strip, and the list's
-three dots, open the detail view as a popup. "Sign in again" and "Connect
-account" open the connect dialog (for "Sign in again", straight at that
-account's provider). The refresh control reads every account now and is
-Herdr's spinner until done; an account read less than 30 seconds ago is not
-read again. The switch turns toasts on and off for every copy. The menu:
-Rename (Enter keeps, Esc leaves it), Move up and Move down (disabled at the
-ends), Sign in again, Remove (Herdr's confirm dialog: "Remove work?" / "Its
-stored login is deleted from this computer."). Arrow keys move through the
-menu; Enter or Space picks. In the connect dialog Esc closes it; Copy reads
-"Copied"; Open opens the address in the browser.
+**Clicks.** An account in the list, the rail, the strip or the detail view
+opens its account view as a popup. The list's three dots and the account
+view's "Accounts and settings" open the detail view as a popup. "Sign in again"
+and "Connect account" open the connect dialog (for "Sign in again", straight
+at that account's provider). The refresh control reads every account now (in
+the account view, that account) and is Herdr's spinner until done; an account
+read less than 30 seconds ago is not read again. The switch turns toasts on
+and off for every copy. The detail view's arrows move an account up or down.
+In the account view: Rename (Enter keeps, Esc leaves it), Sign in again,
+Remove (Herdr's confirm dialog: "Remove work?" / "Its stored login is deleted
+from this computer."); the view closes itself once its account is no longer
+connected. In the connect dialog Esc closes it; Copy reads "Copied"; Open
+opens the address in the browser.
 
 **Hovers.** Accounts and controls take the `hover` ground. In the rail and the
 strip the hover names the account and gives its numbers:
@@ -184,31 +218,37 @@ a jump past both posts the limit toast only. Clicking one does nothing.
 - `mods/headroom/`: `main.js` (the View), `mod.json` `{ "place": "none" }`,
   `logic/` (plain modules, no gpui-kit or herdr imports: form choice, fit,
   levels, pace, colours, rows, words, toasts, accounts, vault, store, readings,
-  publish, PKCE, connect), `providers/` (`claude.js`, `codex.js`, `index.js`),
-  `ui/` (`list`, `rail`, `strip`, `detail`, `menu`, `connect`, `kit`), `icons/`
-  (`more.svg`, `refresh.svg`).
+  publish, host, PKCE, SHA-256, connect, and the data of the list, rail, strip,
+  account view and detail view), `providers/` (`claude.js`, `codex.js`,
+  `index.js`), `ui/` (`list`, `rail`, `strip`, `account`, `detail`, `connect`,
+  `kit`), `icons/` (`chatgpt.svg`, `claude.svg`, `arrow-up.svg`,
+  `arrow-down.svg`, `more.svg`, `refresh.svg`).
 - One copy per block. `main.js` picks the form: `props.connect` → the connect
-  dialog; `props.form` of `list`, `rail`, `strip` or `detail` → that form; else
-  the root's measured size (`on_size_change`): rail below 160 px wide, strip
-  below 48 px tall, list otherwise and before the first measure.
-- Props: `form` (`auto`, `list`, `rail`, `strip`, `detail`); `fit` (the id of
+  dialog; `props.form` of `list`, `rail`, `strip` or `detail`, or `account`
+  with `props.account` → that form; else the root's measured size
+  (`on_size_change`): rail below 160 px wide, strip below 48 px tall, list
+  otherwise and before the first measure.
+- Props: `form` (`auto`, `list`, `rail`, `strip`, `detail`, `account`);
+  `account` (the id of the account the account view shows); `fit` (the id of
   the block holding the copy: the list and the rail call
   `run("layout.resize", { id, px })` with their content's height, at least 48
-  px so a folded rail unfolds to the list and at most 320 px, once per height,
-  from `on_size_change`); `connect` (`{ provider?, account? }`, the connect dialog); `overlay` (Herdr's).
+  px so a folded rail unfolds to the list and at most 329 px, once per height,
+  from `on_size_change`; without it they never resize their block); `connect`
+  (`{ provider?, account? }`, the connect dialog); `overlay` (Herdr's).
 - `herdr`: `props`, `theme`, `settings`, `window` (its `platform`), `appHome`,
   `readTextFile`, `writeTextFile(path, text, expected)`, `exec`, `shared`,
   `setShared`, `notify`, `layout`, `run`, `openOverlay`, `closeOverlay`,
-  `nextCommand`. The global `fetch`, `crypto.getRandomValues`,
-  `crypto.subtle.digest`, `btoa`, `Buffer`, `URLSearchParams`.
-- gpui-kit `View`, `div`, `image`, `svg`; gpui-base `h_flex`, `v_flex`,
-  `Switch`, `Input`, `InputState`, `Popover`. `cx.spawn`, `cx.sleep`,
-  `cx.timer.every(60000)`, `cx.focus_handle`, `cx.write_to_clipboard`.
+  `nextCommand`. The global `fetch`, `crypto.getRandomValues`, `btoa`,
+  `Buffer`, `URLSearchParams`.
+- gpui-kit `View`, `div`, `svg`; gpui-base `h_flex`, `v_flex`, `Switch`,
+  `Input`, `InputState`. `cx.spawn`, `cx.sleep`, `cx.timer.every(60000)`,
+  `cx.focus_handle`, `cx.write_to_clipboard`.
 - Commands: `layout.resize`; overlays `{ mod: "headroom", kind: "popup",
-width: 380, props: { form: "detail" } }`, `{ mod: "headroom", kind:
-"dialog", width: 420, props: { connect } }` and `{ mod: "confirm", kind:
-"dialog", props: { title, detail, command: { name: "headroom.remove" } } }`;
-  it receives `remove` from `nextCommand()`.
+width: 380, height, props: { form: "account", account } }`, `{ mod:
+"headroom", kind: "popup", width: 380, height, props: { form: "detail" } }`,
+  `{ mod: "headroom", kind: "dialog", width: 420, props: { connect } }` and
+  `{ mod: "confirm", kind: "dialog", props: { title, detail, command: { name:
+"headroom.remove" } } }`; it receives `remove` from `nextCommand()`.
 - Shared state: `headroom.readings` (`{ version: 1, accounts: [reading] }`, the
   public interface in the README), `headroom.prefs` (`{ notify }`),
   `headroom.notified` (`{ version: 1, keys }`).
@@ -231,9 +271,8 @@ width: 380, props: { form: "detail" } }`, `{ mod: "headroom", kind:
   claims, and reads `https://chatgpt.com/backend-api/wham/usage` with
   `ChatGPT-Account-Id` (`rate_limit.primary_window`, `secondary_window`, named
   by `limit_window_seconds`, never by slot; `additional_rate_limits`).
-- Shipped art: `icons/claude.svg`, `icons/codex.svg`,
-  `mods/workspace-chrome/spinner.svg`, `mods/workspace-chrome/plus.svg`,
-  `mods/workspace-chrome/chevron-left.svg`,
+- Shipped art: `mods/workspace-chrome/spinner.svg`,
+  `mods/workspace-chrome/plus.svg`, `mods/workspace-chrome/chevron-left.svg`,
   `mods/workspace-chrome/chevron-right.svg`; the shipped `confirm` and `toast`
   mods.
 
@@ -244,6 +283,10 @@ width: 380, props: { form: "detail" } }`, `{ mod: "headroom", kind:
   `cx.sleep`. `fetch` exposes no response headers. A mod cannot listen on a
   port, so Claude's sign-in is the paste-the-code flow. A mod may import only
   from its own folder.
+- **No `crypto.subtle`.** `crypto.subtle.digest` does not work in Herdr
+  0.1.15's mod runtime: its promise never settles. SHA-256 for the PKCE
+  challenge is the mod's own (`logic/sha256.js`), synchronous and in plain
+  JavaScript.
 - **One store for every copy.** Herdr runs a copy per block, a popup and a
   dialog are copies too, and module code is shared between them. Keep the
   accounts, the vault and the reads in one module-level store, one operation
@@ -272,8 +315,8 @@ width: 380, props: { form: "detail" } }`, `{ mod: "headroom", kind:
   reports its week in `primary_window`. Error text is built from a known kind,
   never from a response body.
 - **Sizes.** Text cannot be measured: the strip estimates a glyph at 0.6 of the
-  font size. The strip never resizes its block; the list and the rail stop at
-  320 px.
+  font size. The strip never resizes its block; the list and the rail resize
+  theirs only with `fit`, and stop at 329 px.
 
 ## Done when
 
@@ -287,7 +330,7 @@ width: 380, props: { form: "detail" } }`, `{ mod: "headroom", kind:
 - A Codex plan with only a weekly window shows one bar; a Claude window with no
   reset time shows `not started` and no pace mark.
 - The same block draws the rail below 160 px wide and the strip below 48 px
-  tall; with `fit`, the list block grows with its accounts up to 320 px.
+  tall; with `fit`, the list block grows with its accounts up to 329 px.
 - A strip after another block in its row starts with the rule; alone, it has
   none.
 - A read that fails keeps the last bars dimmed with `… old · network`; a
