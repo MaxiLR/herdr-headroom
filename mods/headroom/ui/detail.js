@@ -458,53 +458,83 @@ function notifySwitch(view) {
     );
 }
 
+// A line of the footer's left column: a switch and its label.
+function switchLine(control, label, t) {
+  return h_flex()
+    .min_h(18)
+    .gap(10)
+    .items_center()
+    .child(control)
+    .child(
+      div()
+        .flex_1()
+        .min_w(0)
+        .text_size(12)
+        .line_height(1.35)
+        .text_color(t.muted)
+        .child(label),
+    );
+}
+
+// Connect account: its words, or below NARROW_PX a square with the plus alone.
+function connectButton(view) {
+  const t = view.theme;
+  const narrow = (view.size?.width ?? WIDTH) < NARROW_PX;
+  const button = h_flex()
+    .id("connect-account")
+    .role("button")
+    .flex_none()
+    .items_center()
+    .rounded(8)
+    .border_1()
+    .border_color(t.input)
+    .bg(t.raised)
+    .cursor_pointer()
+    .hover((s) => s.bg(t.selected))
+    .on_click(() => {
+      closeSelf(view);
+      openConnect(view, {});
+    });
+  if (narrow) {
+    return button
+      .accessibility_label("Connect account")
+      .tooltip("Connect account")
+      .size(30)
+      .justify_center()
+      .child(svg(PLUS).size(14).flex_none().text_color(t.foreground));
+  }
+  return button
+    .h(30)
+    .pl(9)
+    .pr(12)
+    .gap(6)
+    .text_size(12.5)
+    .font_medium()
+    .text_color(t.foreground)
+    .child(svg(PLUS).size(14).flex_none().text_color(t.muted))
+    .child("Connect account");
+}
+
+// The switches in a column at the left, which takes the room; Connect account
+// at the right, centred on them.
 function footer(view) {
   const t = view.theme;
   return h_flex()
     .flex_none()
-    .flex_wrap()
     .px(16)
     .py(12)
     .gap(10)
     .items_center()
     .border_t(1)
     .border_color(t.border)
-    .child(notifySwitch(view))
     .child(
-      div()
+      v_flex()
         .flex_1()
-        .min_w(120)
-        .text_size(12)
-        .line_height(1.35)
-        .text_color(t.muted)
-        .child(NOTIFY),
+        .min_w(0)
+        .gap(10)
+        .child(switchLine(notifySwitch(view), NOTIFY, t)),
     )
-    .child(
-      h_flex()
-        .id("connect-account")
-        .role("button")
-        .flex_none()
-        .h(30)
-        .pl(9)
-        .pr(12)
-        .gap(6)
-        .items_center()
-        .rounded(8)
-        .border_1()
-        .border_color(t.input)
-        .bg(t.raised)
-        .text_size(12.5)
-        .font_medium()
-        .text_color(t.foreground)
-        .cursor_pointer()
-        .hover((s) => s.bg(t.selected))
-        .on_click(() => {
-          closeSelf(view);
-          openConnect(view, {});
-        })
-        .child(svg(PLUS).size(14).flex_none().text_color(t.muted))
-        .child("Connect account"),
-    );
+    .child(connectButton(view));
 }
 
 export function render(view, cx) {
