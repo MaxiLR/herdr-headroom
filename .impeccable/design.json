@@ -1,0 +1,416 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-13T00:02:33+00:00",
+  "title": "Design System: Headroom",
+  "extensions": {
+    "colorMeta": {
+      "chrome": {
+        "role": "neutral",
+        "displayName": "Chrome",
+        "purpose": "Sidebar ground of the list, rail and strip.",
+        "canonical": "theme().chrome",
+        "themes": {
+          "graphite": "#101114",
+          "paper": "#f1f1ee"
+        }
+      },
+      "popover": {
+        "role": "neutral",
+        "displayName": "Popover",
+        "purpose": "Ground of the detail view, connect dialog and menu.",
+        "canonical": "theme().popover",
+        "themes": {
+          "graphite": "#25272b",
+          "paper": "#ffffff"
+        }
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Background",
+        "purpose": "Inside of fields and the code box.",
+        "canonical": "theme().background",
+        "themes": {
+          "graphite": "#17191d",
+          "paper": "#ffffff"
+        }
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "Raised",
+        "purpose": "Secondary and mini buttons.",
+        "canonical": "theme().raised",
+        "themes": {
+          "graphite": "#2c2e31",
+          "paper": "#f6f6f6"
+        }
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Foreground",
+        "purpose": "Labels, titles, the pace tick.",
+        "canonical": "theme().foreground",
+        "themes": {
+          "graphite": "#eeeeef",
+          "paper": "#1b1b1e"
+        }
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "purpose": "Numbers, resets, hints, normal fills, icons.",
+        "canonical": "theme().muted",
+        "themes": {
+          "graphite": "#98999b",
+          "paper": "#69696b"
+        }
+      },
+      "dim": {
+        "role": "neutral",
+        "displayName": "Dim",
+        "purpose": "Block header, separators, Esc, field labels only.",
+        "canonical": "theme().dim",
+        "themes": {
+          "graphite": "#696a6d",
+          "paper": "#969698"
+        }
+      },
+      "track": {
+        "role": "neutral",
+        "displayName": "Track",
+        "purpose": "Empty part of every bar: foreground at 10 % alpha (computed).",
+        "canonical": "computed in logic/color.js",
+        "themes": {
+          "graphite": "#eeeeef1a",
+          "paper": "#1b1b1e1a"
+        }
+      },
+      "working": {
+        "role": "primary",
+        "displayName": "Working Amber",
+        "purpose": "Bar fill from 75 %.",
+        "canonical": "theme().working",
+        "themes": {
+          "graphite": "#e5c07b",
+          "paper": "#9a6700"
+        }
+      },
+      "working-text": {
+        "role": "primary",
+        "displayName": "Working Amber, Readable",
+        "purpose": "High-level numbers: working mixed 22 % toward foreground (computed).",
+        "canonical": "computed in logic/color.js",
+        "themes": {
+          "graphite": "#e7ca95",
+          "paper": "#7e5607"
+        }
+      },
+      "blocked": {
+        "role": "primary",
+        "displayName": "Blocked Coral",
+        "purpose": "Bar fill from 90 % and at the limit.",
+        "canonical": "theme().blocked",
+        "themes": {
+          "graphite": "#f0705f",
+          "paper": "#c93c2c"
+        }
+      },
+      "blocked-text": {
+        "role": "primary",
+        "displayName": "Blocked Coral, Readable",
+        "purpose": "Critical numbers, At limit, errors: blocked mixed 22 % toward foreground (computed).",
+        "canonical": "computed in logic/color.js",
+        "themes": {
+          "graphite": "#f08c7f",
+          "paper": "#a33529"
+        }
+      },
+      "accent": {
+        "role": "secondary",
+        "displayName": "Herdr Accent",
+        "purpose": "Sign in again, switch on, focused field border.",
+        "canonical": "theme().accent",
+        "themes": {
+          "graphite": "#96b2d7",
+          "paper": "#1f62d0"
+        }
+      },
+      "accent-foreground": {
+        "role": "secondary",
+        "displayName": "Accent Foreground",
+        "purpose": "Switch knob over accent.",
+        "canonical": "theme().accent_foreground",
+        "themes": {
+          "graphite": "#17191d",
+          "paper": "#ffffff"
+        }
+      },
+      "solid": {
+        "role": "neutral",
+        "displayName": "Solid",
+        "purpose": "Primary dialog button ground.",
+        "canonical": "theme().solid",
+        "themes": {
+          "graphite": "#eeeeef",
+          "paper": "#1b1b1e"
+        }
+      },
+      "solid-foreground": {
+        "role": "neutral",
+        "displayName": "Solid Foreground",
+        "purpose": "Primary dialog button text.",
+        "canonical": "theme().solid_foreground",
+        "themes": {
+          "graphite": "#111215",
+          "paper": "#ffffff"
+        }
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "purpose": "Section rules in the detail view.",
+        "canonical": "theme().border",
+        "themes": {
+          "graphite": "#ffffff18",
+          "paper": "#00000017"
+        }
+      },
+      "input": {
+        "role": "neutral",
+        "displayName": "Input",
+        "purpose": "Control outlines; switch off track.",
+        "canonical": "theme().input",
+        "themes": {
+          "graphite": "#ffffff24",
+          "paper": "#00000026"
+        }
+      },
+      "hover": {
+        "role": "neutral",
+        "displayName": "Hover",
+        "purpose": "Hover ground over rows and controls.",
+        "canonical": "theme().hover",
+        "themes": {
+          "graphite": "#ffffff0e",
+          "paper": "#0000000c"
+        }
+      },
+      "selected": {
+        "role": "neutral",
+        "displayName": "Selected",
+        "purpose": "Pressed secondary button.",
+        "canonical": "theme().selected",
+        "themes": {
+          "graphite": "#ffffff17",
+          "paper": "#00000012"
+        }
+      }
+    },
+    "typographyMeta": {
+      "dialog-title": {
+        "displayName": "Dialog title",
+        "purpose": "Connect dialog title."
+      },
+      "detail-title": {
+        "displayName": "Detail title",
+        "purpose": "\"Limits\" atop the detail view."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Account labels and dialog body."
+      },
+      "window-line": {
+        "displayName": "Window line",
+        "purpose": "Window lines in the detail view."
+      },
+      "block-header": {
+        "displayName": "Block header",
+        "purpose": "\"Limits\" over the list, in dim."
+      },
+      "numbers": {
+        "displayName": "Numbers",
+        "purpose": "Percentages, resets and status words."
+      },
+      "strip": {
+        "displayName": "Strip",
+        "purpose": "The status-bar line."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Codex device code."
+      },
+      "address": {
+        "displayName": "Address",
+        "purpose": "Sign-in address."
+      }
+    },
+    "shadows": [
+      {
+        "name": "menu",
+        "value": "gpui shadow_lg",
+        "purpose": "Only under the account menu; overlay frames are Herdr's."
+      }
+    ],
+    "motion": [
+      {
+        "name": "reading",
+        "value": "400ms ease-out",
+        "purpose": "Bar fill width and pace tick position move to a new reading (.transition)."
+      },
+      {
+        "name": "switch",
+        "value": "160ms ease-out",
+        "purpose": "Notifications switch knob."
+      },
+      {
+        "name": "spinner",
+        "value": "spin(900)",
+        "purpose": "Herdr's ring spinner for refresh and the Codex wait."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "rail",
+        "value": "width < 160px"
+      },
+      {
+        "name": "strip",
+        "value": "height < 48px"
+      },
+      {
+        "name": "rail-no-number",
+        "value": "width < 60px"
+      },
+      {
+        "name": "list-narrow",
+        "value": "width < 220px"
+      },
+      {
+        "name": "detail-narrow",
+        "value": "width < 340px"
+      },
+      {
+        "name": "detail-wide",
+        "value": "width >= 520px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Account Row with Pair of Bars",
+      "kind": "custom",
+      "refersTo": "account-row",
+      "description": "One account in the list: mark and label, weekly bar over the thin 5-hour bar with pace ticks, one quiet line of numbers.",
+      "html": "<div class=\"ds-wrap\"><button class=\"ds-row\"><span class=\"ds-label-line\"><svg class=\"ds-mark\" viewBox=\"0 0 14 14\" aria-label=\"Claude\"><circle cx=\"7\" cy=\"7\" r=\"6\" fill=\"#d97757\"/></svg><span class=\"ds-label\">maxi · Terac</span></span><span class=\"ds-bar ds-weekly\"><span class=\"ds-fill\" style=\"width:41%\"></span><span class=\"ds-tick ds-up\" style=\"left:52%\"></span></span><span class=\"ds-bar ds-thin\"><span class=\"ds-fill ds-high\" style=\"width:78%\"></span><span class=\"ds-tick ds-down\" style=\"left:60%\"></span></span><span class=\"ds-nums\"><span><b>41%</b> <i>·</i> 4d 6h</span><span>5-hour <b class=\"ds-high-t\">78%</b> <i>·</i> 1h 48m</span></span></button></div>",
+      "css": ":host{--chrome:#101114;--popover:#25272b;--background:#17191d;--raised:#2c2e31;--fg:#eeeeef;--muted:#98999b;--dim:#696a6d;--track:#eeeeef1a;--working:#e5c07b;--working-text:#e7ca95;--blocked:#f0705f;--blocked-text:#f08c7f;--accent:#96b2d7;--accent-fg:#17191d;--solid:#eeeeef;--solid-fg:#111215;--input:#ffffff24;--hover:#ffffff0e;--border:#ffffff18;font-family:Geist,system-ui,sans-serif}.ds-wrap{background:var(--chrome);padding:8px;width:268px}.ds-row{all:unset;display:flex;flex-direction:column;padding:0 8px 9px;border-radius:8px;cursor:pointer;width:100%;box-sizing:border-box}.ds-row:hover{background:var(--hover)}.ds-row:focus-visible{outline:2px solid var(--accent)}.ds-label-line{display:flex;align-items:center;gap:8px;height:26px}.ds-mark{width:14px;height:14px}.ds-label{font-size:13px;color:var(--fg)}.ds-bar{position:relative;display:block;width:100%;border-radius:9999px;background:var(--track)}.ds-weekly{height:6px}.ds-thin{height:3px;margin-top:4px}.ds-fill{display:block;height:100%;border-radius:9999px;background:var(--muted);transition:width .4s ease-out}.ds-fill.ds-high{background:var(--working)}.ds-tick{position:absolute;width:2px;margin-left:-1px;border-radius:1px;background:var(--fg);box-shadow:0 0 0 1.5px var(--chrome)}.ds-up{top:-3px;bottom:-1px}.ds-down{top:-1px;bottom:-3px}.ds-nums{display:flex;justify-content:space-between;height:14px;margin-top:6px;font-size:11px;color:var(--muted)}.ds-nums b{font-weight:400}.ds-nums i{font-style:normal;color:var(--dim)}.ds-high-t{color:var(--working-text)}"
+    },
+    {
+      "name": "Block Header",
+      "kind": "nav",
+      "refersTo": "block-header",
+      "description": "\"Limits\" over the list with one quiet control that opens the detail view.",
+      "html": "<div class=\"ds-head\"><span>Limits</span><button class=\"ds-icon\" aria-label=\"Accounts and settings\">···</button></div>",
+      "css": ":host{--chrome:#101114;--popover:#25272b;--background:#17191d;--raised:#2c2e31;--fg:#eeeeef;--muted:#98999b;--dim:#696a6d;--track:#eeeeef1a;--working:#e5c07b;--working-text:#e7ca95;--blocked:#f0705f;--blocked-text:#f08c7f;--accent:#96b2d7;--accent-fg:#17191d;--solid:#eeeeef;--solid-fg:#111215;--input:#ffffff24;--hover:#ffffff0e;--border:#ffffff18;font-family:Geist,system-ui,sans-serif}.ds-head{display:flex;align-items:center;justify-content:space-between;height:41px;box-sizing:border-box;padding:14px 12px 5px 16px;background:var(--chrome);width:268px;font-size:11.5px;font-weight:500;color:var(--dim)}.ds-icon{all:unset;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--muted);cursor:pointer}.ds-icon:hover{background:var(--hover)}.ds-icon:focus-visible{outline:2px solid var(--accent)}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one primary action of a dialog (Connect).",
+      "html": "<button class=\"ds-btn-primary\">Connect</button>",
+      "css": ":host{--chrome:#101114;--popover:#25272b;--background:#17191d;--raised:#2c2e31;--fg:#eeeeef;--muted:#98999b;--dim:#696a6d;--track:#eeeeef1a;--working:#e5c07b;--working-text:#e7ca95;--blocked:#f0705f;--blocked-text:#f08c7f;--accent:#96b2d7;--accent-fg:#17191d;--solid:#eeeeef;--solid-fg:#111215;--input:#ffffff24;--hover:#ffffff0e;--border:#ffffff18;font-family:Geist,system-ui,sans-serif}.ds-btn-primary{height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--solid);background:var(--solid);color:var(--solid-fg);font:500 12.5px Geist,system-ui,sans-serif;cursor:pointer}.ds-btn-primary:hover{opacity:.88}.ds-btn-primary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.ds-btn-primary:disabled{opacity:.45;cursor:default}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Cancel and other secondary dialog actions.",
+      "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
+      "css": ":host{--chrome:#101114;--popover:#25272b;--background:#17191d;--raised:#2c2e31;--fg:#eeeeef;--muted:#98999b;--dim:#696a6d;--track:#eeeeef1a;--working:#e5c07b;--working-text:#e7ca95;--blocked:#f0705f;--blocked-text:#f08c7f;--accent:#96b2d7;--accent-fg:#17191d;--solid:#eeeeef;--solid-fg:#111215;--input:#ffffff24;--hover:#ffffff0e;--border:#ffffff18;font-family:Geist,system-ui,sans-serif}.ds-btn-secondary{height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--raised);color:var(--fg);font:500 12.5px Geist,system-ui,sans-serif;cursor:pointer}.ds-btn-secondary:hover{opacity:.88}.ds-btn-secondary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
+    },
+    {
+      "name": "Code Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "The 36 px field in the connect dialog; accent border on focus, error line in the critical text colour.",
+      "html": "<div class=\"ds-fwrap\"><input class=\"ds-field\" placeholder=\"Paste the code\"><div class=\"ds-err\">Claude did not accept the code.</div></div>",
+      "css": ":host{--chrome:#101114;--popover:#25272b;--background:#17191d;--raised:#2c2e31;--fg:#eeeeef;--muted:#98999b;--dim:#696a6d;--track:#eeeeef1a;--working:#e5c07b;--working-text:#e7ca95;--blocked:#f0705f;--blocked-text:#f08c7f;--accent:#96b2d7;--accent-fg:#17191d;--solid:#eeeeef;--solid-fg:#111215;--input:#ffffff24;--hover:#ffffff0e;--border:#ffffff18;font-family:Geist,system-ui,sans-serif}.ds-fwrap{background:var(--popover);padding:18px;width:320px}.ds-field{box-sizing:border-box;width:100%;height:36px;padding:0 10px;border-radius:9px;border:1px solid var(--input);background:var(--background);color:var(--fg);font:12.8px Geist,system-ui,sans-serif;outline:none}.ds-field:focus-visible{border-color:var(--accent)}.ds-err{padding-top:8px;font-size:12px;color:var(--blocked-text)}"
+    },
+    {
+      "name": "Notifications Switch",
+      "kind": "custom",
+      "refersTo": "switch-on",
+      "description": "The one notifications switch in the detail footer.",
+      "html": "<label class=\"ds-sw-row\"><button class=\"ds-switch\" role=\"switch\" aria-checked=\"true\"><span></span></button>Notify at 90% and at the limit</label>",
+      "css": ":host{--chrome:#101114;--popover:#25272b;--background:#17191d;--raised:#2c2e31;--fg:#eeeeef;--muted:#98999b;--dim:#696a6d;--track:#eeeeef1a;--working:#e5c07b;--working-text:#e7ca95;--blocked:#f0705f;--blocked-text:#f08c7f;--accent:#96b2d7;--accent-fg:#17191d;--solid:#eeeeef;--solid-fg:#111215;--input:#ffffff24;--hover:#ffffff0e;--border:#ffffff18;font-family:Geist,system-ui,sans-serif}.ds-sw-row{display:flex;align-items:center;gap:10px;background:var(--popover);padding:12px 16px;font-size:12px;color:var(--muted)}.ds-switch{all:unset;position:relative;width:30px;height:18px;border-radius:9px;background:var(--accent);cursor:pointer}.ds-switch span{position:absolute;top:2px;left:14px;width:14px;height:14px;border-radius:50%;background:var(--accent-fg);transition:left .16s ease-out}.ds-switch[aria-checked=false]{background:var(--input)}.ds-switch[aria-checked=false] span{left:2px;background:var(--muted)}.ds-switch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
+    },
+    {
+      "name": "Account Menu",
+      "kind": "custom",
+      "refersTo": "menu",
+      "description": "The account menu in the detail view.",
+      "html": "<div class=\"ds-menu\" role=\"menu\"><div class=\"ds-mi\" role=\"menuitem\" tabindex=\"0\">Rename</div><div class=\"ds-mi\" role=\"menuitem\" tabindex=\"0\">Move up</div><div class=\"ds-mi\" role=\"menuitem\" tabindex=\"0\">Move down</div><div class=\"ds-sep\"></div><div class=\"ds-mi\" role=\"menuitem\" tabindex=\"0\">Remove</div></div>",
+      "css": ":host{--chrome:#101114;--popover:#25272b;--background:#17191d;--raised:#2c2e31;--fg:#eeeeef;--muted:#98999b;--dim:#696a6d;--track:#eeeeef1a;--working:#e5c07b;--working-text:#e7ca95;--blocked:#f0705f;--blocked-text:#f08c7f;--accent:#96b2d7;--accent-fg:#17191d;--solid:#eeeeef;--solid-fg:#111215;--input:#ffffff24;--hover:#ffffff0e;--border:#ffffff18;font-family:Geist,system-ui,sans-serif}.ds-menu{width:176px;padding:3px;box-sizing:border-box;background:var(--popover);border:1px solid var(--input);border-radius:10px;box-shadow:0 10px 15px -3px #0000001a,0 4px 6px -4px #0000001a;font-size:12.8px;color:var(--fg)}.ds-mi{height:30px;padding:0 8px;display:flex;align-items:center;border-radius:7px;cursor:pointer}.ds-mi:hover,.ds-mi:focus-visible{background:var(--hover);outline:none}.ds-sep{height:1px;margin:4px 3px;background:var(--border)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Gauge",
+    "overview": "Headroom is a gauge that lives inside someone else's dashboard. It has no world of its own: every colour is a named colour of the running Herdr theme, read from `theme()` at render, and the type is Herdr's UI font (Geist) with its terminal font (JetBrains Mono) for codes and addresses. What it owns is a structure, the pair of bars, and a temperament: Claude-like restraint, few symbols, states written as words, shapes drawn rather than typed as terminal glyphs.\n\nThe surface is glanced at between other work, in the left sidebar beside Herdr's Spaces and Agents mods. It is dense and calm. Nothing carries colour until something is wrong: at rest every fill and number is `muted`, and the theme's `working` and `blocked` appear only when a window passes 75 % and 90 %. The bar always keeps its full width; the numbers sit in one quiet 11 px line beneath it and never take the bar's room.\n\nThe values in the frontmatter are the graphite theme (Herdr's default dark). They are a reference, not constants: the code names the role (`t.chrome`, `t.muted`) and paper, ink, moss and atom-one-dark supply their own values for the same names.",
+    "keyCharacteristics": [
+      "Thickness names the window: a full 6 px bar for a weekly window, a 3 px bar for the 5-hour one, 4 px apart.",
+      "Colour only for trouble; a level is always paired with its number or the words \"At limit\".",
+      "A 2 px pace tick with a ground-coloured halo says whether an account is burning faster than its window.",
+      "Herdr's own provider marks, spinner, scrollbar, confirm dialog and toasts; no brand, logo or palette of the mod's own.",
+      "Native motion only: fills and ticks slide with `.transition`, waits spin with `.spin(900)`."
+    ],
+    "rules": [
+      {
+        "name": "The Colour Is Trouble Rule",
+        "body": "At rest, everything is `muted` or `foreground`. `working` and `blocked` appear only when a window is high, critical or at its limit, and `accent` only on what can be clicked to fix something.",
+        "section": "colors"
+      },
+      {
+        "name": "The Never By Colour Alone Rule",
+        "body": "A level is always beside its number; at 100 % the number becomes the words \"At limit\". Nothing is told by hue only.",
+        "section": "colors"
+      },
+      {
+        "name": "The Theme Owns The Values Rule",
+        "body": "Never write a hex value in the mod. Name the theme role; derive anything else (track, level numbers, badge tint) from theme roles with `mix()` and `alpha()`.",
+        "section": "colors"
+      },
+      {
+        "name": "The Words Not Glyphs Rule",
+        "body": "States are written: \"At limit\", \"Sign in again\", \"not started\", \"12m old · network\". No warning triangles, no terminal block characters. The only typed symbol is the \"·\" separator in `dim`, and the compact \"!\" badge copied from Herdr.",
+        "section": "typography"
+      },
+      {
+        "name": "The Quiet Number Rule",
+        "body": "Percentages and countdowns are 11 px and `muted` under the bar; they never get a column of their own beside it. Format: \"41% · 4d 6h\"; alone on a row, \"23% · resets in 5d 2h\".",
+        "section": "typography"
+      },
+      {
+        "name": "The No Card Rule",
+        "body": "No borders, pills or containers around an account. The pair of bars and the 9 px gap are the grouping.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** name theme roles (`t.chrome`, `t.muted`) and derive the rest with `mix()` and `alpha()`; the mod follows every Herdr theme, light and dark.",
+      "**Do** keep the weekly bar full (6 px) and the 5-hour bar thin (3 px), 4 px apart, at the full width, in every form.",
+      "**Do** put the percentage and reset under the bar in 11 px `muted`, with the level colour only on the percentage.",
+      "**Do** mix level colours 22 % toward `foreground` for text, so every readable number holds 4.5:1 on graphite and paper.",
+      "**Do** draw only the windows a plan reports; a weekly-only account has one bar.",
+      "**Do** reuse Herdr's assets: provider marks (`icons/claude.svg`, `icons/codex.svg`), spinner, plus and chevron icons, scrollbar, confirm dialog, toasts.",
+      "**Do** move a bar to a new reading with `.transition`; nothing pulses or redraws on a timer for motion."
+    ],
+    "donts": [
+      "**Don't** write a hex value in the mod or give it a logo, brand colour or palette of its own.",
+      "**Don't** tell a level by colour alone, or colour anything at rest.",
+      "**Don't** give the numbers a column beside the bar, or shorten the bar to fit them.",
+      "**Don't** wrap accounts in cards, borders or pills, or sort them by usage.",
+      "**Don't** use terminal glyphs, block characters or warning symbols; write the state as words.",
+      "**Don't** use `dim` for anything a person must read beyond where Herdr's own mods use it.",
+      "**Don't** add a collapse control to the list, or a grouping setting."
+    ]
+  }
+}

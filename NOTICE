@@ -1,0 +1,49 @@
+Headroom
+Copyright (c) 2026 MaxiLR
+Licensed under the MIT License; see LICENSE.
+
+This project includes material taken from oh-my-pi
+(https://github.com/can1357/oh-my-pi), licensed under the MIT License.
+
+Taken from it: the method of signing in to Claude and to Codex, refreshing
+their tokens and reading their usage, the constants (client ids, addresses,
+scopes, headers, the length of a Claude login) and the knowledge of the
+payloads. The sources are:
+
+  packages/ai/src/usage/claude.ts
+  packages/ai/src/usage/openai-codex.ts
+  packages/ai/src/registry/oauth/openai-codex.ts
+  packages/catalog/src/compat/rules/auth/anthropic.kdl
+  packages/catalog/src/compat/rules/auth/openai-codex.kdl
+
+The code in this repository is written for Herdr's runtime and is not a copy
+of oh-my-pi's code.
+
+oh-my-pi's copyright and licence notice, from the LICENSE file of its
+@oh-my-pi/pi-ai package, version 18.19.0 (the LICENSE file of
+@oh-my-pi/pi-catalog 18.19.0 has the same text without the first copyright
+line):
+
+MIT License
+
+Copyright (c) 2025 Mario Zechner
+Copyright (c) 2025-2026 Can Bölük
+Copyright (c) 2026 Stencil Labs, Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

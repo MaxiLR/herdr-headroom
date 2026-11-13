@@ -1,0 +1,73 @@
+{
+  "five_hour": null,
+  "seven_day": { "utilization": 20, "resets_at": "2026-11-17T08:00:00+00:00" },
+  "seven_day_opus": null,
+  "seven_day_sonnet": {
+    "utilization": 30,
+    "resets_at": "2026-11-17T08:00:00+00:00"
+  },
+  "limits": [
+    "junk",
+    { "percent": 5, "resets_at": "2026-11-13T00:00:00+00:00" },
+    {
+      "kind": "session",
+      "percent": 15,
+      "resets_at": "2026-11-12T12:00:00+00:00",
+      "is_active": false
+    },
+    {
+      "kind": "session",
+      "percent": 90,
+      "resets_at": "2026-11-12T13:00:00+00:00"
+    },
+    {
+      "kind": "weekly_all",
+      "percent": 99,
+      "resets_at": "2026-11-18T08:00:00+00:00",
+      "is_active": true
+    },
+    {
+      "kind": "weekly_scoped",
+      "percent": 100,
+      "resets_at": "2026-11-15T00:00:00+00:00",
+      "scope": { "model": { "display_name": "Fable 2.5" } },
+      "is_active": true
+    },
+    {
+      "kind": "weekly_scoped",
+      "percent": 5,
+      "resets_at": "2026-11-16T00:00:00+00:00",
+      "scope": { "model": { "display_name": "fable 2.5" } }
+    },
+    {
+      "kind": "weekly_scoped",
+      "percent": 40,
+      "resets_at": "2026-11-16T00:00:00+00:00",
+      "scope": { "model": { "display_name": "Sonnet" } }
+    },
+    {
+      "kind": "weekly_scoped",
+      "percent": 60,
+      "resets_at": null,
+      "scope": { "model": { "display_name": "Opus" } },
+      "is_active": false
+    },
+    {
+      "kind": "weekly_scoped",
+      "percent": "n/a",
+      "resets_at": "soon",
+      "scope": { "model": { "display_name": "Haiku" } }
+    },
+    {
+      "kind": "weekly_scoped",
+      "percent": 70,
+      "resets_at": "2026-11-16T00:00:00+00:00",
+      "scope": {}
+    },
+    {
+      "kind": "monthly",
+      "percent": 10,
+      "resets_at": "2026-12-01T00:00:00+00:00"
+    }
+  ]
+}
