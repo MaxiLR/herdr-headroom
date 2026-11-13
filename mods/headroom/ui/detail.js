@@ -7,7 +7,9 @@ import { div, svg } from "gpui-kit";
 import { Switch, h_flex, v_flex } from "gpui-base";
 import {
   ageText,
+  arrowsOf,
   clockText,
+  moveAccount,
   openHeight,
   windowsInOrder,
 } from "../logic/detail.js";
@@ -31,6 +33,8 @@ import {
 } from "./menu.js";
 
 const REFRESH = "mods/headroom/icons/refresh.svg";
+const ARROW_UP = "mods/headroom/icons/arrow-up.svg";
+const ARROW_DOWN = "mods/headroom/icons/arrow-down.svg";
 const PLUS = "mods/workspace-chrome/plus.svg";
 
 /** The popup's width, and the width drawn before the first layout. */
@@ -136,11 +140,12 @@ function header(view) {
 
 // The account's first line: the mark, the label (its field while it is
 // renamed), the plan and, on the right, why the last read failed or the Sign
-// in again control, then the account menu's control.
+// in again control, its up and down arrows, then the account menu's control.
 function labelLine(reading, row, index, view) {
   const t = view.theme;
   const signedOut = row.state === "signed-out";
   const field = renameField(reading, view);
+  const arrows = arrowsOf(view.readings, reading.id);
   return h_flex()
     .h(24)
     .gap(8)
@@ -192,7 +197,46 @@ function labelLine(reading, row, index, view) {
           .child("Sign in again"),
       ),
     )
+    .when(arrows !== null, (el) =>
+      el.child(
+        h_flex()
+          .flex_none()
+          .gap(2)
+          .items_center()
+          .child(arrow(reading, index, -1, arrows?.up, view))
+          .child(arrow(reading, index, 1, arrows?.down, view)),
+      ),
+    )
     .child(menuControl(reading, index, view));
+}
+
+// The account's up (`delta` -1) or down (1) arrow; dimmed, and doing
+// nothing, when the account cannot move that way.
+function arrow(reading, index, delta, enabled, view) {
+  const t = view.theme;
+  const up = delta < 0;
+  const name = up ? "Move up" : "Move down";
+  return div()
+    .id(`account-${index}-${up ? "up" : "down"}`)
+    .role("button")
+    .accessibility_label(name)
+    .tooltip(name)
+    .disabled(!enabled)
+    .size(22)
+    .flex_none()
+    .flex()
+    .items_center()
+    .justify_center()
+    .rounded(6)
+    .when(enabled, (el) => el.cursor_pointer().hover((s) => s.bg(t.hover)))
+    .when(!enabled, (el) => el.opacity(0.35))
+    .on_click(() => moveAccount(view, reading.id, delta))
+    .child(
+      svg(up ? ARROW_UP : ARROW_DOWN)
+        .size(14)
+        .flex_none()
+        .text_color(t.muted),
+    );
 }
 
 // `maxi@terac.example · Terac`, under the label.

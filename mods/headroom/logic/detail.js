@@ -1,5 +1,6 @@
 // What the detail view says of its readings: clock times, the age of the
-// newest reading, the order of an account's windows and the popup's height.
+// newest reading, the order of an account's windows, the popup's height and
+// which way each account's arrows move it.
 
 import { countdown } from "./pace.js";
 import { isThin } from "./rows.js";
@@ -95,8 +96,20 @@ export function openHeight(readings, accounts = []) {
   return Math.min(OPEN_MAX, HEIGHTS.header + body + HEIGHTS.footer + 2);
 }
 
-export function arrowsOf(_readings, _id) {
-  return undefined;
+// The arrows of account `id` among `readings` (in the person's order):
+// `{ up, down }`, whether it can move each way; null when there is one
+// account, or `id` is none of them.
+export function arrowsOf(readings, id) {
+  const index = readings.findIndex((reading) => reading.id === id);
+  if (readings.length < 2 || index < 0) return null;
+  return { up: index > 0, down: index < readings.length - 1 };
 }
 
-export async function moveAccount(_view, _id, _delta) {}
+// Moves account `id` one place up (`delta` -1) or down (1) when its arrow
+// that way can; the store's answer, or nothing.
+export function moveAccount(view, id, delta) {
+  const arrows = arrowsOf(view.readings, id);
+  const can = delta < 0 ? arrows?.up : arrows?.down;
+  if (!can) return undefined;
+  return view.store.move(id, delta);
+}
