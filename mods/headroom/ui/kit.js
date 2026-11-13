@@ -1,10 +1,10 @@
 // The small drawing kit every form is built from: the bar with its pace
-// mark, the pair of bars, the provider marks and their dot, the spinner and
-// the fonts.
-import { div, svg } from "gpui-kit";
+// mark, the pair of bars, the provider marks and their dot, the spinner, the
+// band on a scrolling area's bottom edge and the fonts.
+import { Background, div, PathBuilder, svg } from "gpui-kit";
 import { v_flex } from "gpui-base";
 import { settings } from "herdr";
-import { levelFill, track } from "../logic/color.js";
+import { alpha, levelFill, track } from "../logic/color.js";
 
 export { levelFill, levelText, track } from "../logic/color.js";
 
@@ -213,6 +213,53 @@ export function mono() {
 /** Three dots, drawn, in the quiet text colour: a menu or settings control. */
 export function moreIcon(size, t) {
   return svg(MORE).size(size).flex_none().text_color(t.muted);
+}
+
+// A rectangle filling its box, to paint a gradient on.
+function fill() {
+  return PathBuilder.fill()
+    .move_to("0%", "0%")
+    .line_to("100%", "0%")
+    .line_to("100%", "100%")
+    .line_to("0%", "100%")
+    .close()
+    .build();
+}
+
+/**
+ * A band `id` on the bottom edge of the box it is put in (made `relative`),
+ * over what scrolls there: `height` px, the whole width, in `chrome` with its
+ * top `fade` px fading from clear, so what passes under it fades instead of
+ * being cut. It takes no press and no wheel; what is under it keeps them.
+ */
+export function edgeBand({ id, height, fade }, t) {
+  const clear = alpha(t.chrome, 0);
+  return v_flex()
+    .id(id)
+    .absolute()
+    .left(0)
+    .right(0)
+    .bottom(0)
+    .h(height)
+    .child(
+      div()
+        .relative()
+        .flex_none()
+        .w_full()
+        .h(fade)
+        .child(
+          window
+            .paint_path(
+              fill(),
+              Background.linear_gradient(180, clear, t.chrome),
+            )
+            .absolute()
+            .top(0)
+            .left(0)
+            .size_full(),
+        ),
+    )
+    .child(div().flex_1().w_full().bg(t.chrome));
 }
 
 function clamp(share) {

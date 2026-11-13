@@ -22,15 +22,17 @@ const SHOWN = 2;
 // The list's row: the label line, `Login ended …`, the bars and their gap,
 // the line of numbers with its margin, the padding under the row.
 const LIST = { label: 26, ended: 14, bars: [6, 3], gap: 6, numbers: 20, pb: 9 };
-// Under the list's accounts, and more when some are cut off (the hint's room).
-const LIST_BELOW = 8;
+/** Under the list's accounts. */
+export const LIST_BELOW = 8;
+// More under them when some are cut off: the hint's room.
 const LIST_HINT = 17;
 
 // The rail's row: its padding top and bottom, the 16 px line, the gap to the
 // bars, the bars and their gap.
 const RAIL = { py: 6, line: 16, gap: 4, bars: [5, 3] };
-// Above and under the rail's accounts, and more when some are cut off.
-const RAIL_EDGE = 4;
+/** Above and under the rail's accounts. */
+export const RAIL_EDGE = 4;
+// More under them when some are cut off: the hint's room.
 const RAIL_HINT = 6;
 
 // The px of a pair of bars with `full` and `short`, either of which may be

@@ -1,19 +1,22 @@
 // The list: a "Limits" header and, per account, its mark and label, the pair
 // of bars (weekly full, 5-hour thin) and one quiet line of numbers. A click on
 // an account opens its account view; the header's control opens the detail
-// view. The header stays; what does not fit scrolls under it. A 1 px line on
+// view. The header stays; what does not fit scrolls under it, and a hint on
+// the bottom edge says how many accounts are cut off below. A 1 px line on
 // the top edge shows that the boundary drags. Only a block given `props.fit`
 // asks for the height its accounts need, up to two.
 import { div, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { openAccount } from "../logic/account.js";
-import { fitTo, HEADER, LINE, listNeeds } from "../logic/fit.js";
+import { fitTo, HEADER, LINE, LIST_BELOW, listNeeds } from "../logic/fit.js";
+import { hintCount, moreWords, wheel } from "../logic/hint.js";
 import { listRowOf } from "../logic/list.js";
 import { open as openConnect } from "./connect.js";
 import { open as openDetail } from "./detail.js";
-import { levelText, mark, moreIcon, pair } from "./kit.js";
+import { edgeBand, levelText, mark, moreIcon, pair } from "./kit.js";
 
 const PLUS = "mods/workspace-chrome/plus.svg";
+const CHEVRON = "mods/workspace-chrome/chevron-down.svg";
 
 function header(view) {
   const t = view.theme;
@@ -256,8 +259,36 @@ function account(reading, index, view) {
   );
 }
 
+// "3 more" and Herdr's chevron, centred 11 px above the bottom edge, on a band
+// over the accounts. It is not a control.
+function hint(count, t) {
+  return edgeBand({ id: "more-below", height: 34, fade: 8 }, t)
+    .role("label")
+    .accessibility_label(`${moreWords(count)} below`)
+    .child(
+      h_flex()
+        .absolute()
+        .left(0)
+        .right(0)
+        .bottom(11)
+        .h(14)
+        .gap(5)
+        .items_center()
+        .justify_center()
+        .child(
+          div()
+            .text_size(11)
+            .text_color(t.muted)
+            .whitespace_nowrap()
+            .child(`${count} more`),
+        )
+        .child(svg(CHEVRON).size(11).flex_none().text_color(t.dim)),
+    );
+}
+
 export function render(view, cx) {
   const t = view.theme;
+  const more = hintCount(view, "list");
   return v_flex()
     .id("list")
     .size_full()
@@ -268,26 +299,38 @@ export function render(view, cx) {
     .child(header(view))
     .child(
       v_flex()
-        .id("accounts")
+        .relative()
         .flex_1()
         .min_h(0)
-        .overflow_y_scrollbar()
         .child(
           v_flex()
-            .id("accounts-content")
-            .flex_none()
-            .w_full()
-            .px(8)
-            .pb(8)
-            .when(Boolean(view.props.fit), (el) =>
-              el.on_size_change((size) => fit(view, size.height)),
-            )
-            .when(view.readings.length === 0, (el) => el.child(empty(view)))
-            .children(
-              view.readings.map((reading, index) =>
-                account(reading, index, view),
-              ),
+            .id("accounts")
+            .flex_1()
+            .min_h(0)
+            .overflow_y_scrollbar()
+            .child(
+              v_flex()
+                .id("accounts-content")
+                .flex_none()
+                .w_full()
+                .px(8)
+                .pb(LIST_BELOW)
+                // Herdr's scroll area keeps its position to itself: the hint
+                // follows the wheel over the accounts.
+                .on_scroll_wheel((event, cx) => {
+                  if (wheel(view, "list", event.delta.y)) cx.notify();
+                })
+                .when(Boolean(view.props.fit), (el) =>
+                  el.on_size_change((size) => fit(view, size.height)),
+                )
+                .when(view.readings.length === 0, (el) => el.child(empty(view)))
+                .children(
+                  view.readings.map((reading, index) =>
+                    account(reading, index, view),
+                  ),
+                ),
             ),
-        ),
+        )
+        .when(more > 0, (el) => el.child(hint(more, t))),
     );
 }
