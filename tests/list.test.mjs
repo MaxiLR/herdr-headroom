@@ -253,3 +253,132 @@ test("a row is spoken with its label, each window's use and its reset", () => {
     "maxi, Sign in again, Login ended Nov 9",
   );
 });
+
+// Fable, a per-model weekly window, at its limit.
+const fableAtLimit = () => win("7d:fable", 1, WEEKLY_RESET, { atLimit: true });
+const withFable = (windows = reading().windows) =>
+  reading({ windows: [...windows, fableAtLimit()] });
+
+test("a reached per-model limit takes the place of the week's reset time", () => {
+  const row = listRowOf(withFable(), NOW, WIDE);
+  assert.equal(row.limitWords, "Fable at limit");
+  assert.deepEqual(row.numbers, {
+    left: { word: null, parts: ["41%"], level: "normal" },
+    right: { word: "5-hour", parts: ["62%", "1h 48m"], level: "normal" },
+  });
+  assert.doesNotMatch(row.numbers.left.parts.join(" "), /4d 6h/);
+  assert.deepEqual(Object.keys(row.pair).sort(), ["full", "short"]);
+  assert.equal(row.pair.full.fraction, 0.41);
+});
+
+test("below 220 px the 5-hour numbers also lose their reset time beside the words", () => {
+  const row = listRowOf(withFable(), NOW, 200);
+  assert.equal(row.limitWords, "Fable at limit");
+  assert.deepEqual(row.numbers, {
+    left: { word: null, parts: ["41%"], level: "normal" },
+    right: { word: null, parts: ["62%"], level: "normal" },
+  });
+});
+
+test("two models at their limit are counted", () => {
+  const row = listRowOf(
+    reading({
+      windows: [
+        ...reading().windows,
+        fableAtLimit(),
+        win("7d:opus", 1, WEEKLY_RESET, { atLimit: true }),
+      ],
+    }),
+    NOW,
+    WIDE,
+  );
+  assert.equal(row.limitWords, "2 models at limit");
+  assert.deepEqual(row.numbers.left.parts, ["41%"]);
+});
+
+test("weekly only with a reached model reads its percent and the words", () => {
+  const row = listRowOf(
+    withFable([win("7d", 0.23, NOW + 5 * DAY + 2 * HOUR)]),
+    NOW,
+    WIDE,
+  );
+  assert.equal(row.limitWords, "Fable at limit");
+  assert.deepEqual(row.numbers, {
+    left: { word: null, parts: ["23%"], level: "normal" },
+    right: null,
+  });
+});
+
+test("the 5-hour side at its limit is unchanged beside the words", () => {
+  const row = listRowOf(
+    withFable([
+      win("7d", 0.41, WEEKLY_RESET),
+      win("5h", 1, SHORT_RESET, { atLimit: true }),
+    ]),
+    NOW,
+    WIDE,
+  );
+  assert.equal(row.limitWords, "Fable at limit");
+  assert.deepEqual(row.numbers.right, {
+    word: "5-hour",
+    parts: ["At limit", "1h 48m"],
+    level: "limit",
+  });
+});
+
+test("with the weekly window at its limit the row says At limit and no words", () => {
+  const row = listRowOf(
+    withFable([
+      win("7d", 1, WEEKLY_RESET, { atLimit: true }),
+      win("5h", 0.62, SHORT_RESET),
+    ]),
+    NOW,
+    WIDE,
+  );
+  assert.equal(row.limitWords, null);
+  assert.deepEqual(row.numbers.left, {
+    word: null,
+    parts: ["At limit", "4d 6h"],
+    level: "limit",
+  });
+  assert.doesNotMatch(row.spoken, /Fable/);
+});
+
+test("a failed read says nothing of a reached model", () => {
+  const row = listRowOf(
+    reading({
+      status: "stale",
+      fetchedAt: NOW - 12 * MINUTE,
+      error: "network",
+      windows: [...reading().windows, fableAtLimit()],
+    }),
+    NOW,
+    WIDE,
+  );
+  assert.equal(row.limitWords, null);
+  assert.deepEqual(row.numbers.left.parts, ["41%"]);
+  assert.doesNotMatch(row.spoken, /Fable/);
+});
+
+test("a row without a reached model has no words", () => {
+  assert.equal(listRowOf(reading(), NOW, WIDE).limitWords, null);
+});
+
+test("the spoken name keeps the week's reset time and ends with the words", () => {
+  assert.equal(
+    listRowOf(withFable(), NOW, WIDE).spoken,
+    "maxi, Weekly 41% used, resets in 4d 6h, 5-hour 62% used, resets in 1h 48m, Fable at limit",
+  );
+  assert.match(listRowOf(withFable(), NOW, WIDE).spoken, /, Fable at limit$/);
+  assert.match(
+    listRowOf(
+      reading({
+        loginEndsAt: NOW + 2 * DAY,
+        windows: [...reading().windows, fableAtLimit()],
+      }),
+      NOW,
+      WIDE,
+    ).spoken,
+    /Login ends in 2 days, Fable at limit$/,
+  );
+});
