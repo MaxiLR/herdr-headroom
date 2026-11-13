@@ -1,5 +1,5 @@
 // The accounts, their logins and their readings: signs in, reads each account
-// when its reading is old, refreshing its token when needed, and publishes
+// when its reading is due, refreshing its token when needed, and publishes
 // what it read. Every copy of the mod shares one store, which runs at most one
 // operation per account at a time and one vault change at a time.
 import { providers as allProviders } from "../providers/index.js";
@@ -11,12 +11,23 @@ import {
   rename,
   upsert,
 } from "./accounts.js";
+import { levelOf } from "./levels.js";
 import { publish, published } from "./publish.js";
-import { firstReading, readingOf, signedOutReading } from "./readings.js";
+import {
+  firstReading,
+  moved,
+  readingOf,
+  signedOutReading,
+} from "./readings.js";
 import { createVault } from "./vault.js";
 
-// `tick` reads an account again once its last attempt is this old.
-const READ_EVERY_MS = 5 * 60 * 1000;
+// `tick` reads an idle account, or one whose last read failed, again once
+// its last attempt is this old; an active one after its provider's
+// `activeEveryMs`.
+const IDLE_EVERY_MS = 5 * 60 * 1000;
+// `tick` comes once a minute, give or take: a read due within this is made
+// now rather than a minute late.
+const TICK_SLACK_MS = 5 * 1000;
 // An access token expiring within this is refreshed before a read.
 const REFRESH_BEFORE_MS = 5 * 60 * 1000;
 // An operation running longer than this was abandoned: Herdr ended the tasks
@@ -42,6 +53,16 @@ async function attempt(call) {
   }
 }
 
+// Whether a window of `reading` is from 75 % up to its limit, so the next
+// toast is close. One at its limit does not count: nothing moves before its
+// reset, which is read anyway.
+function near(reading) {
+  return (reading?.windows ?? []).some((window) => {
+    const level = levelOf(window);
+    return level === "high" || level === "critical";
+  });
+}
+
 export function createStore(host, { providers = allProviders } = {}) {
   const vault = createVault(host);
   let accounts = [];
@@ -51,6 +72,8 @@ export function createStore(host, { providers = allProviders } = {}) {
   const running = new Map();
   // When each account's last operation started, by id.
   const attempts = new Map();
+  // How each account's last finished read went, `{ failed, moved }`, by id.
+  const outcomes = new Map();
   let started = null;
   // The vault change running, `{ since, done }`, or null.
   let changing = null;
@@ -96,7 +119,9 @@ export function createStore(host, { providers = allProviders } = {}) {
       if (!saved.ok) return { ok: false, kind: saved.kind };
       accounts = next;
       for (const id of readings.keys()) {
-        if (!accounts.some((account) => account.id === id)) readings.delete(id);
+        if (accounts.some((account) => account.id === id)) continue;
+        readings.delete(id);
+        outcomes.delete(id);
       }
       for (const account of accounts) {
         if (!readings.has(account.id)) {
@@ -193,6 +218,10 @@ export function createStore(host, { providers = allProviders } = {}) {
     if (running.get(id) !== entry) return;
     const current = accounts.find((item) => item.id === id);
     if (!current) return;
+    outcomes.set(id, {
+      failed: !result.ok,
+      moved: result.ok && moved(readings.get(id) ?? null, result.windows),
+    });
     readings.set(
       id,
       result.ended
@@ -232,12 +261,27 @@ export function createStore(host, { providers = allProviders } = {}) {
   const readAll = (ids) =>
     Promise.all(ids.map((id) => operation(id))).then(() => undefined);
 
-  // Whether `tick` reads account `id` at `now`: never attempted, last
-  // attempted long enough ago, or a window has reset since.
-  function due(id, now) {
-    const last = attempts.get(id);
-    if (last == null || now - last >= READ_EVERY_MS) return true;
-    return (readings.get(id)?.windows ?? []).some(
+  // How long after its last attempt `tick` reads `account`: 5 minutes while
+  // it is idle or its last read failed; its provider's active interval, when
+  // it has one, while an agent is `working` in Herdr, its numbers move or a
+  // window nears its limit.
+  function every(account, working) {
+    const outcome = outcomes.get(account.id);
+    if (outcome?.failed) return IDLE_EVERY_MS;
+    const active = working || outcome?.moved || near(readings.get(account.id));
+    const activeEveryMs = providers[account.provider].activeEveryMs;
+    return active && activeEveryMs != null ? activeEveryMs : IDLE_EVERY_MS;
+  }
+
+  // Whether `tick` reads `account` at `now`: never attempted, last attempted
+  // long enough ago, or, unless its last read failed, a window has reset
+  // since.
+  function due(account, now, working) {
+    const last = attempts.get(account.id);
+    if (last == null) return true;
+    if (now - last >= every(account, working) - TICK_SLACK_MS) return true;
+    if (outcomes.get(account.id)?.failed) return false;
+    return (readings.get(account.id)?.windows ?? []).some(
       (window) =>
         window.resetsAt != null &&
         window.resetsAt > last &&
@@ -306,10 +350,13 @@ export function createStore(host, { providers = allProviders } = {}) {
 
     tick() {
       const now = host.now();
+      const working = host.working();
       return readAll(
         accounts
-          .map((account) => account.id)
-          .filter((id) => !signedOut(id) && due(id, now)),
+          .filter(
+            (account) => !signedOut(account.id) && due(account, now, working),
+          )
+          .map((account) => account.id),
       );
     },
 

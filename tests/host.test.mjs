@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createHost } from "../mods/headroom/logic/host.js";
 
 // The herdr functions createHost is given, recording programs and commands.
-function api({ platform, exec } = {}) {
+function api({ platform, exec, agents = [] } = {}) {
   const calls = { exec: [], run: [] };
   return {
     calls,
@@ -28,6 +28,7 @@ function api({ platform, exec } = {}) {
       openOverlay: () => "overlay-1",
       closeOverlay: () => null,
       platform: () => platform,
+      agents: () => agents,
     },
   };
 }
@@ -71,4 +72,17 @@ test("resize runs layout.resize with the block and its size", () => {
 test("home is the app's folder", () => {
   const { api: given } = api({ platform: "macos" });
   assert.equal(createHost(given).home, "/home/test/.config/herdr-app");
+});
+
+test("working says whether an agent in Herdr is working", () => {
+  const hostWith = (statuses) =>
+    createHost(
+      api({
+        platform: "macos",
+        agents: statuses.map((status) => ({ status })),
+      }).api,
+    );
+  assert.equal(hostWith([]).working(), false);
+  assert.equal(hostWith(["idle", "done", "blocked"]).working(), false);
+  assert.equal(hostWith(["idle", "working"]).working(), true);
 });

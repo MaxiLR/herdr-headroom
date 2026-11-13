@@ -2,6 +2,7 @@
 // usage limits, in whatever block a layout gives it.
 import { View, div } from "gpui-kit";
 import {
+  agents,
   appHome,
   closeOverlay,
   exec,
@@ -32,7 +33,7 @@ import * as strip from "./ui/strip.js";
 const FORMS = { list, rail, strip, account, detail, connect };
 const MODULES = Object.values(FORMS);
 
-// Countdowns are in minutes; readings are due every five.
+// Countdowns are in minutes; the store reads the accounts that are due.
 const TICK_MS = 60000;
 
 export default class Headroom extends View {
@@ -52,6 +53,7 @@ export default class Headroom extends View {
       openOverlay,
       closeOverlay,
       platform: () => window()?.platform,
+      agents,
     });
     this.store = sharedStore(this.host);
     this.ui = {};

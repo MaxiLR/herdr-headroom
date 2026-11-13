@@ -267,12 +267,19 @@ as it was. Remove asks first, in Herdr's confirm dialog ("Remove work?" / "Its
 stored login is deleted from this computer."), then deletes the account's
 login from the vault.
 
-Readings are fetched for every account every 5 minutes, when one of its
-windows' reset time passes, and when asked: the refresh control in the detail
-view reads every account again, and the one in an account view reads that
-account, except one read in the last 30 seconds. An access token that expires
-within 5 minutes is refreshed before a read, and once more after a read the
-provider refuses (401). An account showing "Sign in again" is not read.
+Readings are fetched for every account every 5 minutes while it is idle, and
+more often while it is active: a Claude account every 2 minutes, a Codex
+account every minute. An account is active while an agent in Herdr is working
+(any agent: Herdr does not say which account it spends), while its last read
+changed a window's numbers, or while one of its windows is from 75 % up to,
+but not at, its limit. After a failed read the next one is 5 minutes later
+whatever else holds. After a read that worked, an account is also read when
+one of its windows' reset time passes. And it is read when asked: the refresh
+control in the detail view reads every account again, and the one in an
+account view reads that account, except one read in the last 30 seconds. An
+access token that expires within 5 minutes is refreshed before a read, and
+once more after a read the provider refuses (401). An account showing "Sign in
+again" is not read.
 
 ## Notifications
 

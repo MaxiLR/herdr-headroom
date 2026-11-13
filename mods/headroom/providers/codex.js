@@ -6,6 +6,8 @@ export const id = "codex";
 export const name = "Codex";
 // A Codex login does not end on its own.
 export const loginTtlMs = null;
+// An active Codex account is read every minute, as Codex's own client does.
+export const activeEveryMs = 60000;
 
 const CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann";
 const USERCODE_URL = "https://auth.openai.com/api/accounts/deviceauth/usercode";

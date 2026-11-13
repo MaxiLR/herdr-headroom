@@ -3,7 +3,8 @@
 // fake of it.
 
 // `api`: `{ fetch, exec, appHome, readTextFile, writeTextFile, shared,
-// setShared, notify, layout, run, openOverlay, closeOverlay, platform }`.
+// setShared, notify, layout, run, openOverlay, closeOverlay, platform,
+// agents }`.
 export function createHost(api) {
   const platform = api.platform();
   return {
@@ -23,6 +24,8 @@ export function createHost(api) {
     resize: (id, px) => api.run("layout.resize", { id, px }),
     openOverlay: (spec) => api.openOverlay(spec),
     closeOverlay: (id) => api.closeOverlay(id),
+    // Whether an agent in Herdr is working: usage is being spent.
+    working: () => api.agents().some((agent) => agent.status === "working"),
     async openUrl(url) {
       try {
         await api.exec(platform === "macos" ? "open" : "xdg-open", [url]);

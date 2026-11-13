@@ -8,6 +8,9 @@ export const id = "claude";
 export const name = "Claude";
 // A Claude login ends 30 days after sign-in whatever happens in between.
 export const loginTtlMs = 2592000000;
+// An active Claude account is read every 2 minutes: the usage endpoint has
+// refused tools that read it every minute.
+export const activeEveryMs = 120000;
 
 const CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
 const AUTHORIZE_URL = "https://claude.ai/oauth/authorize";

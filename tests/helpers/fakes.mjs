@@ -51,6 +51,9 @@ export function fakeHost({
     resizes: [],
     sleeps: [],
     presented: [],
+    // Whether an agent in Herdr is working.
+    busy: false,
+    working: () => host.busy,
     platform,
     home,
     now: () => host.clock.now,
