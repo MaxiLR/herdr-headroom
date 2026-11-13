@@ -14,12 +14,14 @@
 # beside mods/, is never read, copied or removed. When herdr-app is on PATH,
 # the installed mod is checked with `herdr-app check`. No key is bound.
 #
-# --layout [name] (default "Herdr Headroom") writes layouts/<name>.json: the
+# --layout [name] (default herdr-headroom) writes layouts/<name>.json: the
 # home's layouts/main.json with the headroom block added as the last child of
-# sidebar-lists, with the share and minimum of Spaces and Agents, so it is
-# resized like them. Nothing else in the layout changes. Herdr lists a layout
-# under its file name. It needs jq, never overwrites a layout and never switches
-# to it; it prints the command that does.
+# sidebar-lists. The block is sized by the mod (props.fit): it starts at 111 px,
+# one account with one bar, and the mod corrects it on its first measure.
+# Nothing else in the layout changes. Herdr lists a layout under its file name
+# and switches only to a name of letters, digits, - or _, so any other name is
+# a usage error, refused before anything changes. It needs jq, never overwrites
+# a layout and never switches to it; it prints the command that does.
 #
 # It prints one line per step: a mark, the step and what happened. --dry-run
 # prints what each step would do, with every file it would change, add or
@@ -34,7 +36,7 @@ DEST="$HERDR_HOME/mods/headroom"
 BACKUPS="$HERDR_HOME/backups"
 LAYOUTS="$HERDR_HOME/layouts"
 MAIN="$LAYOUTS/main.json"
-BLOCK='{"id": "headroom", "type": "block", "size": {"weight": 1}, "min": 90, "content": {"mod": "headroom"}}'
+BLOCK='{"id": "headroom", "type": "block", "size": {"px": 111}, "min": 90, "content": {"mod": "headroom", "props": {"fit": "headroom"}}}'
 
 if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != dumb ]]; then
   BOLD=$'\033[1m' DIM=$'\033[2m' RESET=$'\033[0m'
@@ -75,19 +77,23 @@ detail() {
 
 usage() {
   echo "usage: $0 [--dry-run] [--layout [name]]" >&2
+  echo "  --layout [name]  layout to write (default herdr-headroom); names use letters, digits, - or _" >&2
   exit 2
 }
 
 dry_run=0
 want_layout=0
-layout_name="Herdr Headroom"
+layout_name="herdr-headroom"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run) dry_run=1 ;;
     --layout)
       want_layout=1
       if [[ $# -gt 1 && "$2" != --* ]]; then
-        [[ -n "$2" ]] || usage
+        if [[ ! "$2" =~ ^[A-Za-z0-9_-]+$ ]]; then
+          echo "layout name '$2' refused: names use letters, digits, - or _" >&2
+          usage
+        fi
         layout_name="$2"
         shift
       fi
@@ -185,17 +191,7 @@ if [[ $want_layout -eq 1 ]]; then
   fi
 fi
 
-# shell_word <text>: the text as one shell word, quoted only when it has to be.
-shell_word() {
-  local plain='^[A-Za-z0-9_@%+=:,./-]+$' quote="'" escaped="'\\''"
-  if [[ "$1" =~ $plain ]]; then
-    printf '%s' "$1"
-  else
-    printf "'%s'" "${1//$quote/$escaped}"
-  fi
-}
-
-switch_command="herdr-app do layout.switch --name $(shell_word "$layout_name")"
+switch_command="herdr-app do layout.switch --name $layout_name"
 
 # layout_report <written|would write>: the layout step's line.
 layout_report() {
