@@ -507,7 +507,7 @@ test("a window that has not started reads 0% · not started, with no clock time"
   if (!lines) return;
   assert.match(
     sentence(lines),
-    /Weekly 5% · resets in 4d 6h Mon 20:30 5-hour 0% · not started Login/,
+    /Weekly 5% · resets in 4d 6h Mon 20:30 5-hour 0% · not started The line on a bar marks how much of its time has passed\. Login/,
     show(lines),
   );
   assert.equal(withId(lines, "window-1-pace"), undefined, show(lines));
