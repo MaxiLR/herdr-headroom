@@ -193,8 +193,8 @@ a jump past both posts the limit toast only. Clicking one does nothing.
   below 48 px tall, list otherwise and before the first measure.
 - Props: `form` (`auto`, `list`, `rail`, `strip`, `detail`); `fit` (the id of
   the block holding the copy: the list and the rail call
-  `run("layout.resize", { id, px })` with their content's height, at most 320
-  px, once per height, from `on_size_change`); `connect` (`{ provider?,
+  `run("layout.resize", { id, px })` with their content's height, at least 48
+  px so a folded rail unfolds to the list and at most 320 px, once per height, from `on_size_change`); `connect` (`{ provider?,
 account? }`, the connect dialog); `overlay` (Herdr's).
 - `herdr`: `props`, `theme`, `settings`, `window` (its `platform`), `appHome`,
   `readTextFile`, `writeTextFile(path, text, expected)`, `exec`, `shared`,
@@ -255,7 +255,8 @@ width: 380, props: { form: "detail" } }`, `{ mod: "headroom", kind:
 - **The vault's modes.** `writeTextFile` replaces the file atomically and may
   not keep its mode. Make the folder 0700 and the file 0600 before the first
   token is written, check with `stat` after every write and `chmod 600` again;
-  when it cannot be made 0600, store nothing. Programs get paths and modes,
+  when it cannot be made 0600, store nothing and say why, on every path that
+  saves (a refresh too), not only on sign-in. Programs get paths and modes,
   never the file's content or a token. Keep the vault outside `mods/`.
 - **Shared state is not private.** Every mod reads it and Herdr keeps it in
   `shared.json`: only labels, ids, plans, times and windows go there; never a

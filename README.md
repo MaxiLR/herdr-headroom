@@ -99,10 +99,10 @@ appears only where a layout puts it.
 
 ### Props
 
-| Prop   | Values                                              | What it does                                                                                                                                                                                 |
-| ------ | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `form` | `auto` (default), `list`, `rail`, `strip`, `detail` | The form to draw. With `auto`, or none, the block's measured size decides.                                                                                                                   |
-| `fit`  | the `id` of the block holding this copy             | The list and the rail resize that block (`layout.resize`) to the height their accounts need, up to 320 px (four accounts); past that the accounts scroll. The strip never resizes its block. |
+| Prop   | Values                                              | What it does                                                                                                                                                                                                                                                           |
+| ------ | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `form` | `auto` (default), `list`, `rail`, `strip`, `detail` | The form to draw. With `auto`, or none, the block's measured size decides.                                                                                                                                                                                             |
+| `fit`  | the `id` of the block holding this copy             | The list and the rail resize that block (`layout.resize`) to the height their accounts need, from 48 px (a strip's height, so a folded rail unfolds to the list again) up to 320 px (four accounts); past that the accounts scroll. The strip never resizes its block. |
 
 The connect dialog is the same mod opened as a dialog with a `connect` prop
 (`{ provider, account }` when it signs an account in again), and Herdr gives
@@ -256,7 +256,8 @@ when an account is connected, read or refreshed.
   the first token is written; the file's mode is checked after every write and
   set to 0600 again when it is not. When the folder or file cannot be made
   private, the mod empties the file, stores nothing and says "Could not keep
-  the login private, so nothing was stored." The vault lives outside `mods/`,
+  the login private, so nothing was stored." in the connect dialog, or in an
+  error toast when a refresh, rename, move or remove was refused. The vault lives outside `mods/`,
   so copying or sharing the mod folder never carries a login. Removing an
   account deletes its login from the vault.
 - **Herdr's shared state**, which Herdr keeps in `<Herdr home>/shared.json` and
