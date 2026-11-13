@@ -20,6 +20,14 @@ export function barOf(window, now) {
   };
 }
 
+// `Opus`: the model a per-model weekly window is for.
+export function modelName(window) {
+  const prefix = "Weekly · ";
+  return window.label.startsWith(prefix)
+    ? window.label.slice(prefix.length)
+    : window.label;
+}
+
 const isGeneral = (window) => !window.id.includes(":");
 const isModel = (window) => window.id.startsWith("7d:");
 const atLimit = (window) => levelOf(window) === "limit";

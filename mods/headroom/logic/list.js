@@ -2,14 +2,8 @@
 
 import { levelOf } from "./levels.js";
 import { untilReset } from "./pace.js";
-import { barOf, rowOf } from "./rows.js";
-import {
-  failedText,
-  loginText,
-  modelName,
-  numbersText,
-  percentText,
-} from "./words.js";
+import { barOf, modelName, rowOf } from "./rows.js";
+import { failedText, loginText, numbersText, percentText } from "./words.js";
 
 /** Below this width the 5-hour numbers lose their word. */
 export const NARROW_PX = 220;

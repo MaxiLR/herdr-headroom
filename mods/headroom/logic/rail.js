@@ -2,14 +2,8 @@
 // words its hover gives, and whether the rail is wide enough for the number.
 
 import { levelOf } from "./levels.js";
-import { rowOf } from "./rows.js";
-import {
-  failedText,
-  modelName,
-  numbersText,
-  percentText,
-  tagOf,
-} from "./words.js";
+import { modelName, rowOf } from "./rows.js";
+import { failedText, numbersText, percentText, tagOf } from "./words.js";
 
 /** The narrowest rail, in px, with room for the number beside the mark. */
 export const NUMBER_MIN_WIDTH = 60;

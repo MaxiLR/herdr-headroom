@@ -80,14 +80,6 @@ export function shortDate(ms) {
   return `${MONTHS[date.getMonth()]} ${date.getDate()}`;
 }
 
-// `Opus`: the model a per-model weekly window is for.
-export function modelName(window) {
-  const prefix = "Weekly · ";
-  return window.label.startsWith(prefix)
-    ? window.label.slice(prefix.length)
-    : window.label;
-}
-
 // The id of the row's short window when it is the tightest, else empty.
 export function tagOf(row) {
   return row.short && row.tightest === row.short ? row.short.id : "";

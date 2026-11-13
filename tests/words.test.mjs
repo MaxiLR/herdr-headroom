@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 import {
   failedText,
   loginText,
-  modelName,
   numbersText,
   percentText,
   shortDate,
   tagOf,
 } from "../mods/headroom/logic/words.js";
+import { modelName } from "../mods/headroom/logic/rows.js";
 import { NOW, reading, win } from "./helpers/fakes.mjs";
 
 const MINUTE = 60 * 1000;
@@ -185,10 +185,7 @@ test("modelName gives the label after Weekly · ", () => {
 test("tagOf names the short window when it is the tightest", () => {
   const weekly = win("7d", 0.41, WEEKLY_RESET);
   const short = win("5h", 0.62, SHORT_RESET);
-  assert.equal(tagOf({ weekly, short, models: [], tightest: short }), "5h");
-  assert.equal(tagOf({ weekly, short, models: [], tightest: weekly }), "");
-  assert.equal(
-    tagOf({ weekly: null, short: null, models: [], tightest: null }),
-    "",
-  );
+  assert.equal(tagOf({ weekly, short, tightest: short }), "5h");
+  assert.equal(tagOf({ weekly, short, tightest: weekly }), "");
+  assert.equal(tagOf({ weekly: null, short: null, tightest: null }), "");
 });
