@@ -4,19 +4,33 @@ import { spawnSync } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
+import { chooseForm } from "../mods/headroom/logic/form.js";
+import { levelOf } from "../mods/headroom/logic/levels.js";
+
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 const read = (path) =>
   readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-const DOCUMENTS = [
+// The README and the reference pages it links to.
+const GUIDE = [
   "README.md",
+  "docs/install.md",
+  "docs/layout.md",
+  "docs/accounts.md",
+  "docs/privacy.md",
+  "docs/readings.md",
+];
+const DOCUMENTS = [
+  ...GUIDE,
   "CONTEXT.md",
   "DESIGN.md",
   "PRODUCT.md",
@@ -127,40 +141,132 @@ function node(layout, id) {
   return null;
 }
 
-test("the README shows the block the installer adds, sized by the mod with fit", () => {
-  const own = section(read("README.md"), "Using it in your own layout");
-  const [first] = fences(own, "json");
-  const shown = JSON.parse(first);
-  assert.deepEqual(shown, {
-    id: "headroom",
-    type: "block",
-    size: { px: 111 },
-    min: 90,
-    content: { mod: "headroom", props: { fit: "headroom" } },
-  });
-  const lists = node(installedLayout(), "sidebar-lists").children;
-  assert.deepEqual(lists.at(-1), shown);
+// Whether `path`, from the repository's root, is a file spelled exactly so:
+// GitHub tells upper from lower case where this machine may not.
+function exists(path) {
+  let folder = ROOT;
+  for (const part of path.split("/")) {
+    if (!readdirSync(folder).includes(part)) return false;
+    folder = join(folder, part);
+  }
+  return true;
+}
+
+// GitHub's anchors for the headings of `text`: lower case, punctuation
+// dropped, spaces as hyphens.
+function anchors(text) {
+  return text
+    .split("\n")
+    .filter((line) => /^#+ /.test(line))
+    .map((line) =>
+      line
+        .replace(/^#+ /, "")
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N} _-]/gu, "")
+        .replace(/ /g, "-"),
+    );
+}
+
+test("every relative link, anchor and image in the README and its pages leads somewhere", () => {
+  for (const path of GUIDE) {
+    const text = read(path);
+    const targets = [
+      ...[...text.matchAll(/\]\(([^)\s]+)\)/g)].map((match) => match[1]),
+      ...[...text.matchAll(/\b(?:src|href)="([^"]+)"/g)].map(
+        (match) => match[1],
+      ),
+    ].filter((target) => !/^(https?:|mailto:)/.test(target));
+    for (const target of targets) {
+      const [file, fragment] = target.split("#");
+      const to = file
+        ? posix.normalize(posix.join(posix.dirname(path), file))
+        : path;
+      assert.ok(exists(to), `${path}: ${target}`);
+      if (fragment !== undefined) {
+        assert.ok(anchors(read(to)).includes(fragment), `${path}: ${target}`);
+      }
+    }
+  }
 });
 
-test("the README's status row example is the row the installer writes", () => {
-  const separator = section(read("README.md"), "The strip's separator");
+test("the README shows its screenshots and links every reference page", () => {
+  const readme = read("README.md");
+  for (const image of [
+    "limits-sidebar",
+    "limits-status-bar",
+    "account-view",
+    "accounts-and-settings",
+  ]) {
+    assert.match(readme, new RegExp(`src="docs/images/${image}\\.png"`), image);
+  }
+  for (const path of GUIDE.slice(1)) {
+    assert.ok(readme.includes(`](${path}`), path);
+  }
+});
+
+test("the README's form table gives the sizes at which the mod changes form", () => {
+  const own = section(read("README.md"), "Using it in your own layout");
+  const px = (form) =>
+    Number(own.match(new RegExp(`\\| \\D*(\\d+) px[^|]*\\| ${form} `))[1]);
+  const rail = px("Rail");
+  const strip = px("Strip");
+  assert.equal(chooseForm({}, { width: rail - 1, height: 400 }), "rail");
+  assert.equal(chooseForm({}, { width: rail, height: 400 }), "list");
+  assert.equal(chooseForm({}, { width: 400, height: strip - 1 }), "strip");
+  assert.equal(chooseForm({}, { width: 400, height: strip }), "list");
+});
+
+test("the README's bar colours turn at the levels the mod uses", () => {
+  const row = read("README.md")
+    .split("\n")
+    .find((line) => line.startsWith("| Bar colour"));
+  const [, high, critical] = row
+    .match(/`working` from (\d+) %, `blocked` from (\d+) %/)
+    .map(Number);
+  const level = (percent) =>
+    levelOf({ usedFraction: percent / 100, atLimit: false });
+  assert.equal(level(high - 1), "normal");
+  assert.equal(level(high), "high");
+  assert.equal(level(critical - 1), "high");
+  assert.equal(level(critical), "critical");
+});
+
+test("the README and the layout page show the block the installer adds, sized by the mod with fit", () => {
+  const lists = node(installedLayout(), "sidebar-lists").children;
+  for (const path of ["README.md", "docs/layout.md"]) {
+    const own = section(read(path), "Using it in your own layout");
+    const [first] = fences(own, "json");
+    const shown = JSON.parse(first);
+    assert.deepEqual(
+      shown,
+      {
+        id: "headroom",
+        type: "block",
+        size: { px: 111 },
+        min: 90,
+        content: { mod: "headroom", props: { fit: "headroom" } },
+      },
+      path,
+    );
+    assert.deepEqual(lists.at(-1), shown, path);
+  }
+});
+
+test("the layout page's status row example is the row the installer writes", () => {
+  const separator = section(read("docs/layout.md"), "The strip's separator");
   const [example] = fences(separator, "json");
   assert.deepEqual(JSON.parse(example), node(installedLayout(), "status-row"));
 });
 
-test("the README's fit holds the first two accounts: 111 to 207 px in the list, 97 or 103 px in the rail", () => {
-  const readme = read("README.md");
-  assert.doesNotMatch(readme, /329/);
-  const props = section(readme, "Props");
+test("the layout page's fit holds the first two accounts: 111 to 207 px in the list, 97 or 103 px in the rail", () => {
+  const page = read("docs/layout.md");
+  const props = section(page, "Props");
   const rows = props.split("\n").filter((line) => line.startsWith("| `"));
   const row = (name) => rows.find((line) => line.startsWith(`| \`${name}\``));
   assert.match(row("form"), /`account`/);
   assert.match(row("account"), /<provider>:<account id>:<organization id>/);
   assert.match(row("fit"), /two accounts/);
-  const own = section(readme, "Using it in your own layout").replace(
-    /\s+/g,
-    " ",
-  );
+  const own = section(page, "The block and `fit`").replace(/\s+/g, " ");
   for (const px of [111, 120, 190, 207, 97, 103]) {
     assert.match(own, new RegExp(`\\b${px} px\\b`), `${px} px`);
   }
@@ -168,9 +274,11 @@ test("the README's fit holds the first two accounts: 111 to 207 px in the list, 
   assert.match(own, /`headroom\.fit`/);
 });
 
-test("the README names herdr-headroom, not Herdr Headroom, as the default layout", () => {
-  const readme = read("README.md");
-  const install = section(readme, "Install");
+test("the README and the install page name herdr-headroom, not Herdr Headroom, as the default layout", () => {
+  const quick = fences(section(read("README.md"), "Install"), "sh").join("\n");
+  assert.match(quick, /^ *herdr-app do layout\.switch --name herdr-headroom$/m);
+  assert.match(quick, /--layout +# [^\n]*herdr-headroom/);
+  const install = read("docs/install.md");
   assert.match(install, /default name `herdr-headroom`/);
   assert.match(install, /\^\[A-Za-z0-9_-\]\+\$/);
   const commands = fences(install, "sh").join("\n");
@@ -179,26 +287,31 @@ test("the README names herdr-headroom, not Herdr Headroom, as the default layout
     /^ *herdr-app do layout\.switch --name herdr-headroom$/m,
   );
   assert.match(commands, /--layout +# [^\n]*herdr-headroom/);
-  for (const match of readme.matchAll(/Herdr Headroom/g)) {
-    const after = readme.slice(match.index + match[0].length).slice(0, 5);
-    assert.equal(after, ".json", "Herdr Headroom only as an old layout's file");
+  for (const path of GUIDE) {
+    const text = read(path);
+    for (const match of text.matchAll(/Herdr Headroom/g)) {
+      const after = text.slice(match.index + match[0].length).slice(0, 5);
+      assert.equal(after, ".json", `${path}: only as an old layout's file`);
+    }
   }
 });
 
-test("the README shows another mod opening the account view", () => {
-  const scripts = fences(read("README.md"), "js").join("\n");
+test("the layout page shows another mod opening the account view", () => {
+  const scripts = fences(read("docs/layout.md"), "js").join("\n");
   assert.match(scripts, /form: "account"/);
   assert.match(scripts, /width: 380/);
 });
 
-test("the README puts Rename and Remove behind the three dots, and Remove asks with the mod's own dialog", () => {
-  const readme = read("README.md").replace(/\s+/g, " ");
-  assert.match(readme, /Rename and Remove behind (the )?three dots/);
-  assert.match(readme, /Remove asks [^.]*the mod's own dialog/);
+test("the README and the layout page put Rename and Remove behind the three dots, and Remove asks with the mod's own dialog", () => {
+  for (const path of ["README.md", "docs/layout.md"]) {
+    const text = read(path).replace(/\s+/g, " ");
+    assert.match(text, /Rename and Remove behind (the )?three dots/, path);
+    assert.match(text, /Remove asks [^.]*the mod's own dialog/, path);
+  }
 });
 
 test("no document names the headroom.remove command or Herdr's confirm dialog for Remove", () => {
-  for (const path of ["README.md", "CONTEXT.md", "RECIPE.md"]) {
+  for (const path of [...GUIDE, "CONTEXT.md", "RECIPE.md"]) {
     const text = read(path);
     assert.doesNotMatch(text, /headroom\.remove/, path);
     assert.doesNotMatch(text, /nextCommand/, path);
@@ -209,6 +322,9 @@ test("no document names the headroom.remove command or Herdr's confirm dialog fo
 test("no document gives fit's old 329 px", () => {
   for (const path of DOCUMENTS) {
     assert.doesNotMatch(read(path), /\b329\b/, path);
+  }
+  for (const path of GUIDE) {
+    assert.doesNotMatch(read(path), /329/, path);
   }
 });
 

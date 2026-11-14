@@ -316,7 +316,7 @@ width: 380, height, props: { form: "account", account } }`, `{ mod:
   `{ mod: "headroom", kind: "dialog", width: 380, props: { remove } }`. The
   mod registers no command.
 - Shared state: `headroom.readings` (`{ version: 1, accounts: [reading] }`, the
-  public interface in the README), `headroom.prefs` (`{ notify }`),
+  public interface in `docs/readings.md`), `headroom.prefs` (`{ notify }`),
   `headroom.notified` (`{ version: 1, keys }`), `headroom.fit`
   (`{ <layout name>: { <block id>: px } }`, the height last fitted per layout
   and block).

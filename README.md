@@ -1,118 +1,124 @@
 # Headroom
 
-One Herdr mod, `headroom`, that shows how close each connected Claude and Codex
-account is to its usage limits. For every account it shows each limit window
-that account's plan has (5-hour, weekly, and per-model weekly where the
-provider reports one): the percent used, a bar that fills left to right, a pace
-mark, and the time until the window resets. It signs in to each account and
-reads its usage itself, so it needs neither OMP nor the Claude Code or Codex
-CLI. Terms are defined in [`CONTEXT.md`](CONTEXT.md); the brief to build it
-from scratch is [`RECIPE.md`](RECIPE.md).
+A mod for [Herdr](https://herdr.dev/), the native app for running coding
+agents. It shows how close each of your Claude and Codex accounts is to its
+usage limits: in the sidebar, in the status bar, or in any block of your layout.
 
-## What it shows
+<p align="center">
+  <img src="docs/images/limits-sidebar.png" width="269" align="top" alt="Limits in Herdr's sidebar: two accounts, each with a weekly and a 5-hour bar, and a note that one more account is below" />
+  &nbsp;&nbsp;
+  <img src="docs/images/account-view.png" width="380" align="top" alt="One account's view: its weekly, 5-hour and per-model windows, each with its percentage and reset time" />
+</p>
 
-- **Percent used**, 0 to 100, rounded down, beside a bar of the same share.
-- **Levels.** A window is normal below 75 %, high from 75 %, critical from
-  90 %, and at its limit at 100 % or when the provider says the limit is
-  reached. Normal bars take the theme's `muted` colour, high ones `working`,
-  critical and limit ones `blocked`. In the list and the detail view a window
-  at its limit reads "At limit" instead of a percent.
-- **Pace mark.** A tick centred on each bar at the share of the window's time
-  that has already passed. A fill past the tick means the account runs out
-  before the reset at its current rate. A window the provider reports no reset
-  time for (one that has not started) has no tick and reads "not started".
-- **Time to reset**, as `<1m`, `42m`, `3h 12m` or `2d 4h`.
-- **Only the windows the plan has.** A Codex plan with a weekly window alone
-  shows one bar. An account's row draws the weekly and the 5-hour window only
-  and names a per-model window at its limit; every per-model weekly window and
-  Codex's additional limits are in the account view and the detail view.
-- **Account states.** A read that failed keeps the last reading, dimmed, with
-  its age and the reason (`12m old · network`). An account whose login has
-  ended shows "Sign in again" and no bars. A Claude account warns in its last 3
-  days before its login ends.
-- **Provider marks.** Each account carries its provider's own logo: the ChatGPT
-  logo in the theme's text colour for Codex, Claude's spark in Claude's orange
-  (`#D97757`) for Claude.
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#connect-an-account">Connect an account</a> ·
+  <a href="#what-you-see">What you see</a> ·
+  <a href="#using-it-in-your-own-layout">Your own layout</a> ·
+  <a href="#privacy-and-security">Privacy</a>
+</p>
+
+## Highlights
+
+- **Every account at once.** Claude (Pro or Max) and Codex (ChatGPT)
+  subscriptions side by side, one row each, in the order you choose.
+- **Weekly and 5-hour bars**, with the percent used and the time until each
+  window resets.
+- **A pace mark on every bar.** It sits at the share of the window's time that
+  has passed. A fill past the mark means the account runs out before the reset
+  at its current rate.
+- **Every other limit too.** Claude's per-model weekly windows and Codex's
+  additional limits are in the account's view. A per-model limit that is
+  reached is said on the row ("Sonnet at limit").
+- **Three forms, one mod.** A list in the sidebar, a rail when the sidebar is
+  folded, a strip in the status bar.
+- **Toasts** when a window reaches 90 % and when it hits its limit.
+- **No CLI needed.** It signs in to each account and reads its usage itself:
+  no Claude Code, no Codex CLI, no oh-my-pi.
+- **Readings for other mods**, published in Herdr's shared state.
 
 ## Install
 
-Install Herdr and start it once, so its home exists: `$HERDR_APP_HOME` when
-set, else `~/.config/herdr-app`.
+You need Herdr, started once so its home exists, on macOS or Linux, and `jq`
+for the layout.
 
 ```sh
-scripts/install.sh --dry-run          # what it would do; changes nothing
-scripts/install.sh                    # install the mod
-scripts/install.sh --layout           # and add the layout herdr-headroom
-scripts/install.sh --layout my-name   # or a layout of another name
+git clone https://github.com/MaxiLR/herdr-headroom.git
+cd herdr-headroom
+scripts/install.sh --layout   # install the mod and add the herdr-headroom layout
+herdr-app do layout.switch --name herdr-headroom
 ```
 
-`scripts/install.sh [--dry-run] [--layout [name]]` prints one line per step: a
-mark (`✔` done, `•` would do, `!` left for you, `✖` failed), the step and what
-happened. On a terminal the lines are coloured; piped output is plain, and
-`NO_COLOR` turns colours off. It refuses, changing nothing, when the Herdr home
-does not exist.
+The layout is a copy of your `main` layout with Limits under Agents in the
+sidebar and a strip, hidden until you turn it on, in the status bar.
 
-- **Back up.** A previous install in `<Herdr home>/mods/headroom/` is moved to
-  `<Herdr home>/backups/headroom-<YYYYmmdd-HHMMSS>/` (with `-2`, `-3`, … when
-  that name is taken), outside `mods/` so Herdr does not load the backup as a
-  mod. A first install makes no backup.
-- **Copy.** `mods/headroom/` of this checkout is copied to
-  `<Herdr home>/mods/headroom/`, leaving out the `gpui-kit.d.ts` and
-  `jsconfig.json` Herdr writes itself. On a reinstall it reports how many files
-  changed, were added or were removed; `--dry-run` lists each one.
-- **Check.** When `herdr-app` is on `PATH`, it runs `herdr-app check` on the
-  installed folder. A failed check prints what `herdr-app` said and exits 1;
-  without `herdr-app` the check is skipped with a warning.
-- **Layout** (`--layout`, default name `herdr-headroom`). A name must match
-  `^[A-Za-z0-9_-]+$`: Herdr lists a layout under its file name and switches
-  only to one whose name uses letters, digits, `-` or `_`. Any other name is
-  refused before anything changes, with exit 2. It needs `jq`. It writes
-  `<Herdr home>/layouts/<name>.json`: a copy of the home's `layouts/main.json`
-  with two changes, and nothing else.
-  - **The block.** One Headroom block is added as the last child of
-    `sidebar-lists`, after Spaces and Agents, sized by the mod (`props.fit`,
-    shown under [Using it in your own layout](#using-it-in-your-own-layout)).
-    It is as tall as its header and its accounts need, up to two accounts;
-    with three or more it is 17 px taller, for the hint that says how many
-    more are below. Further accounts scroll, or you drag the block taller. A
-    drag is kept, across restarts too, until the height the block needs
-    changes.
-  - **The status row.** The first block with the id `status` (Herdr's
-    `workspace-status`) is put in a row of its size: the `status` block at a
-    weight of 3, then the `headroom-strip` block, hidden, at a weight of 2,
-    120 px at least and 720 px at most, across a boundary that drags (shown
-    under [The strip's separator](#the-strips-separator)). "Show in status
-    bar" in Accounts and settings shows and hides it. Without a `status`
-    block the layout is written without it, and the step says so.
+- `scripts/install.sh --dry-run` prints every step and file and changes
+  nothing.
+- `scripts/install.sh` alone installs only the mod, for
+  [a layout of your own](#using-it-in-your-own-layout).
+- Run it again to update. The previous install is moved to
+  `<Herdr home>/backups/`, and a layout that already exists is never
+  overwritten.
 
-  Settings shows the layout as written, the palette with its first letter in
-  upper case. It never overwrites or edits a layout and never switches to it;
-  it prints the command that does:
+[Installing](docs/install.md) covers each step, replacing a layout an earlier
+version wrote, and undoing the install.
 
-  ```sh
-  herdr-app do layout.switch --name herdr-headroom
-  ```
+## Connect an account
 
-  Without `jq`, without `layouts/main.json`, with a `main.json` that is not
-  valid JSON or has no `sidebar-lists` node with children, or when the layout
-  already exists, it says so, writes no layout and still installs the mod.
+Open **Accounts and settings** (the three dots in the Limits header) and choose
+**Connect account**. An empty list shows the button too.
 
-  A layout an earlier version of the installer wrote keeps what it was written
-  with; `Herdr Headroom.json` is one, which Herdr cannot show. To replace it,
-  switch to another layout, remove `<Herdr home>/layouts/<name>.json` and run
-  `--layout` again.
+- **Claude**: approve on Claude's page, copy the code it shows and paste it
+  into the dialog.
+- **Codex**: the dialog shows a device code; enter it on OpenAI's page.
 
-The installer binds no key and never reads, copies or removes the vault
-(`<Herdr home>/headroom/`).
+A Claude login ends 30 days after sign-in. The row warns during the last 3
+days, and "Sign in again", in the account's view, renews it. A Codex login does
+not end on its own.
 
-To undo: remove `<Herdr home>/mods/headroom/`, and the layout file if one was
-written. To go back to an earlier version, copy the backup folder back to
-`<Herdr home>/mods/headroom/`. Remove `<Herdr home>/headroom/` to delete every
-stored login.
+[Accounts, reads and notifications](docs/accounts.md) covers labels, how often
+accounts are read, and the toasts.
+
+## What you see
+
+| On a row                         | Meaning                                                                               |
+| -------------------------------- | ------------------------------------------------------------------------------------- |
+| Full bar over a thin bar         | The weekly window over the 5-hour window.                                             |
+| Bar colour                       | Your theme's `muted` colour below 75 %, `working` from 75 %, `blocked` from 90 %.     |
+| Tick on a bar                    | The pace mark: how much of the window's time has passed.                              |
+| `41% · 4d 5h`                    | Percent used and time until the reset.                                                |
+| "At limit"                       | The window is at 100 %, or the provider says the limit is reached.                    |
+| "Sonnet at limit"                | A per-model window is at its limit. In the rail and the strip it is a red dot.        |
+| Dimmed, with `12m old · network` | The last read failed. The last reading is kept, with its age and the reason.          |
+| "Sign in again"                  | The login ended or was rejected. The stored login is kept until you sign in again.    |
+| "3 more"                         | Accounts are cut off below. Scroll, or drag the top edge of Limits to make it taller. |
+
+[What it shows](docs/accounts.md#what-it-shows) has every state and format.
+
+**Click an account** for its view: every window the plan has, the reset's clock
+time, a refresh control, and Rename, Sign in again and Remove.
+
+**Accounts and settings** (the detail view, in the reference pages) is the one
+place to manage everything: every window of every account, arrows that reorder
+them, Rename and Remove behind three dots, the notifications switch and Connect
+account. Remove asks first with the mod's own dialog, then deletes the
+account's stored login from this computer.
+
+<p align="center">
+  <img src="docs/images/accounts-and-settings.png" width="380" alt="Accounts and settings: three accounts with all their windows, arrows and a three-dot menu on each, the notifications switch, Show in status bar and Connect account" />
+</p>
+
+**Show in status bar**, a switch in Accounts and settings, turns on the strip
+in the installed layout:
+
+<p align="center">
+  <img src="docs/images/limits-status-bar.png" width="540" alt="The strip in Herdr's status bar: one item per account with its mark, bars and percentage" />
+</p>
 
 ## Using it in your own layout
 
-The block the installer adds:
+The mod appears only where a layout puts it. This is the block the installer
+adds:
 
 ```json
 {
@@ -124,439 +130,97 @@ The block the installer adds:
 }
 ```
 
-`props.fit` names the block the copy is in, and the list and the rail resize
-it (`layout.resize`) to the line on their top edge, the list's header and the
-first two accounts. In the list that is 111 px for one account with one bar,
-120 px for one with both bars and 190 px for two; with three or more it is
-207 px, 17 px taller for the hint ("3 more"). In the rail it is 97 px for two
-accounts with both bars, 103 px with the hint ("+3"). An empty list fits its
-"No accounts yet" and its button. Further accounts scroll under the header, or
-you drag the block taller. A layout of your own gets the same from `fit`: room
-for two accounts.
+`fit` names the block's own id. The list and the rail then size the block to
+their first two accounts, and keep a size you drag until the height they need
+changes. Without a `form` prop, the block's measured size picks the form:
 
-The mod remembers the height it last asked for, per layout and block, in
-`headroom.fit`, and fits the block again only when the height it needs
-changes: an account connected, removed or moved into the first two, one
-gaining or losing a bar, or a third account arriving or the last one past two
-leaving. A boundary you drag stays where you put it, across restarts too,
-until then. Folding the sidebar turns the list into the rail, which needs
-another height, so the block is fitted again and a dragged size is lost.
+| Block                | Form  |
+| -------------------- | ----- |
+| Narrower than 160 px | Rail  |
+| Under 48 px tall     | Strip |
+| Anything else        | List  |
 
-Without `fit` the list and the rail never resize their block: they fill the
-block they are given, the header stays and the accounts scroll under it.
+[Using it in your own layout](docs/layout.md) has every prop and form, the
+status row the installer writes, and how another mod or a shell command opens
+the views.
 
-`mod.json` is `{ "place": "none" }`: Herdr docks no copy by itself; the mod
-appears only where a layout puts it.
-
-### Props
-
-| Prop      | Values                                                         | What it does                                                                                                                                                                                                                                                                                                 |
-| --------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `form`    | `auto` (default), `list`, `rail`, `strip`, `detail`, `account` | The form to draw. With `auto`, or none, the block's measured size decides.                                                                                                                                                                                                                                   |
-| `account` | the account's id, `<provider>:<account id>:<organization id>`  | The account the account view shows, with `form: "account"`. The ids are in `headroom.readings`.                                                                                                                                                                                                              |
-| `fit`     | the `id` of the block holding this copy                        | The list and the rail resize that block (`layout.resize`) to the line, the header and their first two accounts, at least 48 px (a strip's height, so a folded rail unfolds to the list again); with three or more accounts, 17 px more for the hint, and the rest scroll. The strip never resizes its block. |
-
-The connect dialog is the same mod opened as a dialog with a `connect` prop
-(`{ provider, account }` when it signs an account in again), the remove dialog
-the same with a `remove` prop (the id of the account it asks about), and Herdr
-gives every overlay an `overlay` prop; a layout sets none of them.
-
-The mod binds no key and has no command of its own.
-
-### Forms
-
-With `form` set to `auto`, before its first measure the block is a list; after:
-
-- **Rail** when the block is narrower than 160 px (Herdr's folded sidebar): a
-  1 px line on its top edge, then each account's mark and the percent of the
-  fuller of its weekly and 5-hour window (`5h` beside it when that is the
-  5-hour one), over its pair of bars. A red dot on the mark says a per-model
-  window is at its limit. When accounts are cut off below, `+3` on the bottom
-  edge says how many. Below 60 px wide the percent is left out and the mark is
-  centred. Hovering an account names it and gives its numbers, and the model
-  at its limit.
-- **Strip** when the block is under 48 px tall (a status bar): a 1 px line on
-  its top edge and one line with an item per account: its mark, label, bars
-  and the percent of the fuller of its weekly and 5-hour window, and the red
-  dot on the mark for a per-model window at its limit. When the line is too
-  narrow the labels go first, then the bars; the marks and percents stay.
-- **List** otherwise: a 1 px line on its top edge, a "Limits" header and, per
-  account, its mark and label, two bars at most (a full bar for the weekly
-  window over a thin one for the 5-hour window), and one line of numbers. A
-  per-model window has no bar on the row: when one is at its limit, its words
-  follow the week's percent in place of the reset time (`41% · Fable at
-limit`, or `2 models at limit`). When accounts are cut off below, "3 more"
-  and a chevron on the bottom edge say how many; the count follows the wheel.
-  Below 220 px wide the 5-hour numbers lose their word.
-- **Account**, only when `form` is `account` with an `account`: that account
-  alone. Its mark, label and plan, the age of its reading (`Read 2m ago`, or a
-  failed read's `12m old · network`) with a refresh control that reads it
-  again, and its email and organization. Then every window the plan has, per
-  model and Codex's additional limits too, each with its percentage, its time
-  to reset and the reset's clock time; when a Claude login ends; each account
-  state as the list shows it (empty tracks before the first read, the last
-  bars dimmed after a failed read, no bars and "Login ended …" for an account
-  that must sign in again); and, when a bar has its pace mark, the line "The
-  line on a bar marks how much of its time has passed." Under them its
-  actions, Rename, Sign in again and Remove, and a last row, "Accounts and
-  settings", that opens the detail view. Remove asks first with the mod's own
-  dialog, over the view, with Cancel and a red Remove. The view closes itself
-  when it opens another view (the connect dialog, the detail view) and when
-  its account is no longer connected.
-- **Detail**, only when `form` is `detail`: the one place to manage every
-  account. Every window of every account, per model and Codex's additional
-  limits too, the reset's clock time, when a login ends, the refresh control,
-  the notifications switch, "Show in status bar" (only when the shown layout
-  has a block with the id `headroom-strip`; it shows and hides that block) and
-  Connect account. Each account has an up and a down arrow that move it in
-  the order, and beside them Rename and Remove behind three dots ("Rename or
-  remove"): Rename turns the label into a field in place, Remove asks as the
-  account view does. From 520 px wide each window is one line; below 340 px
-  the clock time is left out and Connect account is a square with the plus
-  alone. It closes itself when it opens an account view or the connect
-  dialog.
-
-A click on an account in the list, the rail, the strip or the detail view
-opens its account view as a 380 px popup. The list's header control and the
-account view's last row, "Accounts and settings", open the detail view as a
-380 px popup.
-
-### The strip's separator
-
-A strip starts with a 1 px rule when its block follows a shown block in the
-same `row` of the layout, and has none when it is alone or first in its row.
-The copy finds its own block by `props.fit`; without `fit`, by being the only
-block of the `headroom` mod in the layout. When it cannot tell (no layout, two
-Headroom blocks and no `fit`), it draws no rule.
-
-The status row the installer writes from Herdr's 28 px status block. The strip
-follows `status`, so once "Show in status bar" shows it, it starts with the
-rule:
-
-```json
-{
-  "id": "status-row",
-  "type": "row",
-  "size": { "px": 28 },
-  "children": [
-    {
-      "id": "status",
-      "type": "block",
-      "size": { "weight": 3 },
-      "content": { "mod": "workspace-status" }
-    },
-    {
-      "id": "headroom-strip",
-      "type": "block",
-      "hidden": true,
-      "size": { "weight": 2 },
-      "min": 120,
-      "max": 720,
-      "content": {
-        "mod": "headroom",
-        "props": { "form": "strip", "fit": "headroom-strip" }
-      }
-    }
-  ]
-}
-```
-
-### The account view and the detail view from elsewhere
-
-The detail view as a pane, from a shell:
-
-```sh
-herdr-app do pane.split --direction right --mod headroom --props '{"form":"detail"}'
-```
-
-The detail view as a dialog, from another mod:
-
-```js
-import { openOverlay } from "herdr";
-
-openOverlay({
-  mod: "headroom",
-  kind: "dialog",
-  width: 520,
-  props: { form: "detail" },
-});
-```
-
-An account's view as a popup, from another mod, with an id from
-`headroom.readings`:
-
-```js
-import { openOverlay } from "herdr";
-
-openOverlay({
-  mod: "headroom",
-  kind: "popup",
-  width: 380,
-  props: { form: "account", account: "<id>" },
-});
-```
-
-## Connecting accounts
-
-"Connect account" (in the detail view's footer, or in an empty list, rail or
-strip) opens the connect dialog. Choose a provider; the mod opens the
-provider's sign-in page in the browser and shows its address with Copy and
-Open.
-
-- **Claude** (a Claude Pro or Max subscription): approve on Claude's page,
-  copy the code it shows and paste it into the dialog. The code with its
-  `#state`, the bare code, or the whole address of the page that shows the code
-  all work. A code from another sign-in is refused.
-- **Codex** (a ChatGPT subscription): the dialog shows a device code; enter it
-  on OpenAI's page. The mod waits for the approval, asking as often as OpenAI
-  says (every 5 seconds when it does not say), and gives up after 15 minutes.
-  Closing the dialog stops the wait.
-
-Connecting an account that is already connected (the same provider account and
-organization) replaces its login and keeps its label and place. A new account
-goes last, labelled with its email's name part; when another account already
-has that label, its organization, or its plan, is added. One email with several
-organizations gives one account per organization.
-
-A Claude login ends 30 days after sign-in, whatever happens in between: the
-account view and the detail view show the date, and the row warns during the
-last 3 days. A Codex login does not end on its own. When a provider rejects a
-login, the account shows "Sign in again"; its stored login is kept until it
-signs in again or is removed.
-
-An account's view holds its own actions, and the detail view holds Rename and
-Remove for every account. "Sign in again" opens the connect dialog at the
-account's provider, and signing in replaces the account's login. Rename turns
-the label into a field: Enter keeps the new label, Esc leaves it as it was.
-Remove asks first, in the mod's own dialog ("Remove work?" / "Its stored login
-is deleted from this computer.", Cancel and a red Remove; Enter removes, Esc
-cancels), then deletes the account's login from the vault.
-
-Readings are fetched for every account every 5 minutes while it is idle, and
-more often while it is active: a Claude account every 2 minutes, a Codex
-account every minute. An account is active while an agent in Herdr is working
-(any agent: Herdr does not say which account it spends), while its last read
-changed a window's numbers, or while one of its windows is from 75 % up to,
-but not at, its limit. After a failed read the next one is 5 minutes later
-whatever else holds. After a read that worked, an account is also read when
-one of its windows' reset time passes. And it is read when asked: the refresh
-control in the detail view reads every account again, and the one in an
-account view reads that account, except one read in the last 30 seconds. An
-access token that expires within 5 minutes is refreshed before a read, and
-once more after a read the provider refuses (401). An account showing "Sign in
-again" is not read.
-
-## Notifications
-
-A Herdr toast when an account's window reaches 90 % ("work is at 91% of its
-weekly limit", a warning) and when it hits its limit ("work reached its 5-hour
-limit", an error), each with "Resets in …" when the reset time is known. Each
-is posted once per account, window, reset period and threshold; a jump straight
-past both posts the limit toast only. A window that resets can post again. The
-switch "Notify at 90% and at the limit" in the detail view turns them off for
-every copy. Clicking a toast does nothing.
-
-## What it contacts, stores and runs
-
-### Hosts
-
-| Host                  | Address                                                         | When                                                                                            |
-| --------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `claude.ai`           | `https://claude.ai/oauth/authorize`                             | In the browser only, when a Claude sign-in starts.                                              |
-| `platform.claude.com` | `https://platform.claude.com/oauth/code/callback`               | In the browser only: the page Claude sends it to after approval, which shows the code to paste. |
-| `api.anthropic.com`   | `POST https://api.anthropic.com/v1/oauth/token`                 | Exchanging the pasted code for tokens; refreshing a Claude token.                               |
-| `api.anthropic.com`   | `GET https://api.anthropic.com/api/oauth/usage`                 | Each read of a Claude account.                                                                  |
-| `auth.openai.com`     | `POST https://auth.openai.com/api/accounts/deviceauth/usercode` | When a Codex sign-in starts, for the device code.                                               |
-| `auth.openai.com`     | `https://auth.openai.com/codex/device`                          | In the browser only: the page where the device code is entered.                                 |
-| `auth.openai.com`     | `POST https://auth.openai.com/api/accounts/deviceauth/token`    | While waiting for the approval, at OpenAI's interval, for at most 15 minutes.                   |
-| `auth.openai.com`     | `POST https://auth.openai.com/oauth/token`                      | Exchanging the approval for tokens; refreshing a Codex token.                                   |
-| `chatgpt.com`         | `GET https://chatgpt.com/backend-api/wham/usage`                | Each read of a Codex account.                                                                   |
-
-`https://auth.openai.com/deviceauth/callback` is sent as the Codex redirect
-address and is never opened. `https://api.openai.com/auth` and
-`https://api.openai.com/profile` are only the names of claims read from the
-Codex token; nothing is sent there. The mod contacts no other host, and only
-when an account is connected, read or refreshed.
-
-### What is stored, and where
-
-- **The vault**, `<Herdr home>/headroom/vault.json`:
-  `{ "version": 1, "accounts": [...] }`. Each account holds its `id`
-  (`<provider>:<account id>:<organization id>`), `provider`, `label`,
-  `position`, `accessToken`, `refreshToken`, `expiresAt`, `signedInAt` and
-  `identity` (`accountId`, `organizationId`, `email`, `organization`, `plan`;
-  a Codex plan as words, `Self serve business prolite` for
-  `self_serve_business_prolite`).
-  The folder is made 0700 and the file is created empty and set to 0600 before
-  the first token is written; the file's mode is checked after every write and
-  set to 0600 again when it is not. When the folder or file cannot be made
-  private, the mod empties the file, stores nothing and says "Could not keep
-  the login private, so nothing was stored." in the connect dialog, or in an
-  error toast when a refresh, rename, move or remove was refused. The vault
-  lives outside `mods/`, so copying or sharing the mod folder never carries a
-  login. Removing an account deletes its login from the vault.
-- **Herdr's shared state**, which Herdr keeps in `<Herdr home>/shared.json` and
-  every mod can read:
-  - `headroom.readings`: the current readings (see below).
-  - `headroom.prefs`: `{ "notify": false }` when notifications are off; absent
-    or anything else means on.
-  - `headroom.notified`: `{ "version": 1, "keys": [...] }`, the toasts already
-    posted, each `<account id>|<window id>|<reset time>|<90 or limit>`.
-  - `headroom.fit`: `{ "<layout name>": { "<block id>": <px> } }`, the height
-    last asked for each block given `props.fit`.
-
-  No token or email is in shared state. The label is the only personal text
-  there; the ids are made of the provider's own account and organization ids.
-
-- **Nothing in `localStorage`**, and nothing written anywhere else. The mod
-  also reads Herdr's shipped icons (`mods/workspace-chrome/spinner.svg`,
-  `mods/workspace-chrome/plus.svg`, `mods/workspace-chrome/chevron-left.svg`,
-  `mods/workspace-chrome/chevron-right.svg`,
-  `mods/workspace-chrome/chevron-down.svg`) and its own in
-  `mods/headroom/icons/` (`chatgpt.svg`, `claude.svg`, `arrow-up.svg`,
-  `arrow-down.svg`, `more.svg`, `pencil.svg`, `refresh.svg`, `trash.svg`).
-
-### Programs it runs
-
-| Program                | Arguments                                         | Why                                                        |
-| ---------------------- | ------------------------------------------------- | ---------------------------------------------------------- |
-| `open` (macOS)         | the sign-in address                               | Opens the provider's sign-in page in the browser.          |
-| `xdg-open` (elsewhere) | the sign-in address                               | The same on Linux.                                         |
-| `mkdir`                | `-p <Herdr home>/headroom`                        | Creates the vault's folder before the mod first saves it.  |
-| `chmod`                | `700 <Herdr home>/headroom`                       | Makes the folder readable by its owner only.               |
-| `chmod`                | `600 <Herdr home>/headroom/vault.json`            | Makes the vault readable and writable by its owner only.   |
-| `stat`                 | `-f %Lp <vault>` (macOS), `-c %a <vault>` (Linux) | Checks the vault's mode after it is set and after a write. |
-
-The browser gets the sign-in address; the other programs get paths and modes.
-No program is given a token. The browser is opened when a sign-in starts and
-from the dialog's Open control; the address is always shown with a Copy
-control as well, and nothing else is opened.
-
-## For other mods: `headroom.readings`
+## For other mods
 
 The current readings are published in Herdr's shared state under
-`headroom.readings`, rewritten whenever a reading or an account changes. This
-shape is the mod's public interface, and `version` is `1`.
-
-```js
-{ version: 1, accounts: [reading, ...] }   // in the person's order
-```
-
-A reading:
-
-| Field         | Meaning                                                                                                                                       |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`          | The account's id: `<provider>:<account id>:<organization id>`.                                                                                |
-| `provider`    | `"claude"` or `"codex"`.                                                                                                                      |
-| `label`       | The account's label, as the person named it.                                                                                                  |
-| `plan`        | The plan's name (`"Plus"`, `"Pro"`) as Codex reports it, or `null`. Claude reports none.                                                      |
-| `status`      | `"ok"`, `"stale"`, `"error"` or `"signed-out"` (below).                                                                                       |
-| `fetchedAt`   | When the windows were read, ms since the epoch; `null` before the first read that worked. For `"signed-out"`: when the ended login was found. |
-| `error`       | Only on a failed read: `"network"`, `"auth"` or `"unexpected"`.                                                                               |
-| `loginEndsAt` | Claude only: when the login ends, ms since the epoch (sign-in plus 30 days).                                                                  |
-| `windows`     | The account's windows; empty before the first read that worked and when signed out.                                                           |
-
-`status`:
-
-- `"ok"`: the last read worked; `windows` are current.
-- `"stale"`: with `error`, the last read failed and `windows` and `fetchedAt`
-  are those of the last read that worked. Without `error` and with `fetchedAt`
-  `null`, the account has not been read yet.
-- `"error"`: the last read failed and none has worked yet; no windows.
-- `"signed-out"`: the provider rejected the login; no windows until the
-  account signs in again.
-
-A window:
-
-| Field          | Meaning                                                                                                                           |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `id`           | Its kind (below).                                                                                                                 |
-| `label`        | Its name: `"5-hour"`, `"Weekly"`, `"Weekly · Opus"`, `"Review Tasks · 90-minute"`.                                                |
-| `durationMs`   | The window's length in ms.                                                                                                        |
-| `usedFraction` | The share used, 0 to 1 (the provider's percent over 100).                                                                         |
-| `resetsAt`     | When it resets, ms since the epoch; `null` when the window has not started.                                                       |
-| `atLimit`      | Claude: the window is at 100 % or more. Codex: the provider says the limit is reached, on its fullest window and on any at 100 %. |
-
-Window ids:
-
-- `5h`: the 5-hour window; `7d`: the weekly window.
-- `7d:<model>`: a Claude per-model weekly window, `<model>` the model's name
-  in lower case with every run of other characters as `-` (`7d:opus`,
-  `7d:sonnet`).
-- `<n><unit>`: a Codex window of another length, `<unit>` the largest of `d`,
-  `h`, `m`, `s` that divides it (`1d`, `90m`).
-- `extra:<name>:<length>`: a Codex additional limit, `<name>` its name in lower
-  case with every run of other characters as `-`
-  (`extra:review-tasks:90m`).
-
-Claude windows come weekly, then 5-hour, then per model. Codex windows come
-longest first, then the additional limits.
-
-Another mod reads it in its render; Herdr re-renders every mod when shared
-state changes:
+`headroom.readings`, one entry per account with its status and windows:
 
 ```js
 import { shared } from "herdr";
 
-// `work 41%` for each account read with a weekly window.
-function weeklyLines() {
-  const readings = shared("headroom.readings");
-  const accounts = readings?.version === 1 ? readings.accounts : [];
-  return accounts.flatMap((account) => {
-    const weekly = account.windows.find((window) => window.id === "7d");
-    if (account.status !== "ok" || !weekly) return [];
-    return [`${account.label} ${Math.floor(weekly.usedFraction * 100)}%`];
-  });
-}
+const readings = shared("headroom.readings");
+const accounts = readings?.version === 1 ? readings.accounts : [];
+const weekly = accounts[0]?.windows.find((window) => window.id === "7d");
 ```
 
-## Said plainly
+[`headroom.readings`](docs/readings.md) documents every field.
 
-- **Undocumented endpoints, first-party client ids.** The usage and sign-in
-  endpoints above are not documented by either provider, and the client ids
-  the mod signs in with are the providers' own first-party ones (Claude Code's
-  and Codex's), which neither provider has approved for third-party use. Either
-  provider can change or close them without notice. That shows as that
-  provider's reads failing, or its sign-in failing; the other provider's
-  accounts are unaffected.
-- **A vault file is a login.** The Claude token carries inference scope
-  (`user:inference`, among the scopes Claude Code's own sign-in asks for), so a
-  leaked `vault.json` equals a leaked Claude Code login. Every installed Herdr
-  mod runs as you and could read it.
-- **Version.** Written against herdr-app 0.1.15 and its generated type files; a
-  later version can change the mod interface.
-- **Scope.** This computer's accounts only; macOS and Linux.
+## Privacy and security
+
+- **Hosts.** It talks to `api.anthropic.com`, `auth.openai.com` and
+  `chatgpt.com`, and only to sign in, refresh a token and read usage. Sign-in
+  opens `claude.ai`, `platform.claude.com` or `auth.openai.com` in your
+  browser.
+- **Logins** are stored in `<Herdr home>/headroom/vault.json`, readable by you
+  alone (mode 0600) and outside `mods/`, so sharing the mod folder never
+  carries a login. The installer never touches it.
+- **Shared state** holds labels, ids, plans and numbers, never a token or an
+  email.
+- **Programs.** It runs `open` or `xdg-open` for the sign-in page, and `mkdir`,
+  `chmod` and `stat` on the vault.
+
+> [!WARNING]
+>
+> - The sign-in and usage endpoints are undocumented, and the mod signs in with
+>   the providers' own first-party client ids (Claude Code's and Codex's),
+>   which neither provider has approved for third-party use. Either provider
+>   can change or close them without notice.
+> - `vault.json` is a login. The Claude token carries inference scope, so a
+>   leaked file equals a leaked Claude Code login, and every installed Herdr
+>   mod runs as you and could read it.
+
+[What it contacts, stores and runs](docs/privacy.md) lists every address, file
+and program.
 
 ## Development
 
 ```sh
 npm ci
-node --test 'tests/*.test.mjs'
-npx prettier --check .
-herdr-app check mods/headroom
+npm test               # node --test 'tests/*.test.mjs'
+npm run format:check   # prettier --check .
+npm run check          # herdr-app check mods/headroom
 ```
 
-The tests run the logic and the providers under node against fakes of Herdr
-and of the providers' responses, draw the forms with
-`herdr-app check --print-spec`, and run the installer against temporary Herdr
-homes, never the live one. `herdr-app check` loads the mod with empty shared
-state, the state with no accounts.
+The tests run the logic and the providers under node against fakes of Herdr and
+of the providers' responses, draw the forms with `herdr-app check --print-spec`,
+and run the installer against temporary Herdr homes, never the live one.
+`herdr-app check` loads the mod with empty shared state, the state with no
+accounts.
 
 ```
 mods/headroom/
-  main.js          the View: picks a form from props and the measured size
-  mod.json         { "place": "none" }
-  logic/           plain modules, no gpui-kit or herdr imports
-  providers/       claude.js, codex.js, index.js: one adapter per provider
-  ui/              one module per form and dialog, and the shared kit
-  icons/           the mod's own SVGs
-scripts/install.sh copies the mod into a Herdr home; optional layout
-tests/             node --test, with fixtures and helpers
+  main.js      the View: picks a form from props and the measured size
+  mod.json     { "place": "none" }
+  logic/       plain modules, no gpui-kit or herdr imports
+  providers/   claude.js, codex.js, index.js: one adapter per provider
+  ui/          one module per form and dialog, and the shared kit
+  icons/       the mod's own SVGs
+scripts/       install.sh: copies the mod into a Herdr home; optional layout
+tests/         node --test, with fixtures and helpers
 ```
 
-## Licence
+Written against herdr-app 0.1.15. [`CONTEXT.md`](CONTEXT.md) defines the terms,
+[`RECIPE.md`](RECIPE.md) is the brief to build the mod from scratch, and
+[`DESIGN.md`](DESIGN.md) and [`PRODUCT.md`](PRODUCT.md) record the design.
 
-MIT, see [`LICENSE`](LICENSE). The sign-in, refresh and usage-read method, its
-constants and the knowledge of the payloads come from oh-my-pi (MIT). That, and
-the provider logos (the ChatGPT logo and Claude's spark) with their sources,
-are in [`NOTICE`](NOTICE).
+## Credits
+
+Headroom is MIT-licensed ([`LICENSE`](LICENSE)). The sign-in, refresh and
+usage-read method, its constants and the knowledge of the payloads come from
+[oh-my-pi](https://github.com/can1357/oh-my-pi) (MIT). That, and the sources of
+the provider logos (the ChatGPT logo and Claude's spark), are in
+[`NOTICE`](NOTICE).
