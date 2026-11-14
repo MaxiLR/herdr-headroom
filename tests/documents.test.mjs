@@ -2,16 +2,20 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
-  existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
+import { chooseForm } from "../mods/headroom/logic/form.js";
+import { levelOf } from "../mods/headroom/logic/levels.js";
+
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 const read = (path) =>
   readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -137,7 +141,33 @@ function node(layout, id) {
   return null;
 }
 
-test("every relative link and image in the README and its pages leads to a file", () => {
+// Whether `path`, from the repository's root, is a file spelled exactly so:
+// GitHub tells upper from lower case where this machine may not.
+function exists(path) {
+  let folder = ROOT;
+  for (const part of path.split("/")) {
+    if (!readdirSync(folder).includes(part)) return false;
+    folder = join(folder, part);
+  }
+  return true;
+}
+
+// GitHub's anchors for the headings of `text`: lower case, punctuation
+// dropped, spaces as hyphens.
+function anchors(text) {
+  return text
+    .split("\n")
+    .filter((line) => /^#+ /.test(line))
+    .map((line) =>
+      line
+        .replace(/^#+ /, "")
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N} _-]/gu, "")
+        .replace(/ /g, "-"),
+    );
+}
+
+test("every relative link, anchor and image in the README and its pages leads somewhere", () => {
   for (const path of GUIDE) {
     const text = read(path);
     const targets = [
@@ -145,11 +175,16 @@ test("every relative link and image in the README and its pages leads to a file"
       ...[...text.matchAll(/\b(?:src|href)="([^"]+)"/g)].map(
         (match) => match[1],
       ),
-    ].filter((target) => !/^(https?:|mailto:|#)/.test(target));
-    const from = new URL(`../${path}`, import.meta.url);
+    ].filter((target) => !/^(https?:|mailto:)/.test(target));
     for (const target of targets) {
-      const file = new URL(target.split("#")[0], from);
-      assert.ok(existsSync(file), `${path}: ${target}`);
+      const [file, fragment] = target.split("#");
+      const to = file
+        ? posix.normalize(posix.join(posix.dirname(path), file))
+        : path;
+      assert.ok(exists(to), `${path}: ${target}`);
+      if (fragment !== undefined) {
+        assert.ok(anchors(read(to)).includes(fragment), `${path}: ${target}`);
+      }
     }
   }
 });
@@ -167,6 +202,33 @@ test("the README shows its screenshots and links every reference page", () => {
   for (const path of GUIDE.slice(1)) {
     assert.ok(readme.includes(`](${path}`), path);
   }
+});
+
+test("the README's form table gives the sizes at which the mod changes form", () => {
+  const own = section(read("README.md"), "Using it in your own layout");
+  const px = (form) =>
+    Number(own.match(new RegExp(`\\| \\D*(\\d+) px[^|]*\\| ${form} `))[1]);
+  const rail = px("Rail");
+  const strip = px("Strip");
+  assert.equal(chooseForm({}, { width: rail - 1, height: 400 }), "rail");
+  assert.equal(chooseForm({}, { width: rail, height: 400 }), "list");
+  assert.equal(chooseForm({}, { width: 400, height: strip - 1 }), "strip");
+  assert.equal(chooseForm({}, { width: 400, height: strip }), "list");
+});
+
+test("the README's bar colours turn at the levels the mod uses", () => {
+  const row = read("README.md")
+    .split("\n")
+    .find((line) => line.startsWith("| Bar colour"));
+  const [, high, critical] = row
+    .match(/`working` from (\d+) %, `blocked` from (\d+) %/)
+    .map(Number);
+  const level = (percent) =>
+    levelOf({ usedFraction: percent / 100, atLimit: false });
+  assert.equal(level(high - 1), "normal");
+  assert.equal(level(high), "high");
+  assert.equal(level(critical - 1), "high");
+  assert.equal(level(critical), "critical");
 });
 
 test("the README and the layout page show the block the installer adds, sized by the mod with fit", () => {
@@ -260,6 +322,9 @@ test("no document names the headroom.remove command or Herdr's confirm dialog fo
 test("no document gives fit's old 329 px", () => {
   for (const path of DOCUMENTS) {
     assert.doesNotMatch(read(path), /\b329\b/, path);
+  }
+  for (const path of GUIDE) {
+    assert.doesNotMatch(read(path), /329/, path);
   }
 });
 

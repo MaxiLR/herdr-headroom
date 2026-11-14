@@ -46,7 +46,7 @@ block they are given, the header stays and the accounts scroll under it.
 | Prop      | Values                                                         | What it does                                                                                                                                                                                                                                                                                                 |
 | --------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `form`    | `auto` (default), `list`, `rail`, `strip`, `detail`, `account` | The form to draw. With `auto`, or none, the block's measured size decides.                                                                                                                                                                                                                                   |
-| `account` | the account's id, `<provider>:<account id>:<organization id>`  | The account the account view shows, with `form: "account"`. The ids are in `headroom.readings`.                                                                                                                                                                                                              |
+| `account` | the account's id, `<provider>:<account id>:<organization id>`  | The account the account view shows, with `form: "account"`. The ids are in [`headroom.readings`](readings.md).                                                                                                                                                                                               |
 | `fit`     | the `id` of the block holding this copy                        | The list and the rail resize that block (`layout.resize`) to the line, the header and their first two accounts, at least 48 px (a strip's height, so a folded rail unfolds to the list again); with three or more accounts, 17 px more for the hint, and the rest scroll. The strip never resizes its block. |
 
 The connect dialog is the same mod opened as a dialog with a `connect` prop
@@ -174,7 +174,7 @@ openOverlay({
 ```
 
 An account's view as a popup, from another mod, with an id from
-`headroom.readings`:
+[`headroom.readings`](readings.md):
 
 ```js
 import { openOverlay } from "herdr";

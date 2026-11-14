@@ -1,4 +1,4 @@
-# Accounts, readings and notifications
+# Accounts, reads and notifications
 
 [Back to the README](../README.md)
 
