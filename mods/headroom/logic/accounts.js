@@ -1,20 +1,30 @@
 // The accounts kept in the vault: their ids, labels and order. Every
 // operation answers a new list, positions 0..n-1 in order.
+import { providers } from "../providers/index.js";
 
 // One email can hold several organizations; each is its own account.
 export function accountId(providerId, identity) {
   return `${providerId}:${identity.accountId}:${identity.organizationId}`;
 }
 
+// The provider's name, or its id when it has none: a label is never empty.
+const providerName = (providerId) => providers[providerId]?.name ?? providerId;
+
 // The part of the email before `@`; when another account already has that
-// label, the organization, or the plan without one, is added.
-export function defaultLabel(identity, labels) {
+// label, the organization, or the plan without one, is added. With neither
+// email, organization nor plan, the provider's name.
+export function defaultLabel(identity, labels, providerId) {
   const name = identity.email?.split("@")[0] || null;
   const detail = identity.organization ?? identity.plan ?? null;
-  if (!name) return detail ?? "";
+  if (!name) return detail || providerName(providerId);
   if (!labels.includes(name) || !detail) return name;
   return `${name} · ${detail}`;
 }
+
+// The label an account is shown with: a stored empty one is its provider's
+// name.
+export const labelOf = (account) =>
+  account.label || providerName(account.provider);
 
 const ordered = (accounts) =>
   [...accounts]
@@ -46,6 +56,7 @@ export function rename(accounts, id, label) {
             defaultLabel(
               account.identity,
               list.filter((item) => item.id !== id).map((item) => item.label),
+              account.provider,
             ),
         },
   );

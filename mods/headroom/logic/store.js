@@ -6,6 +6,7 @@ import { providers as allProviders } from "../providers/index.js";
 import {
   accountId,
   defaultLabel,
+  labelOf,
   move,
   remove,
   rename,
@@ -83,7 +84,7 @@ export function createStore(host, { providers = allProviders } = {}) {
       host,
       accounts.map((account) => ({
         ...readings.get(account.id),
-        label: account.label,
+        label: labelOf(account),
       })),
       host.now(),
     );
@@ -296,7 +297,7 @@ export function createStore(host, { providers = allProviders } = {}) {
       accounts.map((account) => ({
         id: account.id,
         provider: account.provider,
-        label: account.label,
+        label: labelOf(account),
         email: account.identity.email,
         organization: account.identity.organization,
         plan: account.identity.plan,
@@ -324,6 +325,7 @@ export function createStore(host, { providers = allProviders } = {}) {
           label: defaultLabel(
             identity,
             current.map((account) => account.label),
+            providerId,
           ),
           position: current.length,
           accessToken: result.credentials.accessToken,
