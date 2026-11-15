@@ -382,6 +382,64 @@ test("start brings the accounts back in position order", async () => {
   );
 });
 
+test("a stored account with an empty label is handed out as its provider's name and the vault is left as it was", async () => {
+  const host = fakeHost({ exec: privateExec });
+  const quiet = (id, name) => ({
+    id,
+    name,
+    loginTtlMs: null,
+    login: async () => ({ ok: false, kind: "cancelled" }),
+    read: async () => ({ ok: true, windows: [], plan: null }),
+  });
+  const nobody = { ...MAXI, email: null, plan: null };
+  const stored = (id, provider, position) => ({
+    id,
+    provider,
+    label: "",
+    position,
+    accessToken: "a",
+    refreshToken: "r",
+    expiresAt: NOW + 3600000,
+    signedInAt: NOW,
+    identity: nobody,
+  });
+  const text = JSON.stringify({
+    version: 1,
+    accounts: [
+      stored("claude:acct-maxi:org-maxi", "claude", 0),
+      stored("codex:acct-maxi:org-maxi", "codex", 1),
+    ],
+  });
+  host.files[VAULT] = text;
+  const store = createStore(host, {
+    providers: {
+      claude: quiet("claude", "Claude"),
+      codex: quiet("codex", "Codex"),
+    },
+  });
+  await store.start();
+  assert.deepEqual(
+    store.accounts().map((item) => [item.id, item.label]),
+    [
+      ["claude:acct-maxi:org-maxi", "Claude"],
+      ["codex:acct-maxi:org-maxi", "Codex"],
+    ],
+  );
+  assert.deepEqual(
+    published(host).map((reading) => [reading.id, reading.label]),
+    [
+      ["claude:acct-maxi:org-maxi", "Claude"],
+      ["codex:acct-maxi:org-maxi", "Codex"],
+    ],
+  );
+  await store.refresh();
+  assert.deepEqual(
+    published(host).map((reading) => reading.label),
+    ["Claude", "Codex"],
+  );
+  assert.equal(host.files[VAULT], text);
+});
+
 test("a file that is not a vault gives no accounts and creates nothing", async () => {
   for (const text of ["not json", '{"version":2,"accounts":[]}', "[]"]) {
     const host = fakeHost({ exec: privateExec });

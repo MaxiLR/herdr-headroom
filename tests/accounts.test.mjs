@@ -77,6 +77,32 @@ test("the default label takes the plan when there is no organization", () => {
   assert.equal(defaultLabel(PLUS, ["maxi"]), "maxi · Plus");
 });
 
+const NOBODY = {
+  accountId: "acct-nobody",
+  organizationId: "acct-nobody",
+  email: null,
+  organization: null,
+  plan: null,
+};
+
+test("with no email, organization or plan the default label is the provider's name", () => {
+  assert.equal(defaultLabel(NOBODY, [], "claude"), "Claude");
+  assert.equal(defaultLabel(NOBODY, ["Claude"], "codex"), "Codex");
+  assert.equal(defaultLabel({ ...NOBODY, email: "" }, [], "codex"), "Codex");
+});
+
+test("a provider without a known name gives its id as the default label", () => {
+  assert.equal(defaultLabel(NOBODY, [], "acme"), "acme");
+});
+
+test("the earlier default labels stay when the provider is given", () => {
+  assert.equal(defaultLabel(MAXI, [], "claude"), "maxi");
+  assert.equal(defaultLabel(TERAC, ["maxi"], "claude"), "maxi · Terac");
+  assert.equal(defaultLabel(TERAC, ["ana"], "claude"), "maxi");
+  assert.equal(defaultLabel(PLUS, ["maxi"], "codex"), "maxi · Plus");
+  assert.equal(defaultLabel({ ...NOBODY, plan: "Plus" }, [], "codex"), "Plus");
+});
+
 test("a new account goes last", () => {
   const [maxi, terac] = three();
   const next = upsert([maxi], terac);
@@ -130,6 +156,19 @@ test("an empty label goes back to the default", () => {
   assert.equal(next[1].label, "maxi · Terac");
   const ana = rename(three(), "claude:acct-ana:org-ana", "");
   assert.equal(ana[2].label, "ana");
+});
+
+test("an empty label of an account with no email or plan goes back to its provider's name", () => {
+  const claude = account("claude:acct-nobody:acct-nobody", "Home", 0, NOBODY);
+  const codex = {
+    ...account("codex:acct-nobody:acct-nobody", "Work", 1, NOBODY, 2),
+    provider: "codex",
+  };
+  const next = rename(rename([claude, codex], claude.id, "  "), codex.id, "");
+  assert.deepEqual(
+    next.map((item) => item.label),
+    ["Claude", "Codex"],
+  );
 });
 
 test("move goes up and down by one", () => {
