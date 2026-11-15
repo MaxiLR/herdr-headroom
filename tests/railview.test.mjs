@@ -38,12 +38,12 @@ test("at 76 px each account shows its tightest percent, 5h, and its bars", (t) =
   if (!lines) return;
   const all = lines.join("\n");
   assert.deepEqual(texts(lines), ["62%", "5h", "91%", "5h", "23%"], all);
-  assert.ok(withId(lines, "account-0-full"), all);
-  assert.ok(withId(lines, "account-0-short"), all);
-  assert.ok(withId(lines, "account-1-full"), all);
-  assert.ok(withId(lines, "account-1-short"), all);
-  assert.ok(withId(lines, "account-2-full"), all);
-  assert.equal(withId(lines, "account-2-short"), undefined, all);
+  assert.ok(withId(lines, "bar-claude:acct-maxi:org-maxi-full"), all);
+  assert.ok(withId(lines, "bar-claude:acct-maxi:org-maxi-short"), all);
+  assert.ok(withId(lines, "bar-claude:acct-work:org-work-full"), all);
+  assert.ok(withId(lines, "bar-claude:acct-work:org-work-short"), all);
+  assert.ok(withId(lines, "bar-codex:acct-codex-full"), all);
+  assert.equal(withId(lines, "bar-codex:acct-codex-short"), undefined, all);
   assert.equal(withId(lines, "account-3"), undefined, all);
 });
 
@@ -68,11 +68,11 @@ test("at 44 px the numbers are dropped and the marks and bars stay", (t) => {
   if (!lines) return;
   const all = lines.join("\n");
   assert.deepEqual(texts(lines), [], all);
-  assert.ok(withId(lines, "account-0-full"), all);
-  assert.ok(withId(lines, "account-0-short"), all);
-  assert.ok(withId(lines, "account-1-full"), all);
-  assert.ok(withId(lines, "account-1-short"), all);
-  assert.ok(withId(lines, "account-2-full"), all);
+  assert.ok(withId(lines, "bar-claude:acct-maxi:org-maxi-full"), all);
+  assert.ok(withId(lines, "bar-claude:acct-maxi:org-maxi-short"), all);
+  assert.ok(withId(lines, "bar-claude:acct-work:org-work-full"), all);
+  assert.ok(withId(lines, "bar-claude:acct-work:org-work-short"), all);
+  assert.ok(withId(lines, "bar-codex:acct-codex-full"), all);
   assert.equal(labelled(lines, "Claude").length, 2, all);
   assert.equal(labelled(lines, "Codex").length, 1, all);
 });
@@ -85,8 +85,16 @@ test("a signed-out account shows a faded mark and the ! badge, no bars", (t) => 
   if (!lines) return;
   const all = lines.join("\n");
   assert.deepEqual(texts(lines), ["!"], all);
-  assert.equal(withId(lines, "account-0-full"), undefined, all);
-  assert.equal(withId(lines, "account-0-short"), undefined, all);
+  assert.equal(
+    withId(lines, "bar-claude:acct-maxi:org-maxi-full"),
+    undefined,
+    all,
+  );
+  assert.equal(
+    withId(lines, "bar-claude:acct-maxi:org-maxi-short"),
+    undefined,
+    all,
+  );
   const [mark] = labelled(lines, "Claude");
   assert.match(mark ?? "", /\.opacity\[Number\(0\.45\)\]/, all);
   const account = withId(lines, "account-0") ?? "";
@@ -118,11 +126,11 @@ test("a failed read draws its bars at 40 % opacity and keeps the number", (t) =>
   const all = lines.join("\n");
   assert.deepEqual(texts(lines), ["62%", "5h"], all);
   assert.match(
-    withId(lines, "account-0-full") ?? "",
+    withId(lines, "bar-claude:acct-maxi:org-maxi-full") ?? "",
     /\.opacity\[Number\(0\.4\)\]/,
   );
   assert.match(
-    withId(lines, "account-0-short") ?? "",
+    withId(lines, "bar-claude:acct-maxi:org-maxi-short") ?? "",
     /\.opacity\[Number\(0\.4\)\]/,
   );
 });
@@ -130,7 +138,7 @@ test("a failed read draws its bars at 40 % opacity and keeps the number", (t) =>
 test("a healthy account's bars are drawn at full opacity", (t) => {
   const lines = drawForm(t, "rail", { size: MAC, readings: [reading()] });
   if (!lines) return;
-  const full = withId(lines, "account-0-full");
+  const full = withId(lines, "bar-claude:acct-maxi:org-maxi-full");
   assert.ok(full, lines.join("\n"));
   assert.doesNotMatch(full, /\.opacity/);
 });

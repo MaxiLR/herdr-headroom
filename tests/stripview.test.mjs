@@ -48,11 +48,11 @@ const AFTER = statusBar(
 );
 
 const BAR_IDS = [
-  "account-0-full",
-  "account-0-short",
-  "account-1-full",
-  "account-1-short",
-  "account-2-full",
+  "bar-claude:acct-maxi:org-maxi-full",
+  "bar-claude:acct-maxi:org-maxi-short",
+  "bar-claude:acct-terac:org-terac-full",
+  "bar-claude:acct-terac:org-terac-short",
+  "bar-codex:acct-maxilr-full",
 ];
 
 const labelled = (lines, label) =>
@@ -74,7 +74,7 @@ test("three accounts alone in the bar: labels, bars, percentages, no separator",
     all,
   );
   for (const id of BAR_IDS) assert.ok(withId(lines, id), `${id}\n${all}`);
-  assert.equal(withId(lines, "account-2-short"), undefined, all);
+  assert.equal(withId(lines, "bar-codex:acct-maxilr-short"), undefined, all);
   assert.equal(withId(lines, "separator"), undefined, all);
   assert.equal(labelled(lines, "Claude").length, 2, all);
   assert.equal(labelled(lines, "Codex").length, 1, all);
@@ -166,8 +166,16 @@ test("sign in again: a faded mark and the ! badge, no bars, no percentage", (t) 
   if (!lines) return;
   const all = lines.join("\n");
   assert.deepEqual(texts(lines), ["maxi", "!"], all);
-  assert.equal(withId(lines, "account-0-full"), undefined, all);
-  assert.equal(withId(lines, "account-0-short"), undefined, all);
+  assert.equal(
+    withId(lines, "bar-claude:acct-maxi:org-maxi-full"),
+    undefined,
+    all,
+  );
+  assert.equal(
+    withId(lines, "bar-claude:acct-maxi:org-maxi-short"),
+    undefined,
+    all,
+  );
   const [mark] = labelled(lines, "Claude");
   assert.match(mark ?? "", /\.opacity\[Number\(0\.45\)\]/, all);
   const account = withId(lines, "account-0") ?? "";
@@ -191,12 +199,12 @@ test("read failed: the bars at 40 % opacity, the percentage kept", (t) => {
   const all = lines.join("\n");
   assert.deepEqual(texts(lines), ["maxi", "62%", "5h"], all);
   assert.match(
-    withId(lines, "account-0-full") ?? "",
+    withId(lines, "bar-claude:acct-maxi:org-maxi-full") ?? "",
     /\.opacity\[Number\(0\.4\)\]/,
     all,
   );
   assert.match(
-    withId(lines, "account-0-short") ?? "",
+    withId(lines, "bar-claude:acct-maxi:org-maxi-short") ?? "",
     /\.opacity\[Number\(0\.4\)\]/,
     all,
   );
@@ -209,7 +217,7 @@ test("a healthy account's bars are drawn at full opacity", (t) => {
     layout: ALONE,
   });
   if (!lines) return;
-  const full = withId(lines, "account-0-full");
+  const full = withId(lines, "bar-claude:acct-maxi:org-maxi-full");
   assert.ok(full, lines.join("\n"));
   assert.doesNotMatch(full, /\.opacity/);
 });

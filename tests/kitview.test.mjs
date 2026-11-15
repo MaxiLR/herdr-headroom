@@ -215,3 +215,24 @@ test("a pair sets its bars 6 px apart, each mark reaching alike", (t) => {
     assert.equal(measure(line, "bottom"), -3.5, `${id}: ${line}`);
   }
 });
+
+test("a fill and a pace mark move over 250 ms, ease-in-out", (t) => {
+  const lines = drawKit(
+    t,
+    `[bar({ id: "w", fraction: 0.41, level: "normal", pace: 0.5 }, t)]`,
+  );
+  if (!lines) return;
+  const all = lines.join("\n");
+  assert.ok(
+    (withId(lines, "w-fill") ?? "").includes(
+      ":transition(width, 250ms, 0ms, ease-in-out)",
+    ),
+    all,
+  );
+  assert.ok(
+    (withId(lines, "w-pace") ?? "").includes(
+      ":transition(left, 250ms, 0ms, ease-in-out)",
+    ),
+    all,
+  );
+});

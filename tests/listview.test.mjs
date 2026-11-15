@@ -93,10 +93,10 @@ test("a pair row draws both bars with pace marks and the numbers under them", (t
   assert.match(all, /41% · 4d 6h/, lines.join("\n"));
   assert.match(all, /5-hour 62% · 1h 48m/, lines.join("\n"));
   for (const id of [
-    "account-0-full",
-    "account-0-full-pace",
-    "account-0-short",
-    "account-0-short-pace",
+    "bar-claude:acct-maxi:org-maxi-full",
+    "bar-claude:acct-maxi:org-maxi-full-pace",
+    "bar-claude:acct-maxi:org-maxi-short",
+    "bar-claude:acct-maxi:org-maxi-short-pace",
   ]) {
     assert.ok(withId(lines, id), `${id} missing\n${lines.join("\n")}`);
   }
@@ -123,8 +123,11 @@ test("weekly only draws one full bar and says resets in", (t) => {
   });
   if (!lines) return;
   assert.match(sentence(lines), /23% · resets in 5d 2h/, lines.join("\n"));
-  assert.ok(withId(lines, "account-0-full"), lines.join("\n"));
-  assert.equal(withId(lines, "account-0-short"), undefined);
+  assert.ok(
+    withId(lines, "bar-claude:acct-maxi:org-maxi-full"),
+    lines.join("\n"),
+  );
+  assert.equal(withId(lines, "bar-claude:acct-maxi:org-maxi-short"), undefined);
   assert.ok(!texts(lines).includes("5-hour"), lines.join("\n"));
 });
 
@@ -139,8 +142,11 @@ test("5-hour only draws the thin bar alone, its numbers under 5-hour", (t) => {
     /5-hour 62% · resets in 1h 48m/,
     lines.join("\n"),
   );
-  assert.ok(withId(lines, "account-0-short"), lines.join("\n"));
-  assert.equal(withId(lines, "account-0-full"), undefined);
+  assert.ok(
+    withId(lines, "bar-claude:acct-maxi:org-maxi-short"),
+    lines.join("\n"),
+  );
+  assert.equal(withId(lines, "bar-claude:acct-maxi:org-maxi-full"), undefined);
 });
 
 test("at 180 px the 5-hour numbers lose their word", (t) => {
@@ -227,9 +233,18 @@ test("a window that has not started has no pace mark and says so", (t) => {
   });
   if (!lines) return;
   assert.match(sentence(lines), /0% · not started/, lines.join("\n"));
-  assert.ok(withId(lines, "account-0-short"), lines.join("\n"));
-  assert.equal(withId(lines, "account-0-short-pace"), undefined);
-  assert.ok(withId(lines, "account-0-full-pace"), lines.join("\n"));
+  assert.ok(
+    withId(lines, "bar-claude:acct-maxi:org-maxi-short"),
+    lines.join("\n"),
+  );
+  assert.equal(
+    withId(lines, "bar-claude:acct-maxi:org-maxi-short-pace"),
+    undefined,
+  );
+  assert.ok(
+    withId(lines, "bar-claude:acct-maxi:org-maxi-full-pace"),
+    lines.join("\n"),
+  );
 });
 
 test("a first read draws the label and empty tracks, no numbers", (t) => {
@@ -239,8 +254,14 @@ test("a first read draws the label and empty tracks, no numbers", (t) => {
   });
   if (!lines) return;
   assert.ok(texts(lines).includes("maxi"), lines.join("\n"));
-  assert.ok(withId(lines, "account-0-full"), lines.join("\n"));
-  assert.ok(withId(lines, "account-0-short"), lines.join("\n"));
+  assert.ok(
+    withId(lines, "bar-claude:acct-maxi:org-maxi-full"),
+    lines.join("\n"),
+  );
+  assert.ok(
+    withId(lines, "bar-claude:acct-maxi:org-maxi-short"),
+    lines.join("\n"),
+  );
   assert.doesNotMatch(sentence(lines), /%/, lines.join("\n"));
   assert.ok(!ids(lines).some((id) => id.endsWith("-pace")), lines.join("\n"));
 });
@@ -264,11 +285,11 @@ test("a failed read dims the last bars, drops resets and pace marks, says its ag
   assert.doesNotMatch(all, /4d 6h|1h 48m|resets/, lines.join("\n"));
   assert.ok(!ids(lines).some((id) => id.endsWith("-pace")), lines.join("\n"));
   assert.match(
-    withId(lines, "account-0-full") ?? "",
+    withId(lines, "bar-claude:acct-maxi:org-maxi-full") ?? "",
     /\.opacity\[Number\(0\.4\)\]/,
   );
   assert.match(
-    withId(lines, "account-0-short") ?? "",
+    withId(lines, "bar-claude:acct-maxi:org-maxi-short") ?? "",
     /\.opacity\[Number\(0\.4\)\]/,
   );
 });
@@ -287,7 +308,10 @@ test("a failed read with no earlier reading shows empty tracks and the reason", 
   });
   if (!lines) return;
   assert.ok(texts(lines).includes("network"), lines.join("\n"));
-  assert.ok(withId(lines, "account-0-full"), lines.join("\n"));
+  assert.ok(
+    withId(lines, "bar-claude:acct-maxi:org-maxi-full"),
+    lines.join("\n"),
+  );
   assert.doesNotMatch(sentence(lines), /%/, lines.join("\n"));
 });
 
@@ -322,7 +346,10 @@ test("a login ending within 3 days is said on the label line, bars as usual", (t
   });
   if (!lines) return;
   assert.ok(texts(lines).includes("Login ends in 2 days"), lines.join("\n"));
-  assert.ok(withId(lines, "account-0-full-pace"), lines.join("\n"));
+  assert.ok(
+    withId(lines, "bar-claude:acct-maxi:org-maxi-full-pace"),
+    lines.join("\n"),
+  );
   assert.match(sentence(lines), /41% · 4d 6h/);
 });
 
@@ -464,14 +491,14 @@ test("a reached per-model limit is said in place of the week's reset time", (t) 
   assert.doesNotMatch(all, /4d 6h/, lines.join("\n"));
   assert.match(all, /5-hour 62% · 1h 48m/, lines.join("\n"));
   assert.deepEqual(
-    ids(lines).filter((id) => /^account-0-(full|short|model)/.test(id)),
+    ids(lines).filter((id) => /^bar-/.test(id)),
     [
-      "account-0-full",
-      "account-0-full-fill",
-      "account-0-full-pace",
-      "account-0-short",
-      "account-0-short-fill",
-      "account-0-short-pace",
+      "bar-claude:acct-maxi:org-maxi-full",
+      "bar-claude:acct-maxi:org-maxi-full-fill",
+      "bar-claude:acct-maxi:org-maxi-full-pace",
+      "bar-claude:acct-maxi:org-maxi-short",
+      "bar-claude:acct-maxi:org-maxi-short-fill",
+      "bar-claude:acct-maxi:org-maxi-short-pace",
     ],
   );
   assert.match(

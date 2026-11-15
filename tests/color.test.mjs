@@ -32,6 +32,19 @@ test("mix moves a colour a share of the way toward another", () => {
   assert.equal(mix("#c8c8c8", "#000000", 0.25), "#969696");
 });
 
+test("mix moves the alpha of a translucent colour the same share", () => {
+  // Alpha 0x17 = 23: 23 + 232 × 0.06 = 36.92 → 37 = 0x25; red and green
+  // 255 - 17 × 0.06 = 253.98 → 254 = 0xfe; blue 255 - 16 × 0.06 = 254.04 →
+  // 254 = 0xfe. `#eeeeef` has no alpha, so it counts as 0xff.
+  assert.equal(mix("#ffffff17", "#eeeeef", 0.06), "#fefefe25");
+  // Alpha 0x12 = 18: 18 + 237 × 0.06 = 32.22 → 32 = 0x20; red and green
+  // 27 × 0.06 = 1.62 → 2; blue 30 × 0.06 = 1.8 → 2.
+  assert.equal(mix("#00000012", "#1b1b1e", 0.06), "#02020220");
+  // Toward a translucent colour from an opaque one: 255 - 127 × 0.5 = 191.5
+  // → 192 = 0xc0.
+  assert.equal(mix("#000000", "#ffffff80", 0.5), "#808080c0");
+});
+
 test("alpha writes a share of opacity as the colour's last two digits", () => {
   // 255 × 0.1 = 25.5 → 26 = 0x1a.
   assert.equal(alpha("#ffffff", 0.1), "#ffffff1a");

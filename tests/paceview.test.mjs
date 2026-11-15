@@ -31,11 +31,20 @@ test("in the list both marks reach 2 px each way and the bars sit 6 px apart", (
     readings: [reading()],
   });
   if (!lines) return;
-  assertReach(lines, "account-0-full-pace", 3.5);
-  assertReach(lines, "account-0-short-pace", 3.5);
-  assert.equal(measure(withId(lines, "account-0-full"), "h"), 6);
-  assert.equal(measure(withId(lines, "account-0-short"), "h"), 3);
-  assert.equal(measure(column(lines, "account-0"), "gap"), 6);
+  assertReach(lines, "bar-claude:acct-maxi:org-maxi-full-pace", 3.5);
+  assertReach(lines, "bar-claude:acct-maxi:org-maxi-short-pace", 3.5);
+  assert.equal(
+    measure(withId(lines, "bar-claude:acct-maxi:org-maxi-full"), "h"),
+    6,
+  );
+  assert.equal(
+    measure(withId(lines, "bar-claude:acct-maxi:org-maxi-short"), "h"),
+    3,
+  );
+  assert.equal(
+    measure(column(lines, "bar-claude:acct-maxi:org-maxi"), "gap"),
+    6,
+  );
 });
 
 test("the detail view's bars follow the list", (t) => {
@@ -44,7 +53,7 @@ test("the detail view's bars follow the list", (t) => {
     readings: [reading()],
   });
   if (!lines) return;
-  assertReach(lines, "account-0-window-0-pace", 3.5);
+  assertReach(lines, "bar-claude:acct-maxi:org-maxi-7d-pace", 3.5);
 });
 
 for (const [form, size] of [
@@ -54,10 +63,19 @@ for (const [form, size] of [
   test(`in the ${form} both marks reach 1 px each way and the bars sit 4 px apart`, (t) => {
     const lines = drawForm(t, form, { size, readings: [reading()] });
     if (!lines) return;
-    assertReach(lines, "account-0-full-pace", 2.5);
-    assertReach(lines, "account-0-short-pace", 2.5);
-    assert.equal(measure(withId(lines, "account-0-full"), "h"), 5);
-    assert.equal(measure(withId(lines, "account-0-short"), "h"), 3);
-    assert.equal(measure(column(lines, "account-0"), "gap"), 4);
+    assertReach(lines, "bar-claude:acct-maxi:org-maxi-full-pace", 2.5);
+    assertReach(lines, "bar-claude:acct-maxi:org-maxi-short-pace", 2.5);
+    assert.equal(
+      measure(withId(lines, "bar-claude:acct-maxi:org-maxi-full"), "h"),
+      5,
+    );
+    assert.equal(
+      measure(withId(lines, "bar-claude:acct-maxi:org-maxi-short"), "h"),
+      3,
+    );
+    assert.equal(
+      measure(column(lines, "bar-claude:acct-maxi:org-maxi"), "gap"),
+      4,
+    );
   });
 }

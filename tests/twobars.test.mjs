@@ -29,8 +29,8 @@ for (const [form, size] of [
     const lines = drawForm(t, form, { size, readings: [AHEAD] });
     if (!lines) return;
     const all = lines.join("\n");
-    assert.ok(withId(lines, "account-0-full"), all);
-    assert.ok(withId(lines, "account-0-short"), all);
+    assert.ok(withId(lines, "bar-claude:acct-maxi:org-maxi-full"), all);
+    assert.ok(withId(lines, "bar-claude:acct-maxi:org-maxi-short"), all);
     assert.equal(
       lines.find((line) => /:id\[Str\("[^"]*-model-/.test(line)),
       undefined,

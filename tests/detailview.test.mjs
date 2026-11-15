@@ -200,22 +200,27 @@ test("three accounts at 380 px: every window with its numbers, reset and clock t
 
   // Each window's bar: full for weekly windows, thin for the 5-hour one,
   // each with its pace mark.
-  assert.match(withId(lines, "account-0-window-0") ?? "", /\.h\[Number\(6/);
-  assert.match(withId(lines, "account-0-window-1") ?? "", /\.h\[Number\(3/);
-  assert.match(withId(lines, "account-0-window-2") ?? "", /\.h\[Number\(6/);
+  assert.match(withId(lines, `bar-${MAXI}-7d`) ?? "", /\.h\[Number\(6/);
+  assert.match(withId(lines, `bar-${MAXI}-5h`) ?? "", /\.h\[Number\(3/);
+  assert.match(withId(lines, `bar-${MAXI}-7d:sonnet`) ?? "", /\.h\[Number\(6/);
   for (const id of [
-    "account-0-window-0-pace",
-    "account-0-window-1-pace",
-    "account-0-window-2-pace",
-    "account-1-window-1-pace",
-    "account-2-window-0-pace",
+    `bar-${MAXI}-7d-pace`,
+    `bar-${MAXI}-5h-pace`,
+    `bar-${MAXI}-7d:sonnet-pace`,
+    `bar-${TERAC}-5h-pace`,
+    `bar-${MAXILR}-7d-pace`,
   ]) {
     assert.ok(withId(lines, id), `${id} missing\n${show(lines)}`);
   }
-  assert.equal(withId(lines, "account-0-window-3"), undefined);
+  assert.deepEqual(
+    ids(lines).filter(
+      (id) => id.startsWith(`bar-${MAXI}-`) && !/-(fill|pace)$/.test(id),
+    ),
+    [`bar-${MAXI}-7d`, `bar-${MAXI}-5h`, `bar-${MAXI}-7d:sonnet`],
+  );
   // The bar is under its line.
   assert.ok(
-    at(lines, { id: "account-0-window-0" }) > at(lines, "Mon 20:30"),
+    at(lines, { id: `bar-${MAXI}-7d` }) > at(lines, "Mon 20:30"),
     show(lines),
   );
 });
@@ -252,8 +257,8 @@ test("while reading, the refresh control is Herdr's spinner", (t) => {
 test("a weekly-only account draws one full bar and no 5-hour line", (t) => {
   const lines = draw(t, { readings: [maxilr()] });
   if (!lines) return;
-  assert.ok(withId(lines, "account-0-window-0"), show(lines));
-  assert.equal(withId(lines, "account-0-window-1"), undefined);
+  assert.ok(withId(lines, `bar-${MAXILR}-7d`), show(lines));
+  assert.equal(withId(lines, `bar-${MAXILR}-5h`), undefined);
   assert.ok(!texts(lines).includes("5-hour"), show(lines));
   assert.match(sentence(lines), /Weekly 23% resets in 5d 2h Tue 16:30/);
 });
@@ -271,7 +276,7 @@ test("at 560 px each window is one line: name, bar, percentage, reset, clock", (
   const lines = draw(t, { width: 560, readings: [maxi()] });
   if (!lines) return;
   const name = at(lines, "Weekly");
-  const bar = at(lines, { id: "account-0-window-0" });
+  const bar = at(lines, { id: `bar-${MAXI}-7d` });
   const percent = at(lines, "41%");
   assert.ok(name >= 0 && bar > name && percent > bar, show(lines));
   assert.ok(at(lines, "resets in 4d 6h") > percent, show(lines));
@@ -351,9 +356,9 @@ test("a failed read dims the bars, drops pace marks and says its age", (t) => {
   assert.ok(drawn.includes("41%"), show(lines));
   assert.ok(!ids(lines).some((id) => id.endsWith("-pace")), show(lines));
   for (const id of [
-    "account-0-window-0",
-    "account-0-window-1",
-    "account-0-window-2",
+    `bar-${MAXI}-7d`,
+    `bar-${MAXI}-5h`,
+    `bar-${MAXI}-7d:sonnet`,
   ]) {
     assert.match(withId(lines, id) ?? "", /\.opacity\[Number\(0\.4\)\]/, id);
   }
@@ -387,9 +392,9 @@ test("a window that has not started reads 0% and not started, no pace mark", (t)
   });
   if (!lines) return;
   assert.match(sentence(lines), /5-hour 0% not started/, show(lines));
-  assert.ok(withId(lines, "account-0-window-1"), show(lines));
-  assert.equal(withId(lines, "account-0-window-1-pace"), undefined);
-  assert.ok(withId(lines, "account-0-window-0-pace"), show(lines));
+  assert.ok(withId(lines, `bar-${MAXI}-5h`), show(lines));
+  assert.equal(withId(lines, `bar-${MAXI}-5h-pace`), undefined);
+  assert.ok(withId(lines, `bar-${MAXI}-7d-pace`), show(lines));
 });
 
 test("a first read draws the account's header lines only", (t) => {
