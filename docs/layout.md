@@ -69,8 +69,11 @@ With `form` set to `auto`, before its first measure the block is a list; after:
 - **Strip** when the block is under 48 px tall (a status bar): a 1 px line on
   its top edge and one line with an item per account: its mark, label, bars
   and the percent of the fuller of its weekly and 5-hour window, and the red
-  dot on the mark for a per-model window at its limit. When the line is too
-  narrow the labels go first, then the bars; the marks and percents stay.
+  dot on the mark for a per-model window at its limit. A label is at most
+  92 px, cut with an ellipsis. When the line is too narrow the labels go
+  first, then the bars, then the accounts at the end: `+N` after the last one
+  shown says how many are left out (`N more accounts` on hover). The first
+  account always stays.
 - **List** otherwise: a 1 px line on its top edge, a "Limits" header and, per
   account, its mark and label, two bars at most (a full bar for the weekly
   window over a thin one for the 5-hour window), and one line of numbers. A
@@ -81,31 +84,34 @@ limit`, or `2 models at limit`). When accounts are cut off below, "3 more"
   Below 220 px wide the 5-hour numbers lose their word.
 - **Account**, only when `form` is `account` with an `account`: that account
   alone. Its mark, label and plan, the age of its reading (`Read 2m ago`, or a
-  failed read's `12m old · network`) with a refresh control that reads it
-  again, and its email and organization. Then every window the plan has, per
-  model and Codex's additional limits too, each with its percentage, its time
-  to reset and the reset's clock time; when a Claude login ends; each account
-  state as the list shows it (empty tracks before the first read, the last
-  bars dimmed after a failed read, no bars and "Login ended …" for an account
-  that must sign in again); and, when a bar has its pace mark, the line "The
-  line on a bar marks how much of its time has passed." Under them its
-  actions, Rename, Sign in again and Remove, and a last row, "Accounts and
-  settings", that opens the detail view. Remove asks first with the mod's own
-  dialog, over the view, with Cancel and a red Remove. The view closes itself
-  when it opens another view (the connect dialog, the detail view) and when
-  its account is no longer connected.
+  failed read's `12m old · network`) with a refresh control that reads it again,
+  and its email and organization. Then every window the plan has, per model and
+  Codex's additional limits too, each with its percentage, its time to reset and
+  the reset's clock time; when a Claude login ends (`Login ends Dec 5`, or
+  `Login ends in 2 days` in its last 3 days); each account state as the list
+  shows it (empty tracks before the first read, the last bars dimmed after a
+  failed read, no bars and "Login ended …" for an account that must sign in
+  again); and, when a bar has its pace mark, the line "The line on a bar marks
+  how much of its time has passed." Under them its actions, Rename, Sign in
+  again and Remove, and a last row, "Accounts and settings", that opens the
+  detail view. Remove asks first with the mod's own dialog, over the view, with
+  Cancel and a red Remove. The view closes itself when it opens another view
+  (the connect dialog, the detail view) and when its account is no longer
+  connected.
 - **Detail**, only when `form` is `detail`: the one place to manage every
   account. Every window of every account, per model and Codex's additional
-  limits too, the reset's clock time, when a login ends, the refresh control,
-  the notifications switch, "Show in status bar" (only when the shown layout
-  has a block with the id `headroom-strip`; it shows and hides that block) and
-  Connect account. Each account has an up and a down arrow that move it in
-  the order, and beside them Rename and Remove behind three dots ("Rename or
-  remove"): Rename turns the label into a field in place, Remove asks as the
-  account view does. From 520 px wide each window is one line; below 340 px
-  the clock time is left out and Connect account is a square with the plus
-  alone. It closes itself when it opens an account view or the connect
-  dialog.
+  limits too, the reset's clock time, when a login ends as the account view says
+  it, the refresh control, the notifications switch, "Show in status bar" (only
+  when the shown layout has a block with the id `headroom-strip`; it shows and
+  hides that block) and Connect account. A click anywhere on a switch's line
+  turns it. After a failed read an account keeps its last bars dimmed with their
+  percents alone, as the account view does. Each account has an up and a down
+  arrow that move it in the order, and beside them Rename and Remove behind
+  three dots ("Rename or remove"): Rename turns the label into a field in place,
+  Remove asks as the account view does. From 520 px wide each window is one
+  line; below 340 px the clock time is left out and Connect account is a square
+  with the plus alone. It closes itself when it opens an account view or the
+  connect dialog.
 
 A click on an account in the list, the rail, the strip or the detail view
 opens its account view as a 380 px popup. The list's header control and the

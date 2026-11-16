@@ -129,7 +129,8 @@ started`) and the reset's clock time (`16:20` today, else `Mon 20:30`) at
   the clock time goes. Windows: the general ones longest first, then per
   model, then the others.
 - `Login ends Dec 5` at 11.5 px, 12 px below the windows, in the high number
-  colour in its last 3 days; `Login ended Nov 9` for a signed-out account.
+  colour in its last 3 days (`Login ends in 2 days`); `Login ended Nov 9` for a
+  signed-out account.
 - Footer, 1 px `border` rule above, 16 px by 12 px: a 30 by 18 px switch
   (`accent` with an `accent_foreground` knob when on, `input` with a `muted`
   knob when off), "Notify at 90% and at the limit" at 12 px in `muted`; when
@@ -174,8 +175,10 @@ started`), and the clock time on the right. A failed read: the bars dimmed,
 
 **Remove dialog** (a 380 px dialog over the view that asks). Ground `popover`,
 18 px padding, text 13 px. Title "Remove work?" at 15 px semibold, `Esc` at 11
-px in `dim` on the right; 6 px below, "Its stored login is deleted from this
-computer." in `muted` on 19 px lines; 20 px below, at the right, 8 px apart, two
+px in `dim` on the right; 10 px below, the account's 14 px mark and, 6 px
+after it, its email in `foreground` ("A Claude account" or "A Codex account"
+without one); 6 px below, "Its stored login is deleted from this computer." in
+`muted` on 19 px lines; 20 px below, at the right, 8 px apart, two
 32 px buttons with 8 px corners, 14 px in, 12.5 px medium: Cancel on `raised`
 with an `input` border, and Remove on `blocked` in `solid_foreground`. Enter
 removes, Esc cancels.
@@ -228,9 +231,10 @@ at that account's provider). A popup that opens another view closes itself
 first: the account view when it opens the detail view or the connect dialog,
 the detail view when it opens an account view or the connect dialog. The
 refresh control reads every account now (in the account view, that account)
-and is Herdr's spinner until done; an account read less than 30 seconds ago is
-not read again. The switches turn toasts on and off for every copy, and show
-and hide the strip's block. The detail view's arrows move an account up or
+and is Herdr's spinner while that read runs; an account read less than 30
+seconds ago is not read again, and a refresh that reads none does not spin.
+The switches turn toasts on and off for every copy, and show and hide the
+strip's block. The detail view's arrows move an account up or
 down; its three dots give Rename and Remove. In the account view: Rename
 (Enter keeps, Esc leaves it), Sign in again, Remove. Remove asks first in the
 mod's own dialog ("Remove work?" / "Its stored login is deleted from this
@@ -246,7 +250,7 @@ strip the hover names the account and gives its numbers:
 a per-model window at its limit adds `, Fable at limit`.
 
 **What moves.** A new reading slides the fill's width and the pace mark over
-400 ms, ease-out. The switch's knob slides over 160 ms. The spinner turns
+250 ms, ease-in-out. The switch's knob slides over 160 ms. The spinner turns
 natively. Countdowns redraw once a minute.
 
 **Freshness.** Each copy checks once a minute and when it starts. An idle
@@ -387,9 +391,9 @@ width: 380, height, props: { form: "account", account } }`, `{ mod:
   login ends 30 days after sign-in whatever happens. A Codex weekly-only plan
   reports its week in `primary_window`. Error text is built from a known kind,
   never from a response body.
-- **Sizes.** Text cannot be measured: the strip estimates a glyph at 0.6 of the
-  font size. The strip never resizes its block; the list and the rail resize
-  theirs only with `fit`, to their first two accounts, and remember the height
+- **Sizes.** Text cannot be measured: the strip estimates an ASCII glyph at 0.6
+  of the font size and any other at 1.1. The strip never resizes its block;
+  the list and the rail resize theirs only with `fit`, to their first two accounts, and remember the height
   in `headroom.fit` so a dragged boundary stays until the height needed
   changes.
 - **Layout names.** Herdr lists a layout under its file name, but only shows

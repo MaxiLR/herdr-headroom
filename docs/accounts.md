@@ -46,22 +46,25 @@ Open.
 Connecting an account that is already connected (the same provider account and
 organization) replaces its login and keeps its label and place. A new account
 goes last, labelled with its email's name part; when another account already
-has that label, its organization, or its plan, is added. One email with several
-organizations gives one account per organization.
+has that label, its organization, or its plan, is added. Without an email it is
+labelled with its organization, or its plan, and with none of these with the
+provider's name ("Claude", "Codex"). One email with several organizations gives
+one account per organization.
 
 A Claude login ends 30 days after sign-in, whatever happens in between: the
-account view and the detail view show the date, and the row warns during the
-last 3 days. A Codex login does not end on its own. When a provider rejects a
-login, the account shows "Sign in again"; its stored login is kept until it
+account view and the detail view show the date (`Login ends Dec 5`) and, in its
+last 3 days, the days left (`Login ends in 2 days`), as the row warns. A
+Codex login does not end on its own. When a provider rejects a login, the account shows "Sign in again"; its stored login is kept until it
 signs in again or is removed.
 
 An account's view holds its own actions, and the detail view holds Rename and
 Remove for every account. "Sign in again" opens the connect dialog at the
 account's provider, and signing in replaces the account's login. Rename turns
 the label into a field: Enter keeps the new label, Esc leaves it as it was.
-Remove asks first, in the mod's own dialog ("Remove work?" / "Its stored login
-is deleted from this computer.", Cancel and a red Remove; Enter removes, Esc
-cancels), then deletes the account's login from the vault.
+Remove asks first, in the mod's own dialog ("Remove work?", the account named
+under it by its mark and email, or "A Claude account" without one, then "Its
+stored login is deleted from this computer.", Cancel and a red Remove; Enter
+removes, Esc cancels), then deletes the account's login from the vault.
 
 Readings are fetched for every account every 5 minutes while it is idle, and
 more often while it is active: a Claude account every 2 minutes, a Codex
