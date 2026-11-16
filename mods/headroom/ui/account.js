@@ -142,13 +142,18 @@ function closeOnce(view) {
   view.host.closeOverlay(view.props.overlay);
 }
 
-/** Reads this account now; the control is Herdr's spinner until it is done. */
+/**
+ * Reads this account now; while a read runs the control is Herdr's spinner
+ * until it is done. A refresh the store skips (a read started less than 30 s
+ * ago) changes nothing.
+ */
 export function refresh(view, cx) {
   const state = stateOf(view);
   const reading = accountOf(view);
   if (state.refreshing || reading === null) return;
-  state.refreshing = true;
   const read = view.store.refresh(reading.id);
+  if (!read.started) return;
+  state.refreshing = true;
   cx.notify();
   cx.spawn(async (cx) => {
     try {
@@ -215,7 +220,8 @@ function header(reading, shown, view) {
     );
 }
 
-// The label and the plan, on one baseline.
+// The label and the plan, on one baseline. The plan is cut before the label
+// is.
 function title(reading, shown, t) {
   return h_flex()
     .flex_1()
@@ -234,7 +240,13 @@ function title(reading, shown, t) {
     )
     .when(shown.plan !== null, (el) =>
       el.child(
-        div().flex_none().text_size(12).text_color(t.muted).child(shown.plan),
+        div()
+          .min_w(0)
+          .flex_shrink(1000)
+          .truncate()
+          .text_size(12)
+          .text_color(t.muted)
+          .child(shown.plan),
       ),
     );
 }

@@ -7,7 +7,7 @@
 // before it opens another view.
 import { div, svg } from "gpui-kit";
 import { Switch, h_flex, v_flex } from "gpui-base";
-import { openAccount, openRemove } from "../logic/account.js";
+import { accountViewOf, openAccount, openRemove } from "../logic/account.js";
 import {
   ageText,
   arrowsOf,
@@ -22,12 +22,7 @@ import { untilReset } from "../logic/pace.js";
 import { setNotify } from "../logic/publish.js";
 import { barOf, isThin, rowOf } from "../logic/rows.js";
 import { STRIP_BLOCK, stripBlock } from "../logic/strip.js";
-import {
-  failedText,
-  loginText,
-  percentText,
-  shortDate,
-} from "../logic/words.js";
+import { failedText, percentText } from "../logic/words.js";
 import { open as openConnect } from "./connect.js";
 import { labelField, labelInput } from "./field.js";
 import {
@@ -177,15 +172,19 @@ function closeSelf(view) {
   view.host.closeOverlay(view.props.overlay);
 }
 
-// Reads every account now; the control is Herdr's spinner until it is done.
+// Reads every account now; while a read runs the control is Herdr's spinner
+// until it is done. A refresh the store skips (every read started less than
+// 30 s ago) changes nothing.
 function refresh(view, cx) {
   const state = stateOf(view);
   if (state.refreshing) return;
+  const read = view.store.refresh();
+  if (!read.started) return;
   state.refreshing = true;
   cx.notify();
   cx.spawn(async (cx) => {
     try {
-      await view.store.refresh();
+      await read;
     } finally {
       state.refreshing = false;
       cx.notify();
@@ -443,14 +442,21 @@ function whoLine(account, t) {
     );
 }
 
-// One window: its name, percentage, reset and clock time, and its bar.
+// One window: its name, percentage, reset and clock time, and its bar. A
+// failed read's (`dimmed`) keeps its last percentage alone, in the quiet
+// colour, as the account view does: its reset may have passed since.
 function windowView(window, id, view, { dimmed, wide, narrow }) {
   const t = view.theme;
   const level = levelOf(window);
   const { fraction, pace } = barOf(window, view.now);
-  const left = untilReset(window, view.now);
-  const percent = level === "limit" ? "At limit" : percentText(window);
-  const reset = left === null ? "not started" : `resets in ${left}`;
+  const left = dimmed ? null : untilReset(window, view.now);
+  const percent =
+    level === "limit" && !dimmed ? "At limit" : percentText(window);
+  const reset = dimmed
+    ? null
+    : left === null
+      ? "not started"
+      : `resets in ${left}`;
   const clock =
     left === null || narrow ? null : clockText(window.resetsAt, view.now);
   const track = bar(
@@ -472,7 +478,7 @@ function windowView(window, id, view, { dimmed, wide, narrow }) {
     .child(window.label);
   const number = div()
     .flex_none()
-    .text_color(levelText(level, t))
+    .text_color(levelText(dimmed ? "normal" : level, t))
     .whitespace_nowrap()
     .child(percent);
   const resets = div()
@@ -480,7 +486,7 @@ function windowView(window, id, view, { dimmed, wide, narrow }) {
     .text_size(11.5)
     .text_color(t.muted)
     .whitespace_nowrap()
-    .child(reset);
+    .when(reset !== null, (el) => el.child(reset));
   const time = div()
     .flex_none()
     .text_size(11.5)
@@ -516,30 +522,24 @@ function windowView(window, id, view, { dimmed, wide, narrow }) {
         .text_size(12)
         .child(name.flex_1())
         .child(number)
-        .child(resets)
+        .when(reset !== null, (el) => el.child(resets))
         .when(clock !== null, (el) => el.child(time.child(clock))),
     )
     .child(track);
 }
 
-// `Login ends Dec 5`, in the high colour in its last 3 days; `Login ended
-// Nov 9` for an account that must sign in again; nothing before the first
-// read, which draws the account's header lines only.
-function loginLine(reading, row, view) {
-  const t = view.theme;
-  const text =
-    row.state === "signed-out"
-      ? loginText(reading, view.now)
-      : row.state !== "first" && reading.loginEndsAt != null
-        ? `Login ends ${shortDate(reading.loginEndsAt)}`
-        : null;
-  if (text === null) return null;
+// The login line of the account view's `login`: `Login ends Dec 5`; `Login
+// ends in 2 days` in the high colour in its last 3 days; `Login ended Nov 9`
+// for an account that must sign in again; nothing before the first read,
+// which draws the account's header lines only.
+function loginLine(login, t) {
+  if (login === null) return null;
   return div()
     .mt(12)
     .h(16)
     .text_size(11.5)
-    .text_color(row.loginWarning ? levelText("high", t) : t.muted)
-    .child(text);
+    .text_color(login.warning ? levelText("high", t) : t.muted)
+    .child(login.text);
 }
 
 function section(reading, index, account, view) {
@@ -554,7 +554,7 @@ function section(reading, index, account, view) {
   const windows =
     row.state === "signed-out" ? [] : windowsInOrder(reading.windows);
   const who = whoLine(account, t);
-  const login = loginLine(reading, row, view);
+  const login = loginLine(accountViewOf(reading, account, view.now).login, t);
   return v_flex()
     .id(`account-${index}`)
     .role("button")

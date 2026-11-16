@@ -364,20 +364,21 @@ export function createStore(host, { providers = allProviders } = {}) {
 
     // Reads account `id`, or every account, the person asked to; one whose
     // read started less than 30 seconds ago is not read again, though a read
-    // still running is waited for.
+    // still running is waited for. The promise, which settles once the reads
+    // end, says at once in `started` whether a read runs: one started or one
+    // still running joined; false when every account was skipped.
     refresh(id) {
       const now = host.now();
-      return readAll(
-        accounts
-          .map((account) => account.id)
-          .filter((one) => !id || one === id)
-          .filter(
-            (one) =>
-              !signedOut(one) &&
-              (running.has(one) ||
-                !(now - (attempts.get(one) ?? -Infinity) < MANUAL_GAP_MS)),
-          ),
-      );
+      const ids = accounts
+        .map((account) => account.id)
+        .filter((one) => !id || one === id)
+        .filter(
+          (one) =>
+            !signedOut(one) &&
+            (running.has(one) ||
+              !(now - (attempts.get(one) ?? -Infinity) < MANUAL_GAP_MS)),
+        );
+      return Object.assign(readAll(ids), { started: ids.length > 0 });
     },
   };
 }
