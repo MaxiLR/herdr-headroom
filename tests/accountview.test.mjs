@@ -616,3 +616,94 @@ test("a long plan is the part of the title that gives way; the label stays as it
     `div .min_w[Number(0.0)] .truncate :role[Str("heading")] .text_size[Number(14.0)] .font_semibold .text_color[Str("${foreground}")]`,
   );
 });
+
+// Text longer than any place in a 380 px popup can hold.
+const LONG_LABEL = "Personal Claude account for weekends and side projects";
+const LONG_EMAIL = "maximilian.lindner-rodriguez@terac-engineering.example";
+const LONG_WINDOW = "Weekly · Claude Opus with extended thinking and tool use";
+const CONTROLS = new Set(["Refresh"]);
+
+// The line of the element that draws `text`.
+function elementOf(lines, text) {
+  const at = lines.findIndex(
+    (line) => line.trim() === `text ${JSON.stringify(text)}`,
+  );
+  assert.ok(at > 0, `no ${text}\n${show(lines)}`);
+  return lines[at - 1];
+}
+
+const tooltip = (text) => `:tooltip[Str(${JSON.stringify(text)})]`;
+
+// Every tooltip drawn.
+const tooltips = (lines) =>
+  lines.flatMap((line) =>
+    [...line.matchAll(/:tooltip\[Str\(("(?:[^"\\]|\\.)*")\)\]/g)].map((match) =>
+      JSON.parse(match[1]),
+    ),
+  );
+
+test("a label the account view can cut carries its whole text as a tooltip; work carries none", (t) => {
+  assert.equal(LONG_LABEL.length, 54);
+  const long = drawAccount(t, TERAC, [teracWhole({ label: LONG_LABEL })]);
+  if (!long) return;
+  assert.ok(
+    elementOf(long, LONG_LABEL).includes(tooltip(LONG_LABEL)),
+    show(long),
+  );
+  const work = drawAccount(t, TERAC, [teracWhole({ label: "work" })]);
+  assert.doesNotMatch(elementOf(work, "work"), /:tooltip/);
+});
+
+test("a long plan carries its whole text as a tooltip", (t) => {
+  const plan = "Self serve business prolite";
+  const lines = drawAccount(t, TERAC, [teracWhole({ plan })]);
+  if (!lines) return;
+  assert.ok(elementOf(lines, plan).includes(tooltip(plan)), show(lines));
+});
+
+test("a long email beside an organization carries its whole text as a tooltip", (t) => {
+  const lines = drawForm(t, "account", {
+    props: { form: "account", account: TERAC, overlay: "overlay-1" },
+    size: { width: 380, height: 640 },
+    now: THURSDAY,
+    readings: [teracWhole()],
+    accounts: ACCOUNTS.map((account) =>
+      account.id === TERAC ? { ...account, email: LONG_EMAIL } : account,
+    ),
+  });
+  if (!lines) return;
+  assert.ok(
+    elementOf(lines, LONG_EMAIL).includes(tooltip(LONG_EMAIL)),
+    show(lines),
+  );
+});
+
+test("a long window name carries its whole text as a tooltip", (t) => {
+  const lines = drawAccount(t, MAXI, [
+    maxiWhole({
+      windows: [
+        win("7d:opus", 0.18, MONDAY_2030, { label: LONG_WINDOW }),
+        win("7d", 0.41, MONDAY_2030),
+      ],
+    }),
+  ]);
+  if (!lines) return;
+  assert.ok(
+    elementOf(lines, LONG_WINDOW).includes(tooltip(LONG_WINDOW)),
+    show(lines),
+  );
+});
+
+test("the usual accounts' labels, plans, emails, organizations and window names carry no tooltip", (t) => {
+  for (const [id, whole] of [
+    [MAXI, maxiWhole],
+    [TERAC, teracWhole],
+    [MAXILR, maxilrWhole],
+  ]) {
+    const lines = drawAccount(t, id, [whole()]);
+    if (!lines) return;
+    for (const text of tooltips(lines)) {
+      assert.ok(CONTROLS.has(text), `${text}\n${show(lines)}`);
+    }
+  }
+});

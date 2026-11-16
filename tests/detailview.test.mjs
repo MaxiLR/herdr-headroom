@@ -815,3 +815,97 @@ for (const [read, turning] of [
     }
   });
 }
+
+// Text longer than any place in a 380 px popup can hold.
+const LONG_LABEL = "Personal Claude account for weekends and side projects";
+const LONG_EMAIL = "maximilian.lindner-rodriguez@terac-engineering.example";
+const LONG_WINDOW = "Weekly · Claude Opus with extended thinking and tool use";
+const CONTROLS = new Set([
+  "Refresh",
+  "Move up",
+  "Move down",
+  "Rename or remove",
+  "Connect account",
+]);
+
+// The line of the element that draws `text`.
+function elementOf(lines, text) {
+  const at = lines.findIndex(
+    (line) => line.trim() === `text ${JSON.stringify(text)}`,
+  );
+  assert.ok(at > 0, `no ${text}\n${show(lines)}`);
+  return lines[at - 1];
+}
+
+const tooltip = (text) => `:tooltip[Str(${JSON.stringify(text)})]`;
+
+// Every tooltip drawn.
+const tooltips = (lines) =>
+  lines.flatMap((line) =>
+    [...line.matchAll(/:tooltip\[Str\(("(?:[^"\\]|\\.)*")\)\]/g)].map((match) =>
+      JSON.parse(match[1]),
+    ),
+  );
+
+test("a label the detail view can cut carries its whole text as a tooltip; work carries none", (t) => {
+  assert.equal(LONG_LABEL.length, 54);
+  const lines = draw(t, {
+    readings: [maxi({ label: LONG_LABEL }), terac({ label: "work" })],
+  });
+  if (!lines) return;
+  assert.ok(
+    elementOf(lines, LONG_LABEL).includes(tooltip(LONG_LABEL)),
+    show(lines),
+  );
+  assert.doesNotMatch(elementOf(lines, "work"), /:tooltip/);
+});
+
+test("a long plan, a long email beside an organization and a long window name each carry their tooltip", (t) => {
+  const plan = "Self serve business prolite";
+  const lines = draw(t, {
+    readings: [
+      terac({
+        plan,
+        windows: [
+          win("7d", 0.78, SATURDAY_1830),
+          win("7d:opus", 0.18, SATURDAY_1830, { label: LONG_WINDOW }),
+        ],
+      }),
+    ],
+    accounts: ACCOUNTS.map((account) =>
+      account.id === TERAC ? { ...account, email: LONG_EMAIL } : account,
+    ),
+  });
+  if (!lines) return;
+  for (const text of [plan, LONG_EMAIL, LONG_WINDOW]) {
+    assert.ok(elementOf(lines, text).includes(tooltip(text)), show(lines));
+  }
+});
+
+test("from 520 px a window's name has a 120 px column: a name that fits at 380 px is cut there", (t) => {
+  // 16 ASCII letters and a middle dot at 12 px: 128.4 px, over 120 px and
+  // under the 136.8 px the name has beside its numbers at 380 px.
+  const name = "Weekly · Opus 4.5";
+  const readings = [
+    maxi({
+      windows: [
+        win("5h", 0.62, TODAY_1618),
+        win("7d:opus", 0.18, MONDAY_2030, { label: name }),
+        win("7d", 0.41, MONDAY_2030),
+      ],
+    }),
+  ];
+  const narrow = draw(t, { readings });
+  if (!narrow) return;
+  assert.doesNotMatch(elementOf(narrow, name), /:tooltip/);
+  const wide = draw(t, { width: 560, readings });
+  assert.ok(elementOf(wide, name).includes(tooltip(name)), show(wide));
+});
+
+test("the usual accounts' labels, plans, emails, organizations and window names carry no tooltip", (t) => {
+  const lines = draw(t, { readings: [maxi(), terac(), maxilr()] });
+  if (!lines) return;
+  for (const text of tooltips(lines)) {
+    assert.ok(CONTROLS.has(text), `${text}\n${show(lines)}`);
+  }
+});

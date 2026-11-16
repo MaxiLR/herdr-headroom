@@ -616,3 +616,78 @@ test("Sign in again has room around it, taken back, and keeps its click, underli
     assert.ok(control.includes(part), `${part}\n${lines.join("\n")}`);
   }
 });
+
+// A label of 54 letters: 421.2 px at 13 px, wider than any list.
+const LONG_LABEL = "Personal Claude account for weekends and side projects";
+
+// The line of the element that draws `text`.
+function elementOf(lines, text) {
+  const at = lines.findIndex(
+    (line) => line.trim() === `text ${JSON.stringify(text)}`,
+  );
+  assert.ok(at > 0, `no ${text}\n${lines.join("\n")}`);
+  return lines[at - 1];
+}
+
+test("a label the list can cut carries its whole text as a tooltip; work carries none", (t) => {
+  assert.equal(LONG_LABEL.length, 54);
+  const lines = drawForm(t, "list", {
+    size: SIZE,
+    readings: [
+      reading({ id: "claude:long", label: LONG_LABEL }),
+      reading({ id: "claude:work", label: "work" }),
+    ],
+  });
+  if (!lines) return;
+  assert.ok(
+    elementOf(lines, LONG_LABEL).includes(
+      `:tooltip[Str(${JSON.stringify(LONG_LABEL)})]`,
+    ),
+    lines.join("\n"),
+  );
+  assert.doesNotMatch(elementOf(lines, "work"), /:tooltip/);
+});
+
+test("a list not measured yet is taken as 268 px: the long label carries its tooltip, work none", (t) => {
+  const lines = drawForm(t, "list", {
+    readings: [
+      reading({ id: "claude:long", label: LONG_LABEL }),
+      reading({ id: "claude:work", label: "work" }),
+    ],
+  });
+  if (!lines) return;
+  assert.ok(
+    elementOf(lines, LONG_LABEL).includes(
+      `:tooltip[Str(${JSON.stringify(LONG_LABEL)})]`,
+    ),
+    lines.join("\n"),
+  );
+  assert.doesNotMatch(elementOf(lines, "work"), /:tooltip/);
+});
+
+test("Sign in again shares the label's line: a label that fits alone is cut beside it", (t) => {
+  // 25 letters at 13 px, 195 px: under the 214 px a 268 px list leaves the
+  // label alone, over the 120.2 px it leaves beside Sign in again.
+  const label = "Claude for weekend things";
+  const lines = drawForm(t, "list", {
+    size: SIZE,
+    readings: [
+      reading({ id: "claude:a", label }),
+      reading({
+        id: "claude:b",
+        label,
+        status: "signed-out",
+        loginEndsAt: new Date(2026, 10, 9, 15, 0).getTime(),
+      }),
+    ],
+  });
+  if (!lines) return;
+  const tips = lines.filter((line) =>
+    line.includes(`:tooltip[Str(${JSON.stringify(label)})]`),
+  );
+  assert.equal(tips.length, 1, lines.join("\n"));
+  const signedOut = lines.findIndex((line) =>
+    line.includes(':id[Str("account-1")]'),
+  );
+  assert.ok(lines.indexOf(tips[0]) > signedOut, lines.join("\n"));
+});
