@@ -199,7 +199,7 @@ const TWELVE = Array.from({ length: 12 }, (_, index) => ({
   tag: "5h",
 }));
 const ITEM = 57.84;
-const plus = (more) => String(more).length * 7.08;
+const plus = (more) => (String(more).length + 1) * 7.08;
 // The hand sum of `shown` items beside "+more", 14 px each end, 16 apart.
 const handSum = (shown, more) =>
   28 + shown * ITEM + (shown - 1) * 16 + (more > 0 ? 16 + plus(more) : 0);
