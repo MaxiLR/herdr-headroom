@@ -33,7 +33,7 @@
 # works from any directory. It holds this checkout's path; an install from
 # another checkout points it there. A headroom file this installer did not
 # write is never overwritten, and the step says when ~/.local/bin is not on
-# PATH.
+# PATH. Without HOME no command is written, and the step says so.
 #
 # It prints one line per step: a mark, the step and what happened. --dry-run
 # prints what each step would do, with every file it would change, add or
@@ -50,7 +50,7 @@ LAYOUTS="$HERDR_HOME/layouts"
 MAIN="$LAYOUTS/main.json"
 BLOCK='{"id": "headroom", "type": "block", "size": {"px": 111}, "min": 90, "content": {"mod": "headroom", "props": {"fit": "headroom"}}}'
 STRIP='{"id": "headroom-strip", "type": "block", "hidden": true, "size": {"weight": 2}, "min": 120, "max": 720, "content": {"mod": "headroom", "props": {"form": "strip", "fit": "headroom-strip"}}}'
-BIN="$HOME/.local/bin"
+BIN="${HOME:-}/.local/bin"
 COMMAND="$BIN/headroom"
 COMMAND_MARK="# The headroom command, written by herdr-headroom's scripts/install.sh."
 
@@ -267,9 +267,9 @@ layout_report() {
   esac
 }
 
-# What to do with the command: write, same (it already runs this checkout) or
-# foreign (something there this installer did not write). Decided before
-# anything changes, so a dry run reports the same.
+# What to do with the command: write, same (it already runs this checkout),
+# foreign (something there this installer did not write) or no-home. Decided
+# before anything changes, so a dry run reports the same.
 launcher="$(
   printf '#!/usr/bin/env bash\n%s\n' "$COMMAND_MARK"
   printf 'checkout=%q\n' "$MODULE_DIR"
@@ -282,7 +282,9 @@ fi
 exec "$checkout/scripts/headroom" "$@"
 EOF
 )"
-if [[ ! -e "$COMMAND" && ! -L "$COMMAND" ]]; then
+if [[ -z "${HOME:-}" ]]; then
+  command_state=no-home
+elif [[ ! -e "$COMMAND" && ! -L "$COMMAND" ]]; then
   command_state=write
 elif [[ ! -f "$COMMAND" || -L "$COMMAND" ]] || ! grep -qxF -e "$COMMAND_MARK" "$COMMAND"; then
   command_state=foreign
@@ -297,6 +299,10 @@ command_report() {
   local title="Install the headroom command" mark=ok what
   [[ "$1" == written ]] || mark=plan
   case "$command_state" in
+    no-home)
+      step warn "$title" "HOME is not set; no command written"
+      return
+      ;;
     foreign)
       step warn "$title" "$COMMAND exists and this installer did not write it; left as it is"
       return

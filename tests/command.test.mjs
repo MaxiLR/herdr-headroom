@@ -153,6 +153,12 @@ test("an install writes ~/.local/bin/headroom, executable, and names the step", 
   assert.ok(statSync(command(box)).mode & 0o100, "the command is executable");
   assert.match(result.output, /headroom command/i);
   assert.ok(result.output.includes(command(box)), result.output);
+  // Nothing else appears in HOME: no rc file, no other folder.
+  assert.deepEqual(Object.keys(snapshot(box.home)), [
+    ".local/",
+    ".local/bin/",
+    ".local/bin/headroom",
+  ]);
   // The command reaches this checkout's scripts/headroom.
   const ran = exec(box, command(box), [], { cwd: box.home });
   assert.equal(ran.status, 2, ran.output);
@@ -200,7 +206,19 @@ test("a pull that cannot fast-forward installs nothing and exits 1", (t) => {
 
   assert.equal(result.status, 1, result.output);
   assert.deepEqual(snapshot(box.herdr), before);
+  assert.match(result.output, /fast-forward/i, "git's reason is shown");
   assert.match(result.output, /nothing was installed/i);
+});
+
+test("without HOME the mod is installed and the step says no command is written", (t) => {
+  const box = sandbox(t);
+
+  const result = exec(box, script, [], { env: { HOME: undefined } });
+
+  assert.equal(result.status, 0, result.output);
+  assert.ok(existsSync(join(installed(box), "mod.json")), result.output);
+  assert.match(result.output, /HOME is not set/);
+  assert.deepEqual(snapshot(box.home), {});
 });
 
 test("headroom with anything but update prints the usage, exits 2 and changes nothing", (t) => {

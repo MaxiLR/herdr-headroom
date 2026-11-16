@@ -35,6 +35,7 @@ does not exist.
   another checkout points it there. A `headroom` file the installer did not
   write is left as it is, and the step says so. The step also says when
   `~/.local/bin` is not on `PATH`; add it to run `headroom` from any directory.
+  Without `HOME` it writes no command and says so.
 - **Layout** (`--layout`, default name `herdr-headroom`). A name must match
   `^[A-Za-z0-9_-]+$`: Herdr lists a layout under its file name and switches
   only to one whose name uses letters, digits, `-` or `_`. Any other name is
@@ -88,11 +89,11 @@ branch that is checked out, then that checkout's `scripts/install.sh`, without
 `--layout`: the steps above, with the previous install backed up. With nothing
 to pull it installs the checkout again. When the pull fails (no upstream, a
 branch that diverged, local edits in the way, no network) it shows what git
-said, installs nothing and exits 1. `headroom` with anything but `update`
-prints its usage and exits 2.
+said, installs nothing and exits 1.
 
-When the checkout has moved or is gone, `headroom` says so and exits 1; run
-`scripts/install.sh` from where the checkout is now.
+`headroom` with anything but `update` prints its usage and exits 2. When the
+checkout has moved or is gone, `headroom` says so instead, whatever it was
+given, and exits 1; run `scripts/install.sh` from where the checkout is now.
 
 ## Undoing
 
