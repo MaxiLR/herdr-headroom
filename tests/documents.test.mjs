@@ -499,3 +499,100 @@ test("PRODUCT.md fits Limits to two accounts, puts the strip behind a switch and
   assert.match(evidence, /[Nn]ot tried live/);
   assert.doesNotMatch(evidence, /has not been tried live yet/);
 });
+
+test("DESIGN.md, design.json and RECIPE.md move the bars over 250 ms ease-in-out, not 400 ms", () => {
+  const bars = section(
+    read("DESIGN.md"),
+    "The Pair of Bars (signature)",
+  ).replace(/\s+/g, " ");
+  assert.match(bars, /250 ms `?ease-in-out`?/);
+  assert.doesNotMatch(read("DESIGN.md"), /400 ms/);
+  const design = JSON.parse(read(".impeccable/design.json"));
+  assert.equal(design.schemaVersion, 2);
+  const motion = (name) =>
+    design.extensions.motion.find((entry) => entry.name === name);
+  assert.equal(motion("reading").value, "250ms ease-in-out");
+  assert.match(motion("switch").purpose, /fade/i);
+  assert.doesNotMatch(read(".impeccable/design.json"), /\.4s ease-out/);
+  const recipe = read("RECIPE.md").replace(/\s+/g, " ");
+  assert.match(recipe, /250 ms,? ease-in-out/);
+  assert.doesNotMatch(recipe, /400 ms/);
+});
+
+test("DESIGN.md's switch cross-fades its colours and turns from its whole line", () => {
+  const toggle = section(read("DESIGN.md"), "Switch").replace(/\s+/g, " ");
+  assert.match(toggle, /cross-fade/);
+  assert.match(toggle, /160 ms `?ease-out`?/);
+  assert.match(toggle, /4 by 6 px/);
+  assert.match(toggle, /line turns it|line toggles it/);
+  const design = JSON.parse(read(".impeccable/design.json"));
+  const sw = design.components.find((c) => c.refersTo === "switch-on");
+  assert.match(sw.description, /fade/i);
+  assert.match(sw.description, /line/);
+});
+
+test("DESIGN.md answers a press at once and keeps Copy and Connect one width", () => {
+  const doc = read("DESIGN.md").replace(/\s+/g, " ");
+  assert.match(doc, /pointer-down/);
+  assert.match(doc, /0\.72/);
+  assert.match(doc, /0\.7 opacity/);
+  assert.match(doc, /6 % toward `foreground`/);
+  const buttons = section(read("DESIGN.md"), "Buttons").replace(/\s+/g, " ");
+  assert.match(buttons, /"Copied"[^.]*2 s/);
+  assert.match(buttons, /5 by 6 px/);
+  assert.match(buttons, /one width/);
+});
+
+test("the strip leaves out and counts the accounts it cannot show, its labels at most 92 px", () => {
+  const layout = section(read("DESIGN.md"), "Layout").replace(/\s+/g, " ");
+  assert.match(layout, /\b92 px\b/);
+  assert.match(layout, /"\+N"/);
+  assert.match(layout, /"N more accounts"/);
+  assert.doesNotMatch(layout, /marks and percentages always stay/);
+  const guide = read("docs/layout.md").replace(/\s+/g, " ");
+  assert.match(guide, /`\+N`/);
+  assert.match(guide, /92 px/);
+  assert.doesNotMatch(guide, /the marks and percents stay/);
+  const design = JSON.parse(read(".impeccable/design.json"));
+  assert.ok(
+    design.components.some((c) => /\+N/.test(c.description)),
+    "design.json describes the strip's +N",
+  );
+});
+
+test("Remove's dialog names the account under its question and shows the deletion running", () => {
+  const dialog = section(read("DESIGN.md"), "Remove's Dialog").replace(
+    /\s+/g,
+    " ",
+  );
+  for (const px of [10, 14, 6, 12]) {
+    assert.match(dialog, new RegExp(`\\b${px} px\\b`), `${px} px`);
+  }
+  assert.match(dialog, /"A Claude account"/);
+  assert.match(dialog, /"A Codex account"/);
+  assert.match(dialog, /45 %/);
+  const layout = section(read("DESIGN.md"), "Layout").replace(/\s+/g, " ");
+  assert.match(layout, /Remove's dialog\.\*\*[^.]*10 px/);
+  const design = JSON.parse(read(".impeccable/design.json"));
+  const danger = design.components.find((c) => c.refersTo === "button-danger");
+  assert.match(danger.description, /email/);
+  assert.match(danger.description, /spinner/);
+  const accounts = read("docs/accounts.md").replace(/\s+/g, " ");
+  assert.match(accounts, /Remove[^.]*mark and (its )?email/);
+});
+
+test("the account pages name the provider as the last label and the days in a login's last three days", () => {
+  const accounts = read("docs/accounts.md").replace(/\s+/g, " ");
+  assert.match(accounts, /provider's name/);
+  assert.match(accounts, /`Login ends in (N|\d+) days`/);
+  const layout = read("docs/layout.md").replace(/\s+/g, " ");
+  assert.match(layout, /`Login ends in (N|\d+) days`/);
+  const recipe = read("RECIPE.md");
+  const detail = recipe
+    .slice(
+      recipe.indexOf("**Detail view**"),
+      recipe.indexOf("**Account view**"),
+    )
+    .replace(/\s+/g, " ");
+  assert.match(detail, /`Login ends in 2 days`/);
+});
