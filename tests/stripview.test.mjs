@@ -373,3 +373,66 @@ for (const [name, readingOf] of [
     }
   });
 }
+
+// Twelve accounts at 62 % of a 5-hour window. At 408 px even marks and
+// percentages do not fit: each item is 12 + 6 + 21.24 + 6 + 12.6 = 57.84 px,
+// so 28 + 4 × 57.84 + 3 × 16 + 16 + "+8" 14.16 = 337.52 px holds four and a
+// fifth would make 411.36.
+const TWELVE = Array.from({ length: 12 }, (_, index) =>
+  reading({ id: `claude:acct-${index}:org-${index}`, label: `maxi ${index}` }),
+);
+
+test("twelve accounts in 408 px: four drawn, then +8, which is not a control", (t) => {
+  const lines = drawForm(t, "strip", {
+    size: { width: 408, height: 28 },
+    readings: TWELVE,
+    layout: ALONE,
+  });
+  if (!lines) return;
+  const all = lines.join("\n");
+  const words = JSON.stringify("8 more accounts");
+  const at = lines.findIndex((line) =>
+    line.includes(`:tooltip[Str(${words})]`),
+  );
+  assert.ok(at >= 0, all);
+  const more = lines[at];
+  assert.ok(more.includes(`:accessibility_label[Str(${words})]`), all);
+  assert.doesNotMatch(more, /:on_click/, all);
+  assert.doesNotMatch(more, /:role\[Str\("button"\)\]/, all);
+  assert.doesNotMatch(more, /\.cursor_pointer/, all);
+  assert.doesNotMatch(more, /:hover\(|:active\(/, all);
+  assert.deepEqual(texts(lines).slice(-1), ["+8"], all);
+  assert.deepEqual(
+    texts(lines),
+    ["62%", "5h", "62%", "5h", "62%", "5h", "62%", "5h", "+8"],
+    all,
+  );
+  for (const index of [0, 1, 2, 3]) {
+    assert.ok(withId(lines, `account-${index}`), `account-${index}\n${all}`);
+  }
+  for (const index of [4, 5, 6, 7, 8, 9, 10, 11]) {
+    assert.equal(withId(lines, `account-${index}`), undefined, all);
+  }
+  const after = lines
+    .slice(at + 1)
+    .filter((line) => line.includes(':id[Str("account-'));
+  assert.deepEqual(after, [], all);
+});
+
+test("a long label is drawn at most 92 px wide, cut with an ellipsis", (t) => {
+  const label = "maxi at the Terac organisation, ops";
+  const lines = drawForm(t, "strip", {
+    size: { width: 640, height: 28 },
+    readings: [reading({ label })],
+    layout: ALONE,
+  });
+  if (!lines) return;
+  const all = lines.join("\n");
+  const at = lines.findIndex((line) =>
+    line.trim().startsWith(`text ${JSON.stringify(label)}`),
+  );
+  assert.ok(at > 0, all);
+  const holder = lines[at - 1];
+  assert.match(holder, /\.max_w\[Number\(92(\.0)?\)\]/, all);
+  assert.match(holder, /\.truncate|\.text_ellipsis/, all);
+});

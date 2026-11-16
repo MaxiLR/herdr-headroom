@@ -22,7 +22,7 @@ export const STRIP = {
 // rather than clipping one.
 const GLYPH = 0.6;
 
-const textWidth = (text, size) => text.length * size * GLYPH;
+export const textWidth = (text, size) => text.length * size * GLYPH;
 
 /** The id of the strip's block in the installed layout. */
 export const STRIP_BLOCK = "headroom-strip";
@@ -116,4 +116,12 @@ function itemWidth(item, density) {
     parts.reduce((sum, part) => sum + part, 0) +
     (parts.length - 1) * STRIP.inner
   );
+}
+
+export function stripFit(width, items, separator) {
+  return {
+    density: stripDensity(width, items, separator),
+    shown: items.length,
+    more: 0,
+  };
 }
