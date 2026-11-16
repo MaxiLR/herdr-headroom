@@ -1,11 +1,17 @@
 // Colours worked out from the theme without Herdr: mixes, alphas, the track
 // and each level's fill and number. `t` is the theme: `#rrggbb` by name.
 
-/** `#rrggbb`: `a` moved `share` (0 to 1) of the way toward `b`. */
+/**
+ * `a` moved `share` (0 to 1) of the way toward `b`, alpha too: `#rrggbbaa`
+ * when either has an alpha (a colour without one counts as `ff`), else
+ * `#rrggbb`.
+ */
 export function mix(a, b, share) {
   const from = channels(a);
   const to = channels(b);
-  return `#${from.map((value, i) => hex(value + (to[i] - value) * share)).join("")}`;
+  const mixed = from.map((value, i) => hex(value + (to[i] - value) * share));
+  const translucent = a.length > 7 || b.length > 7;
+  return `#${(translucent ? mixed : mixed.slice(0, 3)).join("")}`;
 }
 
 /** `#rrggbbaa`: the colour at `share` (0 to 1) of full opacity. */
@@ -37,9 +43,12 @@ export function levelText(level, t) {
   return mix(t[LEVEL_COLOR[level]], t.foreground, 0.22);
 }
 
+// Red, green, blue and alpha, 0 to 255; a colour without alpha is opaque.
 function channels(color) {
-  return [1, 3, 5].map((start) =>
-    Number.parseInt(color.slice(start, start + 2), 16),
+  return [1, 3, 5, 7].map((start) =>
+    start < color.length
+      ? Number.parseInt(color.slice(start, start + 2), 16)
+      : 255,
   );
 }
 

@@ -30,7 +30,15 @@ import {
 } from "../logic/words.js";
 import { open as openConnect } from "./connect.js";
 import { labelField, labelInput } from "./field.js";
-import { bar, levelText, mark, spinner } from "./kit.js";
+import {
+  bar,
+  levelText,
+  mark,
+  pressedGround,
+  pressedStep,
+  pressedWord,
+  spinner,
+} from "./kit.js";
 import { moreMenu } from "./menu.js";
 
 const REFRESH = "mods/headroom/icons/refresh.svg";
@@ -230,6 +238,7 @@ function header(view) {
         .rounded(6)
         .cursor_pointer()
         .hover((s) => s.bg(t.hover))
+        .active(pressedGround(t))
         .on_click((_event, cx) => refresh(view, cx))
         .child(
           refreshing
@@ -292,7 +301,8 @@ function labelLine(reading, row, index, view) {
   return named.child(controls(reading, index, view));
 }
 
-// The label's field, the account view's own; a click in it stays there.
+// The label's field, the account view's own; a press or a click in it stays
+// there.
 function nameField(reading, input, index, view) {
   return labelField(
     input,
@@ -304,9 +314,12 @@ function nameField(reading, input, index, view) {
     view.theme,
   )
     .id(`account-${index}-name`)
+    .on_mouse_down("left", (_event, cx) => cx.stop_propagation())
     .on_click((_event, cx) => cx.stop_propagation());
 }
 
+// Sign in again, a word in the account's line: neither its press nor its
+// click reaches the account.
 function signInAgain(reading, index, view) {
   const t = view.theme;
   return div()
@@ -318,6 +331,8 @@ function signInAgain(reading, index, view) {
     .text_color(t.accent)
     .cursor_pointer()
     .hover((s) => s.underline())
+    .active(pressedWord())
+    .on_mouse_down("left", (_event, cx) => cx.stop_propagation())
     .on_click((_event, cx) => {
       cx.stop_propagation();
       closeSelf(view);
@@ -361,9 +376,9 @@ function controls(reading, index, view) {
 }
 
 // The account's up (`delta` -1) or down (1) arrow; dimmed, and doing
-// nothing, when the account cannot move that way. Neither lets the click
-// reach the account: a dimmed one is disabled, so its own click never runs,
-// and it stops the press instead.
+// nothing, when the account cannot move that way. Neither lets the press or
+// the click reach the account: a dimmed one is disabled, so its own click
+// never runs, and the press is stopped either way.
 function arrow(reading, index, delta, enabled, view) {
   const t = view.theme;
   const up = delta < 0;
@@ -380,12 +395,14 @@ function arrow(reading, index, delta, enabled, view) {
     .items_center()
     .justify_center()
     .rounded(6)
-    .when(enabled, (el) => el.cursor_pointer().hover((s) => s.bg(t.hover)))
-    .when(!enabled, (el) =>
+    .when(enabled, (el) =>
       el
-        .opacity(0.35)
-        .on_mouse_down("left", (_event, cx) => cx.stop_propagation()),
+        .cursor_pointer()
+        .hover((s) => s.bg(t.hover))
+        .active(pressedGround(t)),
     )
+    .when(!enabled, (el) => el.opacity(0.35))
+    .on_mouse_down("left", (_event, cx) => cx.stop_propagation())
     .on_click((_event, cx) => {
       cx.stop_propagation();
       moveAccount(view, reading.id, delta);
@@ -542,6 +559,7 @@ function section(reading, index, account, view) {
     .border_color(t.border)
     .cursor_pointer()
     .hover((s) => s.bg(t.hover))
+    .active(pressedGround(t))
     .on_click(() => {
       closeSelf(view);
       openAccount(view, reading.id);
@@ -549,8 +567,8 @@ function section(reading, index, account, view) {
     .child(labelLine(reading, row, index, view))
     .when(who !== null, (el) => el.child(who))
     .children(
-      windows.map((window, k) =>
-        windowView(window, `account-${index}-window-${k}`, view, layout),
+      windows.map((window) =>
+        windowView(window, `bar-${reading.id}-${window.id}`, view, layout),
       ),
     )
     .when(login !== null, (el) => el.child(login));
@@ -667,6 +685,7 @@ function connectButton(view) {
     .bg(t.raised)
     .cursor_pointer()
     .hover((s) => s.bg(t.selected))
+    .active(pressedStep(t))
     .on_click(() => {
       closeSelf(view);
       openConnect(view, {});

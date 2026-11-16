@@ -9,7 +9,14 @@ import {
   startSignIn,
   stopsIn,
 } from "../logic/connect.js";
-import { levelText, mark, mono, spinner } from "./kit.js";
+import {
+  levelText,
+  mark,
+  mono,
+  pressedGround,
+  pressedSolid,
+  spinner,
+} from "./kit.js";
 
 // Herdr's own chevrons, as its sidebar draws them.
 const BACK = "mods/workspace-chrome/chevron-left.svg";
@@ -176,6 +183,7 @@ function header(view, title, withBack, t) {
           .text_color(t.muted)
           .cursor_pointer()
           .hover((s) => s.bg(t.hover).text_color(t.foreground))
+          .active(pressedGround(t))
           .on_click((_event, cx) => {
             back(view);
             cx.notify();
@@ -228,6 +236,7 @@ function choice(view, provider, t) {
     .border_color(t.input)
     .cursor_pointer()
     .hover((s) => s.bg(t.hover))
+    .active(pressedGround(t))
     .on_click((_event, cx) => {
       choose(view, provider, cx);
       cx.notify();
@@ -437,6 +446,7 @@ function mini(id, text, t) {
     .text_color(t.foreground)
     .cursor_pointer()
     .hover((s) => s.bg(t.hover))
+    .active(pressedGround(t))
     .child(text);
 }
 
@@ -460,6 +470,7 @@ function buttons(view, primary, t) {
       button("cancel", "Cancel", false, t)
         .cursor_pointer()
         .hover((s) => s.opacity(0.88))
+        .active(pressedSolid())
         .on_click(() => dismiss(view)),
     )
     .when(Boolean(primary), (el) => el.child(primary));
@@ -496,6 +507,7 @@ function connectButton(view, disabled, checking, t) {
       el
         .cursor_pointer()
         .hover((s) => s.opacity(0.88))
+        .active(pressedSolid())
         .on_click((_event, cx) => {
           submit(view);
           cx.notify();
@@ -507,6 +519,7 @@ function startAgain(view, provider, t) {
   return button("start-again", "Start again", true, t)
     .cursor_pointer()
     .hover((s) => s.opacity(0.88))
+    .active(pressedSolid())
     .on_click((_event, cx) => {
       choose(view, provider, cx);
       cx.notify();

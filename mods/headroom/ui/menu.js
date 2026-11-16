@@ -2,9 +2,9 @@
 // open: a pencil and Rename, a trash can and Remove. gpui-base's `Popover`
 // owns the press on the control, the anchoring and the dismissal (a press
 // outside, Escape); the caller holds which menu is open, as plain data.
-import { svg } from "gpui-kit";
+import { div, svg } from "gpui-kit";
 import { Popover, h_flex, v_flex } from "gpui-base";
-import { levelText, moreIcon } from "./kit.js";
+import { levelText, moreIcon, pressedGround } from "./kit.js";
 
 const PENCIL = "mods/headroom/icons/pencil.svg";
 const TRASH = "mods/headroom/icons/trash.svg";
@@ -14,8 +14,9 @@ const NAME = "Rename or remove";
 /** The menu's width, as Herdr's own menus of short words are. */
 const WIDTH = 176;
 
-// A click stays where it is: neither the control nor its menu opens the
-// account view of the account they are drawn in.
+// A click or a press stays where it is: neither the control nor its menu
+// opens the account view of the account they are drawn in, or looks like a
+// press on it.
 const keep = (_event, cx) => cx.stop_propagation();
 
 /**
@@ -37,14 +38,23 @@ export function moreMenu({ index, open, onOpenChange, onChoose }, t) {
     .cursor_pointer()
     .when(open, (el) => el.bg(t.hover))
     .hover((s) => s.bg(t.hover))
+    .active(pressedGround(t))
     .on_click(keep)
     .child(open ? moreIcon(14, t).text_color(t.foreground) : moreIcon(14, t));
-  return Popover.new(`account-${index}-menu`)
-    .anchor("top_right")
-    .open(open)
-    .on_open_change((value, cx) => onOpenChange(value, cx))
-    .trigger(trigger)
-    .when(open, (el) => el.content(surface(index, onChoose, t)));
+  // The Popover owns the press on the dots, so the press is stopped around
+  // it, once the Popover has had it: the menu still opens, and the account
+  // does not look pressed.
+  return div()
+    .flex_none()
+    .on_mouse_down("left", keep)
+    .child(
+      Popover.new(`account-${index}-menu`)
+        .anchor("top_right")
+        .open(open)
+        .on_open_change((value, cx) => onOpenChange(value, cx))
+        .trigger(trigger)
+        .when(open, (el) => el.content(surface(index, onChoose, t))),
+    );
 }
 
 function surface(index, onChoose, t) {
@@ -53,6 +63,7 @@ function surface(index, onChoose, t) {
     .id(`account-${index}-menu-items`)
     .role("menu")
     .accessibility_label(NAME)
+    .on_mouse_down("left", keep)
     .on_click(keep)
     .mt(2)
     .w(WIDTH)
@@ -97,6 +108,7 @@ function item({ index, key, k, icon, word }, colors, onChoose, t) {
     .text_color(colors.word)
     .cursor_pointer()
     .hover((s) => s.bg(t.hover))
+    .active(pressedGround(t))
     .on_click((_event, cx) => {
       cx.stop_propagation();
       onChoose(key, cx);

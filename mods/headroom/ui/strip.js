@@ -16,7 +16,7 @@ import {
   stripSeparator,
 } from "../logic/strip.js";
 import { open as openConnect } from "./connect.js";
-import { dotted, levelText, mark, pair } from "./kit.js";
+import { dotted, levelText, mark, pair, pressedGround } from "./kit.js";
 
 // A signed-out account's mark is faded; a failed read's bars are dimmed by
 // the pair itself.
@@ -44,7 +44,7 @@ function badge(t) {
     .child("!");
 }
 
-function bars(row, index, view) {
+function bars(reading, row, view) {
   const unread = row.state === "first" && !row.weekly && !row.short;
   return div()
     .w(STRIP.bars)
@@ -52,7 +52,7 @@ function bars(row, index, view) {
     .child(
       pair(
         {
-          id: `account-${index}`,
+          id: `bar-${reading.id}`,
           full: row.weekly
             ? barOf(row.weekly, view.now)
             : unread
@@ -87,6 +87,7 @@ function account(reading, row, item, index, density, view) {
     .rounded(5)
     .cursor_pointer()
     .hover((s) => s.bg(t.hover))
+    .active(pressedGround(t))
     .on_click(() => openAccount(view, reading.id))
     .child(
       dotted(
@@ -106,7 +107,7 @@ function account(reading, row, item, index, density, view) {
     )
     .when(item.badge, (el) => el.child(badge(t)))
     .when(item.bars && density !== "no-bars", (el) =>
-      el.child(bars(row, index, view)),
+      el.child(bars(reading, row, view)),
     )
     .when(item.percent !== null, (el) =>
       el.child(
@@ -136,6 +137,7 @@ function connect(view) {
     .rounded(5)
     .cursor_pointer()
     .hover((s) => s.bg(t.hover).text_color(t.foreground))
+    .active(pressedGround(t))
     .on_click(() => openConnect(view))
     .child("Connect account");
 }

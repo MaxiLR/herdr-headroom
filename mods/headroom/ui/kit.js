@@ -1,10 +1,10 @@
 // The small drawing kit every form is built from: the bar with its pace
 // mark, the pair of bars, the provider marks and their dot, the spinner, the
-// band on a scrolling area's bottom edge and the fonts.
+// band on a scrolling area's bottom edge, the fonts and the pressed looks.
 import { Background, div, PathBuilder, svg } from "gpui-kit";
 import { v_flex } from "gpui-base";
 import { settings } from "herdr";
-import { alpha, levelFill, track } from "../logic/color.js";
+import { alpha, levelFill, mix, track } from "../logic/color.js";
 
 export { levelFill, levelText, track } from "../logic/color.js";
 
@@ -32,7 +32,33 @@ const MARKS = {
 };
 
 // A new reading slides the fill and the pace mark there natively.
-const MOTION = { duration: 400, easing: "ease-out" };
+const MOTION = { duration: 250, easing: "ease-in-out" };
+
+// What a pressable looks like while it is pressed, for `.active(...)`: at
+// once, on pointer-down, with no transition. Each matches its hover.
+
+/** Rows and small controls that hover on `hover`: the `selected` ground. */
+export function pressedGround(t) {
+  return (s) => s.bg(t.selected);
+}
+
+/**
+ * Buttons that hover on `selected`: one step past it, `selected` moved 6 %
+ * toward the text colour, as translucent as `selected` is.
+ */
+export function pressedStep(t) {
+  return (s) => s.bg(mix(t.selected, t.foreground, 0.06));
+}
+
+/** Solid, red and dialog buttons, which hover at 88 %: 72 % opacity. */
+export function pressedSolid() {
+  return (s) => s.opacity(0.72);
+}
+
+/** "Sign in again" as a word in a row: 70 % opacity. */
+export function pressedWord() {
+  return (s) => s.opacity(0.7);
+}
 
 // The pace mark: a 2 px tick reaching the same distance beyond its bar above
 // and below, in a 1.5 px halo of the ground behind it.

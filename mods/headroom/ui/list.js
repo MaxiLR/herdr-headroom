@@ -13,7 +13,15 @@ import { hintCount, moreWords, wheel } from "../logic/hint.js";
 import { listRowOf } from "../logic/list.js";
 import { open as openConnect } from "./connect.js";
 import { open as openDetail } from "./detail.js";
-import { edgeBand, levelText, mark, moreIcon, pair } from "./kit.js";
+import {
+  edgeBand,
+  levelText,
+  mark,
+  moreIcon,
+  pair,
+  pressedGround,
+  pressedWord,
+} from "./kit.js";
 
 const PLUS = "mods/workspace-chrome/plus.svg";
 const CHEVRON = "mods/workspace-chrome/chevron-down.svg";
@@ -46,6 +54,7 @@ function header(view) {
         .rounded(6)
         .cursor_pointer()
         .hover((s) => s.bg(t.hover))
+        .active(pressedGround(t))
         .on_click(() => openDetail(view))
         .child(moreIcon(14, t)),
     );
@@ -98,6 +107,7 @@ function empty(view) {
             .text_color(t.foreground)
             .cursor_pointer()
             .hover((s) => s.bg(t.hover))
+            .active(pressedGround(t))
             .on_click(() => openConnect(view, {}))
             .child(svg(PLUS).size(12).flex_none().text_color(t.muted))
             .child("Connect account"),
@@ -143,6 +153,9 @@ function labelLine(row, index, view) {
           .text_color(t.accent)
           .cursor_pointer()
           .hover((s) => s.underline())
+          .active(pressedWord())
+          // A press here does not look like a press on the row.
+          .on_mouse_down("left", (_event, cx) => cx.stop_propagation())
           .on_click((_event, cx) => {
             cx.stop_propagation();
             openConnect(view, { provider: row.provider, account: row.id });
@@ -221,6 +234,7 @@ function account(reading, index, view) {
       .rounded(8)
       .cursor_pointer()
       .hover((s) => s.bg(t.hover))
+      .active(pressedGround(t))
       .on_click(() => openAccount(view, reading.id))
       // A reorder can change the first two accounts without changing how tall
       // all of them are together.
@@ -242,7 +256,7 @@ function account(reading, index, view) {
         el.child(
           pair(
             {
-              id,
+              id: `bar-${reading.id}`,
               full: row.pair.full,
               short: row.pair.short,
               dimmed: row.dimmed,

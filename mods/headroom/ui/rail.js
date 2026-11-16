@@ -13,7 +13,14 @@ import { hintCount, moreWords, wheel } from "../logic/hint.js";
 import { railNumber, railTooltip, showsNumber } from "../logic/rail.js";
 import { barOf, rowOf } from "../logic/rows.js";
 import { open as openConnect } from "./connect.js";
-import { dotted, edgeBand, levelText, mark, pair } from "./kit.js";
+import {
+  dotted,
+  edgeBand,
+  levelText,
+  mark,
+  pair,
+  pressedGround,
+} from "./kit.js";
 
 const PLUS = "mods/workspace-chrome/plus.svg";
 
@@ -77,12 +84,12 @@ function line(row, index, wide, t) {
     .when(Boolean(end), (el) => el.child(end));
 }
 
-function bars(row, index, view) {
+function bars(reading, row, view) {
   const now = view.now;
   const unread = row.state === "first" && !row.weekly && !row.short;
   return pair(
     {
-      id: `account-${index}`,
+      id: `bar-${reading.id}`,
       full: row.weekly ? barOf(row.weekly, now) : unread ? UNREAD : null,
       short: row.short ? barOf(row.short, now) : null,
       heights: [5, 3],
@@ -121,6 +128,7 @@ function account(reading, index, view, wide) {
       .rounded(6)
       .cursor_pointer()
       .hover((s) => s.bg(t.hover))
+      .active(pressedGround(t))
       .on_click(() => openAccount(view, reading.id))
       // A reorder can change the first two accounts without changing how tall
       // all of them are together.
@@ -129,7 +137,7 @@ function account(reading, index, view, wide) {
       )
       .child(line(row, index, wide, t))
       .when(row.state !== "signed-out", (el) =>
-        el.child(bars(row, index, view)),
+        el.child(bars(reading, row, view)),
       )
   );
 }
@@ -151,6 +159,7 @@ function connect(view) {
     .text_color(t.muted)
     .cursor_pointer()
     .hover((s) => s.bg(t.hover).text_color(t.foreground))
+    .active(pressedGround(t))
     .on_click(() => openConnect(view))
     .child(svg(PLUS).size(14).flex_none());
 }

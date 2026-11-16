@@ -5,6 +5,7 @@
 import { div } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { removeQuestion } from "../logic/account.js";
+import { pressedSolid } from "./kit.js";
 import {
   cancelRemove,
   closeRemove,
@@ -112,5 +113,6 @@ function button(id, text, colours) {
     .whitespace_nowrap()
     .cursor_pointer()
     .hover((s) => s.opacity(0.88))
+    .active(pressedSolid())
     .child(text);
 }

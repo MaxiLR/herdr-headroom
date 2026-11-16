@@ -18,7 +18,16 @@ import {
 import { open as openConnect } from "./connect.js";
 import { open as openDetail } from "./detail.js";
 import { labelField, labelInput } from "./field.js";
-import { bar, levelText, mark, pair, spinner } from "./kit.js";
+import {
+  bar,
+  levelText,
+  mark,
+  pair,
+  pressedGround,
+  pressedSolid,
+  pressedStep,
+  spinner,
+} from "./kit.js";
 
 const CHEVRON = "mods/workspace-chrome/chevron-right.svg";
 const REFRESH = "mods/headroom/icons/refresh.svg";
@@ -196,6 +205,7 @@ function header(reading, shown, view) {
         .rounded(6)
         .cursor_pointer()
         .hover((s) => s.bg(t.hover))
+        .active(pressedGround(t))
         .on_click((_event, cx) => refresh(view, cx))
         .child(
           turning
@@ -441,6 +451,7 @@ function action(id, text, t, { solid = false, color = t.foreground } = {}) {
     .whitespace_nowrap()
     .cursor_pointer()
     .hover((s) => (solid ? s.opacity(0.88) : s.bg(t.selected)))
+    .active(solid ? pressedSolid() : pressedStep(t))
     .child(text);
 }
 
@@ -464,6 +475,7 @@ function detailRow(view) {
     .text_color(t.muted)
     .cursor_pointer()
     .hover((s) => s.bg(t.hover))
+    .active(pressedGround(t))
     .on_click(() => {
       closeOnce(view);
       openDetail(view);
