@@ -287,9 +287,12 @@ const fableAtLimit = (overrides = {}) =>
 const FABLE_WORDS =
   "maxi: Weekly 41% · 4d 6h, 5-hour 62% · 1h 48m, Fable at limit";
 
+// The fills of the bars of the `index`th of the three accounts, named for it.
 const fills = (lines, index) =>
-  lines.filter((line) =>
-    new RegExp(`:id\\[Str\\("account-${index}-[^"]*-fill"\\)\\]`).test(line),
+  lines.filter(
+    (line) =>
+      line.includes(`:id[Str("bar-${THREE[index].id}-`) &&
+      line.includes(`-fill")]`),
   );
 
 // What each density draws of the three accounts, with the dot or without.

@@ -280,16 +280,15 @@ function drawConnect(t, state, steps = "") {
   return drawActing(t, "connect", fixture, steps)?.lines ?? null;
 }
 
-test("the provider choices take the selected ground; Cancel falls to 72 %", (t) => {
+test("the provider choices take the selected ground", (t) => {
   const selected = selectedOf(t);
   if (selected === null) return;
   const lines = drawConnect(t, {});
   assertPressed(lines, "choose-claude", ground(selected));
   assertPressed(lines, "choose-codex", ground(selected));
-  assertPressed(lines, "cancel", SOLID);
 });
 
-test("Back, Copy and Open take the selected ground; an empty Connect has no pressed look", (t) => {
+test("Back, Copy and Open take the selected ground, Cancel falls to 72 %; an empty Connect has no pressed look", (t) => {
   const selected = selectedOf(t);
   if (selected === null) return;
   const lines = drawConnect(t, {
@@ -299,6 +298,7 @@ test("Back, Copy and Open take the selected ground; an empty Connect has no pres
   for (const id of ["back", "copy-url", "open-url"]) {
     assertPressed(lines, id, ground(selected));
   }
+  assertPressed(lines, "cancel", SOLID);
   assertNotPressed(lines, "connect");
 });
 
