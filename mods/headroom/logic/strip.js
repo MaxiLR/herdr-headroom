@@ -1,5 +1,6 @@
 // The strip: whether it starts with a separator, what each account's item
-// holds, and how much of each item the width has room for.
+// holds, and how much of each item, and how many items, the width has room
+// for.
 
 import { railNumber } from "./rail.js";
 
@@ -17,12 +18,25 @@ export const STRIP = {
   tag: 10.5,
 };
 
-// Without a way to measure text, a glyph is taken as 0.6 of the font size:
-// wider than Geist's average, so an estimate errs toward dropping a part
+// Without a way to measure text, the width of a text is estimated so that it
+// never falls short: a letter of ASCII is taken as 0.6 of the font size, wider
+// than Geist's average, and any other letter (a middle dot, an accent, a CJK
+// character, an emoji) as 1.1. An estimate errs toward leaving a part out
 // rather than clipping one.
-const GLYPH = 0.6;
+const ASCII_GLYPH = 0.6;
+const OTHER_GLYPH = 1.1;
 
-export const textWidth = (text, size) => text.length * size * GLYPH;
+/** The estimated width, in px, of `text` at a font `size` px. */
+export function textWidth(text, size) {
+  let width = 0;
+  for (const letter of text) {
+    width += size * (letter.codePointAt(0) < 128 ? ASCII_GLYPH : OTHER_GLYPH);
+  }
+  return width;
+}
+
+/** The widest a label is drawn, in px; a longer one is cut with an ellipsis. */
+export const STRIP_LABEL = 92;
 
 /** The id of the strip's block in the installed layout. */
 export const STRIP_BLOCK = "headroom-strip";
@@ -81,17 +95,36 @@ export function stripItem(row) {
   };
 }
 
+const DENSITIES = ["full", "no-labels", "no-bars"];
+
 /**
- * How much of each item fits a strip `width` px wide (null: not measured
- * yet, drawn full): `full`, `no-labels`, or `no-bars`. Labels go first, then
- * bars; marks and percentages always stay, clipped at the end if need be.
+ * What a strip `width` px wide (null: not measured yet, drawn full) has room
+ * for: `{ density, shown, more }`. The density is `full`, `no-labels` or
+ * `no-bars`: labels go first, then bars. When the items do not fit even
+ * without bars, the first `shown` accounts are drawn beside a "+N" item and
+ * the `more` after them are left out; the first account is always drawn.
  */
-export function stripDensity(width, items, separator) {
-  if (width == null) return "full";
-  for (const density of ["full", "no-labels"]) {
-    if (stripWidth(items, separator, density) <= width) return density;
+export function stripFit(width, items, separator) {
+  const all = { shown: items.length, more: 0 };
+  if (width == null) return { density: "full", ...all };
+  for (const density of DENSITIES) {
+    if (stripWidth(items, separator, density) <= width) {
+      return { density, ...all };
+    }
   }
-  return "no-bars";
+  const density = DENSITIES[DENSITIES.length - 1];
+  if (items.length <= 1) return { density, ...all };
+  let shown = items.length - 1;
+  while (shown > 1) {
+    const more = items.length - shown;
+    const need =
+      stripWidth(items.slice(0, shown), separator, density) +
+      STRIP.gap +
+      textWidth(`+${more}`, STRIP.text);
+    if (need <= width) break;
+    shown -= 1;
+  }
+  return { density, shown, more: items.length - shown };
 }
 
 function stripWidth(items, separator, density) {
@@ -107,7 +140,9 @@ function stripWidth(items, separator, density) {
 
 function itemWidth(item, density) {
   const parts = [STRIP.mark];
-  if (density === "full") parts.push(textWidth(item.label, STRIP.text));
+  if (density === "full") {
+    parts.push(Math.min(STRIP_LABEL, textWidth(item.label, STRIP.text)));
+  }
   if (item.badge) parts.push(STRIP.badge);
   if (item.bars && density !== "no-bars") parts.push(STRIP.bars);
   if (item.percent) parts.push(textWidth(item.percent, STRIP.text));
@@ -116,12 +151,4 @@ function itemWidth(item, density) {
     parts.reduce((sum, part) => sum + part, 0) +
     (parts.length - 1) * STRIP.inner
   );
-}
-
-export function stripFit(width, items, separator) {
-  return {
-    density: stripDensity(width, items, separator),
-    shown: items.length,
-    more: 0,
-  };
 }
