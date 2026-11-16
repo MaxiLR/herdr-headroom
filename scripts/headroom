@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# The headroom command: brings this checkout up to date and installs it.
+#
+# Usage: headroom update
+#
+# scripts/install.sh writes ~/.local/bin/headroom, which runs this file, so the
+# command works from any directory. update runs `git pull --ff-only` in this
+# checkout, on the branch that is checked out, then this checkout's
+# scripts/install.sh, without --layout. A pull that fails (no upstream, a
+# branch that diverged, local edits in the way, no network) leaves git's reason
+# on the screen, installs nothing and exits 1. Anything but `update` is a usage
+# error, with exit 2.
+set -euo pipefail
+
+MODULE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+# In a function, so bash has read all of it before the pull replaces this file.
+main() {
+  if [[ $# -ne 1 || "$1" != update ]]; then
+    echo "usage: headroom update" >&2
+    exit 2
+  fi
+  if ! git -C "$MODULE_DIR" pull --ff-only; then
+    echo "headroom: $MODULE_DIR could not be updated; nothing was installed." >&2
+    exit 1
+  fi
+  exec "$MODULE_DIR/scripts/install.sh"
+}
+
+main "$@"

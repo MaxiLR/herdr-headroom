@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Install the headroom mod into the Herdr home, and optionally add it to a
-# personal layout.
+# Install the headroom mod into the Herdr home, optionally add it to a personal
+# layout, and install the headroom command that updates it.
 #
 # Usage: scripts/install.sh [--dry-run] [--layout [name]]
 #
@@ -28,6 +28,13 @@
 # a usage error, refused before anything changes. It needs jq, never overwrites
 # a layout and never switches to it; it prints the command that does.
 #
+# ~/.local/bin/headroom is the one file written outside the Herdr home: a
+# launcher that runs this checkout's scripts/headroom, so `headroom update`
+# works from any directory. It holds this checkout's path; an install from
+# another checkout points it there. A headroom file this installer did not
+# write is never overwritten, and the step says when ~/.local/bin is not on
+# PATH.
+#
 # It prints one line per step: a mark, the step and what happened. --dry-run
 # prints what each step would do, with every file it would change, add or
 # remove, and changes nothing. Colors on a terminal only; NO_COLOR turns them
@@ -43,6 +50,9 @@ LAYOUTS="$HERDR_HOME/layouts"
 MAIN="$LAYOUTS/main.json"
 BLOCK='{"id": "headroom", "type": "block", "size": {"px": 111}, "min": 90, "content": {"mod": "headroom", "props": {"fit": "headroom"}}}'
 STRIP='{"id": "headroom-strip", "type": "block", "hidden": true, "size": {"weight": 2}, "min": 120, "max": 720, "content": {"mod": "headroom", "props": {"form": "strip", "fit": "headroom-strip"}}}'
+BIN="$HOME/.local/bin"
+COMMAND="$BIN/headroom"
+COMMAND_MARK="# The headroom command, written by herdr-headroom's scripts/install.sh."
 
 if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != dumb ]]; then
   BOLD=$'\033[1m' DIM=$'\033[2m' RESET=$'\033[0m'
@@ -257,6 +267,52 @@ layout_report() {
   esac
 }
 
+# What to do with the command: write, same (it already runs this checkout) or
+# foreign (something there this installer did not write). Decided before
+# anything changes, so a dry run reports the same.
+launcher="$(
+  printf '#!/usr/bin/env bash\n%s\n' "$COMMAND_MARK"
+  printf 'checkout=%q\n' "$MODULE_DIR"
+  cat <<'EOF'
+if [[ ! -x "$checkout/scripts/headroom" ]]; then
+  echo "headroom: $checkout is gone, or has no scripts/headroom." >&2
+  echo "Run scripts/install.sh from where the checkout is now." >&2
+  exit 1
+fi
+exec "$checkout/scripts/headroom" "$@"
+EOF
+)"
+if [[ ! -e "$COMMAND" && ! -L "$COMMAND" ]]; then
+  command_state=write
+elif [[ ! -f "$COMMAND" || -L "$COMMAND" ]] || ! grep -qxF -e "$COMMAND_MARK" "$COMMAND"; then
+  command_state=foreign
+elif [[ "$(cat "$COMMAND")" == "$launcher" ]]; then
+  command_state=same
+else
+  command_state=write
+fi
+
+# command_report <written|would write>: the command step's line.
+command_report() {
+  local title="Install the headroom command" mark=ok what
+  [[ "$1" == written ]] || mark=plan
+  case "$command_state" in
+    foreign)
+      step warn "$title" "$COMMAND exists and this installer did not write it; left as it is"
+      return
+      ;;
+    same) what="$COMMAND already updates from $MODULE_DIR" ;;
+    write)
+      what="$COMMAND, which updates from $MODULE_DIR"
+      [[ "$1" == written ]] || what="would write $what"
+      ;;
+  esac
+  case ":$PATH:" in
+    *":$BIN:"*) step "$mark" "$title" "$what" ;;
+    *) step warn "$title" "$what; $BIN is not on PATH, so add it to run headroom from any directory" ;;
+  esac
+}
+
 if [[ $dry_run -eq 1 ]]; then
   if [[ -n "$backup" ]]; then
     step plan "Back up the previous install" "would move $DEST to $backup"
@@ -269,6 +325,7 @@ if [[ $dry_run -eq 1 ]]; then
     step plan "Copy the mod" "would copy $count files from $SOURCE to $DEST"
   fi
   [[ $want_layout -eq 0 ]] || layout_report "would write"
+  command_report "would write"
   if command -v herdr-app >/dev/null 2>&1; then
     step plan "Check the installed mod" "would run herdr-app check on $DEST"
   else
@@ -300,6 +357,13 @@ if [[ "$layout_state" == write ]]; then
   (set -o noclobber && printf '%s\n' "$layout_json" >"$layout_target")
 fi
 [[ $want_layout -eq 0 ]] || layout_report "written"
+
+if [[ "$command_state" == write ]]; then
+  mkdir -p "$BIN"
+  printf '%s\n' "$launcher" >"$COMMAND"
+  chmod +x "$COMMAND"
+fi
+command_report "written"
 
 if command -v herdr-app >/dev/null 2>&1; then
   if said="$(herdr-app check "$DEST" 2>&1)"; then

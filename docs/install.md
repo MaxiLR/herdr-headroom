@@ -29,6 +29,12 @@ does not exist.
 - **Check.** When `herdr-app` is on `PATH`, it runs `herdr-app check` on the
   installed folder. A failed check prints what `herdr-app` said and exits 1;
   without `herdr-app` the check is skipped with a warning.
+- **Command.** It writes `~/.local/bin/headroom`, the one file outside the
+  Herdr home: a launcher holding this checkout's path, which runs the
+  checkout's `scripts/headroom` (see [Updating](#updating)). An install from
+  another checkout points it there. A `headroom` file the installer did not
+  write is left as it is, and the step says so. The step also says when
+  `~/.local/bin` is not on `PATH`; add it to run `headroom` from any directory.
 - **Layout** (`--layout`, default name `herdr-headroom`). A name must match
   `^[A-Za-z0-9_-]+$`: Herdr lists a layout under its file name and switches
   only to one whose name uses letters, digits, `-` or `_`. Any other name is
@@ -71,7 +77,26 @@ does not exist.
 The installer binds no key and never reads, copies or removes the vault
 (`<Herdr home>/headroom/`).
 
-To undo: remove `<Herdr home>/mods/headroom/`, and the layout file if one was
-written. To go back to an earlier version, copy the backup folder back to
-`<Herdr home>/mods/headroom/`. Remove `<Herdr home>/headroom/` to delete every
-stored login.
+## Updating
+
+```sh
+headroom update   # from any directory
+```
+
+It runs `git pull --ff-only` in the checkout the mod was installed from, on the
+branch that is checked out, then that checkout's `scripts/install.sh`, without
+`--layout`: the steps above, with the previous install backed up. With nothing
+to pull it installs the checkout again. When the pull fails (no upstream, a
+branch that diverged, local edits in the way, no network) it shows what git
+said, installs nothing and exits 1. `headroom` with anything but `update`
+prints its usage and exits 2.
+
+When the checkout has moved or is gone, `headroom` says so and exits 1; run
+`scripts/install.sh` from where the checkout is now.
+
+## Undoing
+
+Remove `<Herdr home>/mods/headroom/`, `~/.local/bin/headroom`, and the layout
+file if one was written. To go back to an earlier version, copy the backup
+folder back to `<Herdr home>/mods/headroom/`. Remove `<Herdr home>/headroom/`
+to delete every stored login.
