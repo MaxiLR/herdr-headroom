@@ -132,6 +132,15 @@ export function withId(lines, id) {
 // `openOverlay` (it returns "overlay-2"), `closeOverlay`, `setShared`,
 // `resize`, `show`, `hide` and `openUrl` (it resolves true), in order, read after the form's `render` has run;
 // `lines` are the form's own drawn lines.
+//
+// `fixture.read` is how the store answers a `refresh`, its promise's
+// `started` saying whether a read runs: `"runs"` (the default) starts one,
+// and the form is drawn before it settles, as every drawing is; `"skips"`
+// starts none; `"settles"` starts one, and the form is drawn once it and
+// every task the form started have ended. Herdr draws a view before any
+// promise settles, so with `"settles"` the form and `steps` run before the
+// view does, with a context of their own whose `spawn` runs its task at once
+// and whose `notify` does nothing.
 export function drawActing(t, form, fixture = {}, steps = "") {
   const lines = drawSource(
     t,
@@ -154,51 +163,75 @@ const recordAsync =
     calls.push([name, ...args]);
     return { ok: true };
   };
+const recordRead = (...args) => {
+  calls.push(["refresh", ...args]);
+  return Object.assign(Promise.resolve({ ok: true }), {
+    started: fixture.read !== "skips",
+  });
+};
+
+// The view of the form, acted on with \`cx\`.
+function act(cx) {
+  const store = {
+    accounts: () => fixture.accounts ?? [],
+    refresh: recordRead,
+    rename: recordAsync("rename"),
+    move: recordAsync("move"),
+    remove: recordAsync("remove"),
+  };
+  const host = {
+    now: () => fixture.now ?? ${NOW},
+    random: nothing,
+    fetch: nothing,
+    platform: "macos",
+    home: "",
+    exec: nothing,
+    readText: nothing,
+    writeText: nothing,
+    shared: nothing,
+    setShared: record("setShared", null),
+    notify: nothing,
+    layout: () => fixture.layout ?? null,
+    resize: record("resize", null),
+    show: record("show", null),
+    hide: record("hide", null),
+    openOverlay: record("openOverlay", "overlay-2"),
+    closeOverlay: record("closeOverlay", null),
+    openUrl: async (...args) => record("openUrl", true)(...args),
+  };
+  const view = {
+    form: ${JSON.stringify(form)},
+    props: fixture.props ?? {},
+    size: fixture.size ?? null,
+    now: fixture.now ?? ${NOW},
+    theme: theme(),
+    readings: fixture.readings ?? [],
+    notify: fixture.notify ?? true,
+    ui: fixture.ui ?? {},
+    store,
+    host,
+  };
+  form.init?.(view, cx);
+  ${steps}
+  return view;
+}
+
+let settled = null;
+if (fixture.read === "settles") {
+  const tasks = [];
+  const cx = {
+    notify: nothing,
+    spawn: (task) => {
+      tasks.push(Promise.resolve(task(cx)));
+    },
+  };
+  settled = act(cx);
+  while (tasks.length > 0) await tasks.shift();
+}
 
 export default class Acting extends View {
   init(_props, cx) {
-    const store = {
-      accounts: () => fixture.accounts ?? [],
-      refresh: recordAsync("refresh"),
-      rename: recordAsync("rename"),
-      move: recordAsync("move"),
-      remove: recordAsync("remove"),
-    };
-    const host = {
-      now: () => fixture.now ?? ${NOW},
-      random: nothing,
-      fetch: nothing,
-      platform: "macos",
-      home: "",
-      exec: nothing,
-      readText: nothing,
-      writeText: nothing,
-      shared: nothing,
-      setShared: record("setShared", null),
-      notify: nothing,
-      layout: () => fixture.layout ?? null,
-      resize: record("resize", null),
-      show: record("show", null),
-      hide: record("hide", null),
-      openOverlay: record("openOverlay", "overlay-2"),
-      closeOverlay: record("closeOverlay", null),
-      openUrl: async (...args) => record("openUrl", true)(...args),
-    };
-    this.view = {
-      form: ${JSON.stringify(form)},
-      props: fixture.props ?? {},
-      size: fixture.size ?? null,
-      now: fixture.now ?? ${NOW},
-      theme: theme(),
-      readings: fixture.readings ?? [],
-      notify: fixture.notify ?? true,
-      ui: fixture.ui ?? {},
-      store,
-      host,
-    };
-    const view = this.view;
-    form.init?.(view, cx);
-    ${steps}
+    this.view = settled ?? act(cx);
   }
 
   render(cx) {

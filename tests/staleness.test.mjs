@@ -6,8 +6,10 @@ import {
   MINUTE,
   WINDOWS,
   assertNoToken,
+  deferred,
   login,
   readingOf,
+  settle,
   setup,
   setupSigningIn,
   usageOk,
@@ -169,6 +171,41 @@ test("a second manual refresh within 30 seconds makes no request, one after does
   host.clock.now += 1;
   await store.refresh(ID);
   assert.equal(usageRequests(host).length, 2);
+  assertNoToken(host);
+});
+
+test("a manual refresh says at once whether a read runs, and can still be awaited", async () => {
+  const answer = deferred();
+  let reads = 0;
+  const { host, store } = setup({
+    usage: async () => {
+      reads += 1;
+      if (reads === 1) await answer.promise;
+      return usageOk();
+    },
+  });
+  await store.start();
+  // The first starts a read.
+  const first = store.refresh();
+  assert.equal(first.started, true);
+  await settle();
+  // One while that read is still running joins it.
+  const joined = store.refresh(ID);
+  assert.equal(joined.started, true);
+  answer.resolve();
+  await joined;
+  await first;
+  assert.equal(readingOf(host, ID).status, "ok");
+  assert.equal(usageRequests(host).length, 1);
+  // One within 30 seconds of it reads nothing.
+  host.clock.now += 29999;
+  const skipped = store.refresh();
+  assert.equal(skipped.started, false);
+  const skippedOne = store.refresh(ID);
+  assert.equal(skippedOne.started, false);
+  assert.equal(await skipped, undefined);
+  assert.equal(await skippedOne, undefined);
+  assert.equal(usageRequests(host).length, 1);
   assertNoToken(host);
 });
 

@@ -1,7 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { drawForm, drawSource, texts, withId } from "./helpers/draw.mjs";
-import { reading, win } from "./helpers/fakes.mjs";
+import {
+  drawClicking,
+  drawForm,
+  drawSource,
+  texts,
+  themeColour,
+  withId,
+} from "./helpers/draw.mjs";
+import { NOW, reading, win } from "./helpers/fakes.mjs";
 
 test("the detail view draws each account and Connect account", (t) => {
   const lines = drawForm(t, "detail", {
@@ -417,12 +424,34 @@ test("a first read draws the account's header lines only", (t) => {
   assert.ok(!sentence(lines).includes("Read "), show(lines));
 });
 
-test("a login ending within 3 days is still said as its date", (t) => {
-  const lines = draw(t, {
-    readings: [maxi({ loginEndsAt: new Date(2026, 10, 14, 9, 0).getTime() })],
+test("a login in its last 3 days says how many days are left, in the account view's colour", (t) => {
+  const ending = maxi({
+    fetchedAt: NOW - 2 * MINUTE,
+    loginEndsAt: NOW + 2 * DAY,
   });
+  const lines = draw(t, { now: NOW, readings: [ending] });
   if (!lines) return;
-  assert.ok(texts(lines).includes("Login ends Nov 14"), show(lines));
+  const drawn = texts(lines);
+  assert.ok(drawn.includes("Login ends in 2 days"), show(lines));
+  assert.ok(!sentence(lines).includes("Login ends Nov"), show(lines));
+  // The account view says it in the high colour; the detail view the same.
+  const account = drawForm(t, "account", {
+    props: { form: "account", account: MAXI, overlay: "overlay-1" },
+    size: { width: 380, height: 640 },
+    now: NOW,
+    readings: [ending],
+    accounts: ACCOUNTS,
+  });
+  const colourOf = (drawing) =>
+    drawing[
+      drawing.findIndex(
+        (line) => line.trim() === 'text "Login ends in 2 days"',
+      ) - 1
+    ]?.match(/\.text_color\[Str\("([^"]*)"\)\]/)?.[1];
+  const high = colourOf(account);
+  assert.ok(high, show(account));
+  assert.notEqual(high, themeColour(t, "muted"));
+  assert.equal(colourOf(lines), high, show(lines));
 });
 
 test("with no accounts: the header, No accounts yet and the footer", (t) => {
@@ -699,3 +728,90 @@ test("Sign in again has room around it, taken back, and keeps its click, underli
     assert.ok(control.includes(part), `${part}\n${show(lines)}`);
   }
 });
+
+// A failed read whose windows are under, at, and before the start of their
+// limits.
+const failedMaxi = () =>
+  maxi({
+    status: "stale",
+    fetchedAt: THURSDAY - 12 * MINUTE,
+    error: "network",
+    windows: [
+      win("7d", 0.41, MONDAY_2030),
+      win("5h", 0.97, TODAY_1618, { atLimit: true }),
+      win("7d:sonnet", 0, null, { label: "Weekly · Sonnet" }),
+    ],
+  });
+
+for (const width of [380, 560]) {
+  test(`at ${width} px a failed read keeps each window's name, dimmed bar and last percentage, in the quiet colour, alone`, (t) => {
+    const lines = draw(t, { width, readings: [failedMaxi()] });
+    if (!lines) return;
+    const drawn = texts(lines);
+    const muted = themeColour(t, "muted");
+    for (const percent of ["41%", "97%", "0%"]) {
+      assert.ok(drawn.includes(percent), `${percent}\n${show(lines)}`);
+      const element =
+        lines[
+          lines.findIndex((line) => line.trim() === `text "${percent}"`) - 1
+        ];
+      assert.match(
+        element ?? "",
+        new RegExp(`\\.text_color\\[Str\\("${muted}"\\)\\]`),
+        `${percent}\n${show(lines)}`,
+      );
+    }
+    for (const name of ["Weekly", "5-hour", "Weekly · Sonnet"]) {
+      assert.ok(drawn.includes(name), `${name}\n${show(lines)}`);
+    }
+    for (const id of [
+      `bar-${MAXI}-7d`,
+      `bar-${MAXI}-5h`,
+      `bar-${MAXI}-7d:sonnet`,
+    ]) {
+      assert.match(withId(lines, id) ?? "", /\.opacity\[Number\(0\.4\)\]/, id);
+    }
+    for (const text of drawn) {
+      assert.doesNotMatch(text, /resets in|not started|At limit/, show(lines));
+      assert.doesNotMatch(text, /\d{1,2}:\d{2}/, show(lines));
+    }
+  });
+}
+
+// After a press on the refresh control, with a store whose read `read`
+// (skips, runs, settles): the spinner while a read runs, the icon otherwise.
+for (const [read, turning] of [
+  ["skips", false],
+  ["runs", true],
+  ["settles", false],
+]) {
+  test(`a press on refresh with a read that ${read} draws ${turning ? "the spinner" : "the refresh icon"}`, (t) => {
+    const result = drawClicking(
+      t,
+      "detail",
+      {
+        props: { form: "detail", overlay: "overlay-1" },
+        size: { width: 380, height: 640 },
+        now: THURSDAY,
+        readings: [maxi(), terac()],
+        accounts: ACCOUNTS,
+        read,
+      },
+      "refresh",
+    );
+    if (!result) return;
+    assert.deepEqual(result.calls, [["refresh"]]);
+    const drawn = inside(result.lines, "refresh").join("\n");
+    if (turning) {
+      assert.match(drawn, /spinner\.svg/, show(result.lines));
+      assert.doesNotMatch(drawn, /icons\/refresh\.svg/);
+    } else {
+      assert.match(
+        drawn,
+        /svg "mods\/headroom\/icons\/refresh\.svg"/,
+        show(result.lines),
+      );
+      assert.doesNotMatch(drawn, /spinner\.svg/);
+    }
+  });
+}
