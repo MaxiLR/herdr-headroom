@@ -8,9 +8,11 @@
 import { div, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { openAccount } from "../logic/account.js";
+import { canCut } from "../logic/cut.js";
 import { fitTo, HEADER, LINE, LIST_BELOW, listNeeds } from "../logic/fit.js";
 import { hintCount, moreWords, wheel } from "../logic/hint.js";
 import { listRowOf } from "../logic/list.js";
+import { textWidth } from "../logic/strip.js";
 import { open as openConnect } from "./connect.js";
 import { open as openDetail } from "./detail.js";
 import {
@@ -25,6 +27,22 @@ import {
 
 const PLUS = "mods/workspace-chrome/plus.svg";
 const CHEVRON = "mods/workspace-chrome/chevron-down.svg";
+
+/** The list's width before it is measured. */
+const UNMEASURED = 268;
+// Its accounts' sides: the content's padding and the account's, 8 px each.
+const SIDES = 32;
+const MARK = 14;
+const GAP = 8;
+const LABEL = 13;
+const NOTE = 11;
+
+// The px the label of `row` has in a list `width` px wide (null: not
+// measured yet): the account's width less the mark and the note beside it.
+function labelPlace(row, width) {
+  const note = row.note === null ? 0 : GAP + textWidth(row.note.text, NOTE);
+  return (width ?? UNMEASURED) - SIDES - MARK - GAP - note;
+}
 
 function header(view) {
   const t = view.theme;
@@ -115,22 +133,25 @@ function empty(view) {
     );
 }
 
-// The label line: the mark, the label and, on the right, the row's note.
+// The label line: the mark, the label and, on the right, the row's note. A
+// label that can be cut carries its whole text as a tooltip.
 function labelLine(row, index, view) {
   const t = view.theme;
   const signedOut = row.state === "signed-out";
+  const place = labelPlace(row, view.size?.width);
   return h_flex()
     .h(26)
-    .gap(8)
+    .gap(GAP)
     .items_center()
-    .child(mark(row.provider, 14, t))
+    .child(mark(row.provider, MARK, t))
     .child(
       div()
         .flex_1()
         .min_w(0)
         .truncate()
-        .text_size(13)
+        .text_size(LABEL)
         .text_color(signedOut ? t.muted : t.foreground)
+        .when(canCut(row.label, LABEL, place), (el) => el.tooltip(row.label))
         .child(row.label),
     )
     .when(row.note !== null && !signedOut, (el) =>

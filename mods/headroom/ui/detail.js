@@ -8,6 +8,7 @@
 import { div, svg } from "gpui-kit";
 import { Switch, h_flex, v_flex } from "gpui-base";
 import { accountViewOf, openAccount, openRemove } from "../logic/account.js";
+import { canCut } from "../logic/cut.js";
 import {
   ageText,
   arrowsOf,
@@ -21,7 +22,7 @@ import { listRowOf } from "../logic/list.js";
 import { untilReset } from "../logic/pace.js";
 import { setNotify } from "../logic/publish.js";
 import { barOf, isThin, rowOf } from "../logic/rows.js";
-import { STRIP_BLOCK, stripBlock } from "../logic/strip.js";
+import { STRIP_BLOCK, stripBlock, textWidth } from "../logic/strip.js";
 import { failedText, percentText } from "../logic/words.js";
 import { open as openConnect } from "./connect.js";
 import { labelField, labelInput } from "./field.js";
@@ -47,6 +48,26 @@ const WIDTH = 380;
 const WIDE_PX = 520;
 /** Below this width the reset's clock time is dropped. */
 const NARROW_PX = 340;
+
+// An account's sides, and on its first line the mark, the gaps, the arrows and
+// the three dots, 2 px apart, and the font sizes of the label, the plan, why
+// the last read failed and Sign in again.
+const SIDES = 16;
+const LINE = { mark: 16, gap: 8, control: 22, between: 2 };
+const LABEL = 13;
+const PLAN = 12;
+const FAILED = 11.5;
+const SIGN_IN = 12;
+// The email line's indent, font size and gap, and what sits between its parts.
+const WHO = { left: 24, size: 11.5, gap: 4 };
+const WHO_BETWEEN = 2 * WHO.gap + textWidth("·", WHO.size);
+// A window's name and the numbers beside it below WIDE_PX, the font sizes of
+// the name (and its percentage) and of the reset and clock time; from WIDE_PX
+// the name's column.
+const WINDOW_GAP = 8;
+const NAME = 12;
+const WINDOW_SMALL = 11.5;
+const NAME_COLUMN = 120;
 
 const NOTIFY = "Notify at 90% and at the limit";
 const STRIP = "Show in status bar";
@@ -247,20 +268,53 @@ function header(view) {
     );
 }
 
+// The px the label of `reading` has on its first line in a view `width` px
+// wide: the line less the mark, the plan's gap, what sits on the right (why
+// the last read failed, or Sign in again) and the controls, and the gaps
+// between them. The plan, cut before the label is, takes no room here.
+function labelPlace(reading, row, view, width) {
+  const right =
+    row.state === "failed"
+      ? [textWidth(failedText(reading, view.now), FAILED)]
+      : row.state === "signed-out"
+        ? [textWidth("Sign in again", SIGN_IN)]
+        : [];
+  const controls =
+    arrowsOf(view.readings, reading.id) === null
+      ? LINE.control
+      : 3 * LINE.control + 2 * LINE.between;
+  // The mark, the label, the plan, the space, what is on the right and the
+  // controls.
+  const parts = 4 + (reading.plan ? 1 : 0) + right.length;
+  return (
+    width -
+    2 * SIDES -
+    LINE.mark -
+    right.reduce((sum, px) => sum + px, 0) -
+    controls -
+    (parts - 1) * LINE.gap
+  );
+}
+
 // The account's first line: the mark, the label, the plan and, on the right,
 // why the last read failed or the Sign in again control, then its up and
-// down arrows and its three dots. The plan is cut before the label is. While
-// the account is renamed, its field runs from the mark up to the arrows.
-function labelLine(reading, row, index, view) {
+// down arrows and its three dots. The plan is cut before the label is: the
+// label has its place, the plan what the label leaves of it; each that can be
+// cut carries its whole text as a tooltip. While the account is renamed, its
+// field runs from the mark up to the arrows.
+function labelLine(reading, row, index, view, width) {
   const t = view.theme;
   const signedOut = row.state === "signed-out";
   const input =
     stateOf(view).renaming === reading.id ? renameInput(view) : null;
+  const label = reading.label;
+  const place = labelPlace(reading, row, view, width);
+  const planPlace = place - textWidth(label, LABEL);
   const line = h_flex()
     .h(24)
-    .gap(8)
+    .gap(LINE.gap)
     .items_center()
-    .child(mark(reading.provider, 16, t));
+    .child(mark(reading.provider, LINE.mark, t));
   const named =
     input !== null
       ? line.child(nameField(reading, input, index, view))
@@ -269,10 +323,11 @@ function labelLine(reading, row, index, view) {
             div()
               .min_w(0)
               .truncate()
-              .text_size(13)
+              .text_size(LABEL)
               .font_medium()
               .text_color(signedOut ? t.muted : t.foreground)
-              .child(reading.label),
+              .when(canCut(label, LABEL, place), (el) => el.tooltip(label))
+              .child(label),
           )
           .when(Boolean(reading.plan), (el) =>
             el.child(
@@ -280,8 +335,11 @@ function labelLine(reading, row, index, view) {
                 .min_w(0)
                 .flex_shrink(1000)
                 .truncate()
-                .text_size(12)
+                .text_size(PLAN)
                 .text_color(t.muted)
+                .when(canCut(reading.plan, PLAN, planPlace), (el) =>
+                  el.tooltip(reading.plan),
+                )
                 .child(reading.plan),
             ),
           )
@@ -290,7 +348,7 @@ function labelLine(reading, row, index, view) {
             el.child(
               div()
                 .flex_none()
-                .text_size(11.5)
+                .text_size(FAILED)
                 .text_color(t.muted)
                 .whitespace_nowrap()
                 .child(failedText(reading, view.now)),
@@ -422,30 +480,45 @@ function arrow(reading, index, delta, enabled, view) {
     );
 }
 
-// `maxi@terac.example · Terac`, under the label.
-function whoLine(account, t) {
+// `maxi@terac.example · Terac`, under the label, in a view `width` px wide.
+// The parts give way together: each has the line less the others and what
+// sits between them, and carries its whole text as a tooltip when that can
+// cut it.
+function whoLine(account, width, t) {
   const parts = [account?.email, account?.organization].filter(Boolean);
   if (parts.length === 0) return null;
+  const line = width - 2 * SIDES - WHO.left - WHO_BETWEEN * (parts.length - 1);
+  const all = parts.reduce((sum, part) => sum + textWidth(part, WHO.size), 0);
   return h_flex()
     .h(16)
     .mt(1)
-    .pl(24)
-    .gap(4)
+    .pl(WHO.left)
+    .gap(WHO.gap)
     .items_center()
-    .text_size(11.5)
+    .text_size(WHO.size)
     .text_color(t.muted)
     .children(
-      parts.flatMap((part, i) => [
-        ...(i > 0 ? [div().flex_none().text_color(t.dim).child("·")] : []),
-        div().min_w(0).truncate().child(part),
-      ]),
+      parts.flatMap((part, i) => {
+        const place = line - (all - textWidth(part, WHO.size));
+        return [
+          ...(i > 0 ? [div().flex_none().text_color(t.dim).child("·")] : []),
+          div()
+            .min_w(0)
+            .truncate()
+            .when(canCut(part, WHO.size, place), (el) => el.tooltip(part))
+            .child(part),
+        ];
+      }),
     );
 }
 
 // One window: its name, percentage, reset and clock time, and its bar. A
 // failed read's (`dimmed`) keeps its last percentage alone, in the quiet
-// colour, as the account view does: its reset may have passed since.
-function windowView(window, id, view, { dimmed, wide, narrow }) {
+// colour, as the account view does: its reset may have passed since. In a
+// view `width` px wide, a name that can be cut carries its whole text as a
+// tooltip: from WIDE_PX it has a column of its own, below it what the
+// numbers beside it leave of the account's width.
+function windowView(window, id, view, { dimmed, wide, narrow, width }) {
   const t = view.theme;
   const level = levelOf(window);
   const { fraction, pace } = barOf(window, view.now);
@@ -471,10 +544,24 @@ function windowView(window, id, view, { dimmed, wide, narrow }) {
     },
     t,
   );
+  const beside = [
+    [percent, NAME],
+    [reset, WINDOW_SMALL],
+    [clock, WINDOW_SMALL],
+  ].filter(([text]) => text !== null);
+  const namePlace = wide
+    ? NAME_COLUMN
+    : beside.reduce(
+        (left, [text, size]) => left - WINDOW_GAP - textWidth(text, size),
+        width - 2 * SIDES,
+      );
   const name = div()
     .min_w(0)
     .truncate()
     .text_color(t.muted)
+    .when(canCut(window.label, NAME, namePlace), (el) =>
+      el.tooltip(window.label),
+    )
     .child(window.label);
   const number = div()
     .flex_none()
@@ -483,13 +570,13 @@ function windowView(window, id, view, { dimmed, wide, narrow }) {
     .child(percent);
   const resets = div()
     .flex_none()
-    .text_size(11.5)
+    .text_size(WINDOW_SMALL)
     .text_color(t.muted)
     .whitespace_nowrap()
     .when(reset !== null, (el) => el.child(reset));
   const time = div()
     .flex_none()
-    .text_size(11.5)
+    .text_size(WINDOW_SMALL)
     .text_color(t.muted)
     .whitespace_nowrap();
 
@@ -499,8 +586,8 @@ function windowView(window, id, view, { dimmed, wide, narrow }) {
       .h(16)
       .gap(14)
       .items_center()
-      .text_size(12)
-      .child(name.w(120).flex_none())
+      .text_size(NAME)
+      .child(name.w(NAME_COLUMN).flex_none())
       .child(div().flex_1().min_w(0).child(track))
       .child(number.w(56).text_right())
       .child(resets.w(104))
@@ -517,9 +604,9 @@ function windowView(window, id, view, { dimmed, wide, narrow }) {
       h_flex()
         .h(16)
         .mb(6)
-        .gap(8)
+        .gap(WINDOW_GAP)
         .items_center()
-        .text_size(12)
+        .text_size(NAME)
         .child(name.flex_1())
         .child(number)
         .when(reset !== null, (el) => el.child(resets))
@@ -550,10 +637,11 @@ function section(reading, index, account, view) {
     dimmed: row.state === "failed",
     wide: width >= WIDE_PX,
     narrow: width < NARROW_PX,
+    width,
   };
   const windows =
     row.state === "signed-out" ? [] : windowsInOrder(reading.windows);
-  const who = whoLine(account, t);
+  const who = whoLine(account, width, t);
   const login = loginLine(accountViewOf(reading, account, view.now).login, t);
   return v_flex()
     .id(`account-${index}`)
@@ -562,7 +650,7 @@ function section(reading, index, account, view) {
     .flex_none()
     .pt(11)
     .pb(13)
-    .px(16)
+    .px(SIDES)
     .border_t(1)
     .border_color(t.border)
     .cursor_pointer()
@@ -572,7 +660,7 @@ function section(reading, index, account, view) {
       closeSelf(view);
       openAccount(view, reading.id);
     })
-    .child(labelLine(reading, row, index, view))
+    .child(labelLine(reading, row, index, view, width))
     .when(who !== null, (el) => el.child(who))
     .children(
       windows.map((window) =>

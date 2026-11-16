@@ -15,6 +15,8 @@ import {
   accountViewOf,
   openRemove,
 } from "../logic/account.js";
+import { canCut } from "../logic/cut.js";
+import { textWidth } from "../logic/strip.js";
 import { open as openConnect } from "./connect.js";
 import { open as openDetail } from "./detail.js";
 import { labelField, labelInput } from "./field.js";
@@ -32,6 +34,21 @@ import {
 const CHEVRON = "mods/workspace-chrome/chevron-right.svg";
 const REFRESH = "mods/headroom/icons/refresh.svg";
 const PACE_LINE = "The line on a bar marks how much of its time has passed.";
+
+/** The popup's width, and the width drawn before the first layout. */
+const WIDTH = 380;
+// The header's sides, its mark, its gaps and its refresh control; the font
+// sizes of the label, the plan and the age.
+const HEADER = { left: 16, right: 10, mark: 16, gap: 8, refresh: 26 };
+const LABEL = 14;
+const PLAN = 12;
+const AGE = 11.5;
+// The email line's sides and font size, and what sits between its parts.
+const WHO = { left: 40, right: 16, size: 11.5, gap: 4 };
+const WHO_BETWEEN = 2 * WHO.gap + textWidth("·", WHO.size);
+// The windows' sides and the font size of their names.
+const SIDES = 16;
+const NAME = 12;
 
 // The tracks of windows not read yet.
 const EMPTY = { fraction: 0, level: "normal", pace: null };
@@ -175,22 +192,22 @@ function header(reading, shown, view) {
   return h_flex()
     .h(26)
     .mt(12)
-    .ml(16)
-    .mr(10)
+    .ml(HEADER.left)
+    .mr(HEADER.right)
     .flex_none()
-    .gap(8)
+    .gap(HEADER.gap)
     .items_center()
-    .child(mark(reading.provider, 16, t))
+    .child(mark(reading.provider, HEADER.mark, t))
     .child(
       input !== null
         ? renameField(reading, input, view)
-        : title(reading, shown, t),
+        : title(reading, shown, titlePlace(shown, view), t),
     )
     .when(shown.age !== null, (el) =>
       el.child(
         div()
           .flex_none()
-          .text_size(11.5)
+          .text_size(AGE)
           .text_color(t.muted)
           .whitespace_nowrap()
           .child(shown.age),
@@ -202,7 +219,7 @@ function header(reading, shown, view) {
         .role("button")
         .accessibility_label("Refresh")
         .tooltip("Refresh")
-        .size(26)
+        .size(HEADER.refresh)
         .flex_none()
         .flex()
         .items_center()
@@ -220,23 +237,45 @@ function header(reading, shown, view) {
     );
 }
 
-// The label and the plan, on one baseline. The plan is cut before the label
-// is.
-function title(reading, shown, t) {
+// The px the title has in the header: the view's width less the header's
+// sides, its mark, the age and the refresh control, and the gaps between them.
+function titlePlace(shown, view) {
+  const age = shown.age === null ? 0 : HEADER.gap + textWidth(shown.age, AGE);
+  return (
+    (view.size?.width ?? WIDTH) -
+    HEADER.left -
+    HEADER.right -
+    HEADER.mark -
+    HEADER.gap -
+    age -
+    HEADER.gap -
+    HEADER.refresh
+  );
+}
+
+// The label and the plan, on one baseline, in a title `place` px wide. The
+// plan is cut before the label is: the label has the place less the gap
+// before the plan, the plan what the label leaves. Each that can be cut
+// carries its whole text as a tooltip.
+function title(reading, shown, place, t) {
+  const label = reading.label;
+  const labelPlace = place - (shown.plan === null ? 0 : HEADER.gap);
+  const planPlace = labelPlace - textWidth(label, LABEL);
   return h_flex()
     .flex_1()
     .min_w(0)
-    .gap(8)
+    .gap(HEADER.gap)
     .items_baseline()
     .child(
       div()
         .min_w(0)
         .truncate()
         .role("heading")
-        .text_size(14)
+        .text_size(LABEL)
         .font_semibold()
         .text_color(shown.state === "signed-out" ? t.muted : t.foreground)
-        .child(reading.label),
+        .when(canCut(label, LABEL, labelPlace), (el) => el.tooltip(label))
+        .child(label),
     )
     .when(shown.plan !== null, (el) =>
       el.child(
@@ -244,36 +283,53 @@ function title(reading, shown, t) {
           .min_w(0)
           .flex_shrink(1000)
           .truncate()
-          .text_size(12)
+          .text_size(PLAN)
           .text_color(t.muted)
+          .when(canCut(shown.plan, PLAN, planPlace), (el) =>
+            el.tooltip(shown.plan),
+          )
           .child(shown.plan),
       ),
     );
 }
 
-// `maxi@terac.example · Terac`, under the label.
-function whoLine(who, t) {
+// `maxi@terac.example · Terac`, under the label, in a view `width` px wide.
+// The parts give way together: each has the line less the others and what
+// sits between them, and carries its whole text as a tooltip when that can
+// cut it.
+function whoLine(who, width, t) {
+  const line = width - WHO.left - WHO.right - WHO_BETWEEN * (who.length - 1);
+  const all = who.reduce((sum, part) => sum + textWidth(part, WHO.size), 0);
   return h_flex()
     .flex_none()
     .h(16)
     .mt(1)
-    .pl(40)
-    .pr(16)
-    .gap(4)
+    .pl(WHO.left)
+    .pr(WHO.right)
+    .gap(WHO.gap)
     .items_center()
-    .text_size(11.5)
+    .text_size(WHO.size)
     .text_color(t.muted)
     .children(
-      who.flatMap((part, i) => [
-        ...(i > 0 ? [div().flex_none().text_color(t.dim).child("·")] : []),
-        div().min_w(0).truncate().child(part),
-      ]),
+      who.flatMap((part, i) => {
+        const place = line - (all - textWidth(part, WHO.size));
+        return [
+          ...(i > 0 ? [div().flex_none().text_color(t.dim).child("·")] : []),
+          div()
+            .min_w(0)
+            .truncate()
+            .when(canCut(part, WHO.size, place), (el) => el.tooltip(part))
+            .child(part),
+        ];
+      }),
     );
 }
 
 // One window: its name, its bar at the full width, then the percentage and
 // the time to its reset on the left and the reset's clock time on the right.
-function windowView(window, k, dimmed, t) {
+// A name that can be cut in a view `width` px wide carries its whole text as
+// a tooltip.
+function windowView(window, k, dimmed, width, t) {
   return v_flex()
     .flex_none()
     .mt(13)
@@ -282,8 +338,11 @@ function windowView(window, k, dimmed, t) {
         .h(16)
         .min_w(0)
         .truncate()
-        .text_size(12)
+        .text_size(NAME)
         .text_color(t.foreground)
+        .when(canCut(window.name, NAME, width - 2 * SIDES), (el) =>
+          el.tooltip(window.name),
+        )
         .child(window.name),
     )
     .child(
@@ -520,21 +579,22 @@ export function render(view, cx) {
     return ground;
   }
   const shown = accountViewOf(reading, account, view.now);
+  const width = view.size?.width ?? WIDTH;
   return ground
     .text_size(13)
     .child(header(reading, shown, view))
-    .when(shown.who.length > 0, (el) => el.child(whoLine(shown.who, t)))
+    .when(shown.who.length > 0, (el) => el.child(whoLine(shown.who, width, t)))
     .child(
       v_flex()
         .id("account-windows")
         .flex_1()
         .min_h(0)
         .overflow_y_scrollbar()
-        .px(16)
+        .px(SIDES)
         .pb(15)
         .children(
           shown.windows.map((window, k) =>
-            windowView(window, k, shown.dimmed, t),
+            windowView(window, k, shown.dimmed, width, t),
           ),
         )
         .when(shown.empty, (el) => el.child(firstTracks(t)))
