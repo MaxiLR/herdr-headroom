@@ -54,7 +54,9 @@ logos, from the mod's own `mods/headroom/icons/`: the ChatGPT logo
 - Notes: a failed read, `12m old · network` in `muted`; a Claude login in its
   last 3 days, `Login ends in 2 days` in the high number colour. A signed-out
   account: the label in `muted`, "Sign in again" at 11 px in `accent` on the
-  right, `Login ended Nov 9` on a 14 px line below, and no bars.
+  right (its own control, its target 5 px above and below the word and 6 px
+  each side, taken back by its margins so nothing moves), `Login ended Nov 9`
+  on a 14 px line below, and no bars.
 - No accounts: "No accounts yet" (13 px medium, `foreground`), "Connect a
   Claude or Codex account to see how close it is to its limits." (12 px,
   `muted`), and a 28 px "Connect account" button with Herdr's plus icon, a
@@ -95,10 +97,13 @@ and 3 px, 4 px apart), the percent of the fuller of the weekly and the 5-hour
 window and the `5h` tag at 10.5 px, 6 px between parts; the rail's dot on the
 mark for a per-model window at its limit. When another shown block comes before
 it in its row, it starts with a 1 px by 14 px rule in `dim` (2 px from the
-edge, 16 px before the first item). When the line is too narrow the labels go
-first, then the bars. A signed-out account: the faded mark and the "!" badge.
-No accounts: the words "Connect account". A click on an account opens its
-account view.
+edge, 16 px before the first item). A label is at most 92 px wide, cut with an
+ellipsis. When the line is too narrow the labels go first, then the bars; when
+the items still do not fit, the accounts at the end are left out and counted
+in a "+N" item after the last one shown, in the items' text, not pressable,
+its tooltip and spoken name "N more accounts". The first account is always
+drawn. A signed-out account: the faded mark and the "!" badge. No accounts:
+the words "Connect account". A click on an account opens its account view.
 
 **Detail view** (a 380 px popup; also a dialog or a pane). Ground `popover`,
 text 13 px.
@@ -124,21 +129,26 @@ now`) at 11.5 px in `muted`, and a 26 px refresh control with a 14 px icon.
 - Each window: a 16 px line at 12 px with its name in `muted`, the percent (or
   "At limit") in its level's number colour, `resets in 4d 6h` (or `not
 started`) and the reset's clock time (`16:20` today, else `Mon 20:30`) at
-  11.5 px in `muted`; the bar 6 px below. From 520 px wide each window is one
-  line: name 120 px, bar, percent 56 px, reset 104 px, time 66 px. Below 340 px
-  the clock time goes. Windows: the general ones longest first, then per
-  model, then the others.
+  11.5 px in `muted`; the bar 6 px below. After a failed read the percent is
+  shown alone, as in the account view: no time to a reset, no clock time. From
+  520 px wide each window is one line: name 120 px, bar, percent 56 px, reset
+  104 px, time 66 px. Below 340 px the clock time goes. Windows: the general
+  ones longest first, then per model, then the others.
 - `Login ends Dec 5` at 11.5 px, 12 px below the windows, in the high number
   colour in its last 3 days (`Login ends in 2 days`); `Login ended Nov 9` for a
   signed-out account.
-- Footer, 1 px `border` rule above, 16 px by 12 px: a 30 by 18 px switch
-  (`accent` with an `accent_foreground` knob when on, `input` with a `muted`
-  knob when off), "Notify at 90% and at the limit" at 12 px in `muted`; when
-  the shown layout has a `headroom-strip` block, 10 px under it the same
-  switch and "Show in status bar", on while that block is shown, which shows
-  and hides it (28 px more footer); and, centred on them at the right, a 30 px
-  "Connect account" button on `raised` with an `input` border, below 340 px
-  wide a 30 px square with the plus alone.
+- Footer, 1 px `border` rule above, 16 px by 12 px: a 30 by 18 px switch (the
+  track on `input` with an `accent` layer over it, the knob on `muted` with an
+  `accent_foreground` layer over it; each layer's opacity 1 when on and 0 when
+  off, so the colours cross-fade over the knob's 160 ms `ease-out` slide),
+  "Notify at 90% and at the limit" at 12 px in `muted`. The switch and its
+  label are one line, and the whole line turns it: a 4 by 6 px hit padding
+  taken back by negative margins, 7 px corners, the `hover` ground and the
+  pressed look. When the shown layout has a `headroom-strip` block, 10 px
+  under it the same switch and "Show in status bar", on while that block is
+  shown, which shows and hides it (28 px more footer); and, centred on them at
+  the right, a 30 px "Connect account" button on `raised` with an `input`
+  border, below 340 px wide a 30 px square with the plus alone.
 - The popup is as tall as its accounts, at most 640 px; past that they scroll.
   It closes itself when it opens an account view or the connect dialog.
 
@@ -180,12 +190,16 @@ after it, its email in `foreground` ("A Claude account" or "A Codex account"
 without one); 6 px below, "Its stored login is deleted from this computer." in
 `muted` on 19 px lines; 20 px below, at the right, 8 px apart, two
 32 px buttons with 8 px corners, 14 px in, 12.5 px medium: Cancel on `raised`
-with an `input` border, and Remove on `blocked` in `solid_foreground`. Enter
-removes, Esc cancels.
+with an `input` border, and Remove on `blocked` in `solid_foreground`, 98 px
+at least so it keeps its width with its spinner. Enter removes, Esc cancels.
+While the login is deleted, Herdr's 12 px spinner in `solid_foreground` comes
+6 px before "Remove" and both buttons are disabled at 45 % opacity, with no
+hover or pressed look; a second Enter, Esc or press does nothing.
 
 **Connect dialog** (a 420 px dialog). Ground `popover`, 18 px padding. Title at
 15 px semibold ("Connect an account", "Connect Claude", "Connect Codex"), `Esc`
-at 11 px in `dim` on the right, a back chevron once a provider is chosen.
+at 11 px in `dim` on the right, a back chevron with the tooltip "Back" once a
+provider is chosen.
 
 - Choose: two 56 px rows with a 1 px `input` border and 9 px corners, the 22 px
   mark, the name, "Sign in with your Claude account" / "Sign in with your
@@ -194,9 +208,11 @@ at 11 px in `dim` on the right, a back chevron once a provider is chosen.
   computer, in a file only you can read."
 - Claude: "Your browser opened Claude's sign-in page. Approve there, then copy
   the code it shows you."; the sign-in address in mono at 11.5 px in a 36 px
-  field with Copy and Open; a 36 px field "Paste the code"; "The whole address
-  of the page that shows the code works too."; Cancel and Connect (on `solid`,
-  disabled at 45 % until a code is pasted, a spinner while it is checked).
+  field with Copy (58 px at least, one width as "Copy" and as "Copied") and
+  Open; a 36 px field "Paste the code"; "The whole address of the page that
+  shows the code works too."; Cancel and Connect (on `solid`, disabled at 45 %
+  until a code is pasted, a spinner while it is checked, 98 px at least so it
+  keeps one width with the spinner and without).
 - Codex: "Your browser opened OpenAI's sign-in page. Enter this code there.";
   the device code in mono at 22 px medium in a 56 px box with Copy; the address
   with Copy and Open; Herdr's spinner in `working` with "Waiting for you to
@@ -213,6 +229,11 @@ a window at its limit reads "At limit" in the list and the detail view.
 
 **Pace mark.** At `1 - (resetsAt - now) / duration`, clamped to the bar. A
 window with no reset time has not started: no mark, and `not started`.
+
+**Labels.** An account's label is the person's own, else the email's name part
+(with the organization or plan when another account has that name), else the
+organization or plan, else the provider's name ("Claude", "Codex"): a label is
+never empty. A stored empty label is shown as the provider's name.
 
 **Account states.**
 
@@ -233,25 +254,44 @@ the detail view when it opens an account view or the connect dialog. The
 refresh control reads every account now (in the account view, that account)
 and is Herdr's spinner while that read runs; an account read less than 30
 seconds ago is not read again, and a refresh that reads none does not spin.
-The switches turn toasts on and off for every copy, and show and hide the
-strip's block. The detail view's arrows move an account up or
-down; its three dots give Rename and Remove. In the account view: Rename
+The switches, turned from their whole line, turn toasts on and off for every
+copy, and show and hide the strip's block. The detail view's arrows move an
+account up or down; its three dots give Rename and Remove. In the account view: Rename
 (Enter keeps, Esc leaves it), Sign in again, Remove. Remove asks first in the
 mod's own dialog ("Remove work?" / "Its stored login is deleted from this
 computer.") over the view that asks, which stays open; the dialog deletes the
 account and closes, and the account view closes itself once its account is no
-longer connected. In the connect dialog Esc closes it; Copy reads "Copied";
-Open opens the address in the browser.
+longer connected. In the connect dialog Esc closes it; Copy reads "Copied" and
+turns back to "Copy" after 2 s (a second copy starts the 2 s again); Open opens
+the address in the browser.
 
 **Hovers.** Accounts and controls take the `hover` ground. In the rail and the
 strip the hover names the account and gives its numbers:
 `work: Weekly 41% · 4d 6h, 5-hour 62% · 1h 48m`; `work: Not read yet`;
 `work: Sign in again`; a failed read adds `· Read failed: 12m old · network`;
-a per-model window at its limit adds `, Fable at limit`.
+a per-model window at its limit adds `, Fable at limit`. A label, an email and
+organization, a plan or a window's name that can be cut in its place (in the
+list, the account view and the detail view) carries its whole text as a
+tooltip, judged with the strip's width estimate; short text carries none.
+
+**Presses.** Every pressable answers at once, on pointer-down, with no
+transition, and each pressed look matches its hover. Rows, icon controls, the
+three dots, menu rows, the switches' lines, the account view's last row, the
+provider choices, Copy and Open take the `selected` ground. The buttons that
+hover on `selected` (Rename, Sign in again and Remove in the account view,
+Connect account in the detail view) take `selected` mixed 6 % toward
+`foreground` (`mix()`, its alpha moved 6 % too). Solid, red and dialog
+buttons, which hover at 88 %, fall to 72 % opacity; the word "Sign in again"
+in a row to 70 %. A press on a control inside a row does not give the row its
+pressed look. Disabled controls (a dimmed arrow, Connect while it is empty or
+checking, Remove's dialog while it removes) have no pressed look.
 
 **What moves.** A new reading slides the fill's width and the pace mark over
-250 ms, ease-in-out. The switch's knob slides over 160 ms. The spinner turns
-natively. Countdowns redraw once a minute.
+250 ms, ease-in-out. A bar's track, fill and pace mark are named for their
+account (and window), not for the row's place, so a reorder or a removal
+moves no bar. The switch's knob slides over 160 ms `ease-out`, and its colour
+layers cross-fade in step. The spinner turns natively. Countdowns redraw once
+a minute.
 
 **Freshness.** Each copy checks once a minute and when it starts. An idle
 account is read when its last read is 5 minutes old; an active one sooner,
@@ -392,10 +432,12 @@ width: 380, height, props: { form: "account", account } }`, `{ mod:
   reports its week in `primary_window`. Error text is built from a known kind,
   never from a response body.
 - **Sizes.** Text cannot be measured: the strip estimates an ASCII glyph at 0.6
-  of the font size and any other at 1.1. The strip never resizes its block;
-  the list and the rail resize theirs only with `fit`, to their first two accounts, and remember the height
-  in `headroom.fit` so a dragged boundary stays until the height needed
-  changes.
+  of the font size and any other at 1.1, meant never to fall short of the drawn
+  width, and counts a label at 92 px at most. The same estimate decides
+  whether a text can be cut in its place and so carries a tooltip. The strip
+  never resizes its block; the list and the rail resize theirs only with
+  `fit`, to their first two accounts, and remember the height in
+  `headroom.fit` so a dragged boundary stays until the height needed changes.
 - **Layout names.** Herdr lists a layout under its file name, but only shows
   and switches to a layout whose name uses letters, digits, `-` or `_`: a file
   such as `Herdr Headroom.json` is never shown.

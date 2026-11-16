@@ -378,7 +378,7 @@ The memorable thing: a full bar over a thin one, thickness naming the window so 
 Every press answers at once, on pointer-down, with no transition; each pressed look matches its hover.
 
 - **`selected` ground:** account rows in the list, the rail, the strip and the detail view, icon controls, the three dots, menu rows, the switches' lines, the account view's last row, the provider choices in the connect dialog, Copy and Open.
-- **One step past `selected`:** the buttons that hover on `selected` (the account actions, Connect account in the detail view) take `selected` mixed 6 % toward `foreground`, as translucent as `selected` is.
+- **One step past `selected`:** the buttons that hover on `selected` (the account actions, Connect account in the detail view) take `selected` mixed 6 % toward `foreground`, its alpha moved 6 % toward opaque too, so it stays translucent (`#ffffff17` gives `#fefefe25`).
 - **0.72 opacity:** solid, danger and dialog buttons, which hover at 0.88: Connect, Cancel, Remove in Remove's dialog, and Sign in again when it is solid.
 - **0.7 opacity:** the word "Sign in again" in a row.
 - **Disabled:** no pressed look.

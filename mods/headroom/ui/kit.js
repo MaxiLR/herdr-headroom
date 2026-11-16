@@ -44,7 +44,7 @@ export function pressedGround(t) {
 
 /**
  * Buttons that hover on `selected`: one step past it, `selected` moved 6 %
- * toward the text colour, as translucent as `selected` is.
+ * toward the text colour, its alpha moved 6 % toward opaque too.
  */
 export function pressedStep(t) {
   return (s) => s.bg(mix(t.selected, t.foreground, 0.06));
