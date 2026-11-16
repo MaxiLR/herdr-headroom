@@ -596,3 +596,122 @@ test("the account pages name the provider as the last label and the days in a lo
     .replace(/\s+/g, " ");
   assert.match(detail, /`Login ends in 2 days`/);
 });
+
+// The text of RECIPE.md from the bold lead `from` up to the bold lead `to`.
+function recipePart(from, to) {
+  const recipe = read("RECIPE.md");
+  const start = recipe.indexOf(`**${from}**`);
+  assert.notEqual(start, -1, `no **${from}** in RECIPE.md`);
+  const end = recipe.indexOf(`**${to}**`, start);
+  assert.notEqual(end, -1, `no **${to}** after **${from}** in RECIPE.md`);
+  return recipe.slice(start, end).replace(/\s+/g, " ");
+}
+
+test("RECIPE.md's strip leaves out and counts the accounts it cannot show, its labels at most 92 px", () => {
+  const strip = recipePart("Strip", "Detail view");
+  assert.match(strip, /\b92 px\b/);
+  assert.match(strip, /"\+N"|`\+N`/);
+  assert.match(strip, /"N more accounts"|`N more accounts`/);
+  assert.match(strip, /first account is always/);
+});
+
+test("RECIPE.md answers every press on pointer-down with the pressed looks", () => {
+  const behaves = section(read("RECIPE.md"), "How it behaves").replace(
+    /\s+/g,
+    " ",
+  );
+  const presses = behaves.slice(behaves.indexOf("**Presses.**"));
+  assert.match(presses, /^\*\*Presses\.\*\*/);
+  assert.match(presses, /pointer-down/);
+  assert.match(presses, /`selected`/);
+  assert.match(presses, /6 % toward `foreground`/);
+  assert.match(presses, /72 %/);
+  assert.match(presses, /70 %/);
+  assert.match(presses, /[Dd]isabled[^.]*no pressed look/);
+});
+
+test("RECIPE.md's footer switch cross-fades its colour layers and turns from its whole line", () => {
+  const detail = recipePart("Detail view", "Account view");
+  assert.match(detail, /`accent` layer/);
+  assert.match(detail, /cross-fade/);
+  assert.match(detail, /160 ms/);
+  assert.match(detail, /line[^.]*(turns|toggles) it/);
+  assert.match(detail, /4 by 6 px/);
+});
+
+test("RECIPE.md's Copy turns back after 2 s and Remove's dialog shows its deletion running", () => {
+  const behaves = section(read("RECIPE.md"), "How it behaves").replace(
+    /\s+/g,
+    " ",
+  );
+  assert.match(behaves, /"Copied"[^.]*2 s/);
+  const dialog = recipePart("Remove dialog", "Connect dialog");
+  assert.match(dialog, /spinner/);
+  assert.match(dialog, /45 %/);
+  assert.match(dialog, /disabled/);
+});
+
+test("RECIPE.md's detail view shows a failed read's percentage alone, as the account view does", () => {
+  const detail = recipePart("Detail view", "Account view");
+  assert.match(
+    detail,
+    /failed read[^.]*percent[^.]*alone|percent[^.]*alone[^.]*failed read/,
+  );
+});
+
+test("RECIPE.md names Back's tooltip, tooltips on cut text and the provider's name as the last label", () => {
+  const recipe = read("RECIPE.md").replace(/\s+/g, " ");
+  assert.match(recipe, /tooltip "Back"/);
+  assert.match(recipe, /whole text as a tooltip/);
+  assert.match(recipe, /provider's name \("Claude", "Codex"\)/);
+});
+
+test("design.json's selected ground is the pressed grounds, and every hovered sample has its pressed look", () => {
+  const design = JSON.parse(read(".impeccable/design.json"));
+  assert.match(
+    design.extensions.colorMeta.selected.purpose,
+    /pressed grounds/i,
+  );
+  assert.doesNotMatch(
+    design.extensions.colorMeta.selected.purpose,
+    /secondary button/i,
+  );
+  // A hover on `hover` presses on `selected`, a hover on `selected` one step
+  // past it, and a hover at .88 opacity at .72.
+  const pressed = {
+    "background:var(--hover)": /background:var\(--selected\)/,
+    "background:var(--selected)":
+      /background:color-mix\(in srgb,var\(--selected\),var\(--fg\) 6%\)/,
+    "opacity:.88": /opacity:\.72/,
+  };
+  let hovered = 0;
+  for (const component of design.components) {
+    const rules = [...(component.css ?? "").matchAll(/([^{}]+)\{([^}]*)\}/g)];
+    for (const [, selectors, body] of rules) {
+      const names = [...selectors.matchAll(/\.(ds-[\w-]+):hover/g)].map(
+        (m) => m[1],
+      );
+      for (const name of names) {
+        hovered += 1;
+        const look = Object.keys(pressed).find((decl) => body.includes(decl));
+        assert.ok(look, `${component.refersTo}: .${name}:hover{${body}}`);
+        const active = rules.find(([, other]) =>
+          new RegExp(`\\.${name}(:not\\([^)]*\\))*:active`).test(other),
+        );
+        assert.ok(active, `${component.refersTo}: no .${name}:active`);
+        assert.match(
+          active[2],
+          pressed[look],
+          `${component.refersTo}: .${name}`,
+        );
+      }
+    }
+  }
+  assert.ok(hovered >= 10, `${hovered} hovered samples`);
+});
+
+test("DESIGN.md and the kit do not say the step past selected keeps its alpha", () => {
+  const design = read("DESIGN.md").replace(/\s+/g, " ");
+  assert.doesNotMatch(design, /as translucent as `selected` is/);
+  assert.match(design, /alpha[^.]*6 %|6 %[^.]*alpha/);
+});
