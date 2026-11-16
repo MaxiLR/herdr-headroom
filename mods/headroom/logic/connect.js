@@ -44,6 +44,10 @@ export function dialogState(provider = null) {
   };
 }
 
+export function markCopied(_state, _what, _io) {}
+
+export function backToProviders(_state) {}
+
 /**
  * Starts signing in to `provider` through `store.connect`, keeping `state` in
  * step with it. `sleep(ms)` waits (a failure to wait stops the sign-in),

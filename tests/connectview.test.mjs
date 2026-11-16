@@ -200,6 +200,62 @@ test("a Codex sign-in that timed out says so and offers Start again", (t) => {
   assert.ok(!drawn.includes("Waiting for you to approve"), all);
 });
 
+// The least width an element's line prints, or null when it has none.
+function leastWidth(line) {
+  const found = / \.min_w\[Number\(([-\d.]+)\)\]/.exec(line ?? "");
+  return found ? Number(found[1]) : null;
+}
+
+for (const [id, what, step] of [
+  ["copy-url", "url", { provider: "claude", shown: { url: CLAUDE_URL } }],
+  [
+    "copy-code",
+    "code",
+    { provider: "codex", shown: { url: CODEX_URL, code: "WDJB-MJHT" } },
+  ],
+]) {
+  test(`${id} is as wide reading Copy as reading Copied`, (t) => {
+    const ready = drawDialog(t, { state: preloaded({ ...step }) });
+    if (!ready) return;
+    const done = drawDialog(t, { state: preloaded({ ...step, copied: what }) });
+    const before = withId(ready, id);
+    const after = withId(done, id);
+    assert.ok(texts(ready).includes("Copy"), ready.join("\n"));
+    assert.ok(texts(done).includes("Copied"), done.join("\n"));
+    assert.notEqual(leastWidth(before), null, before);
+    assert.ok(leastWidth(before) >= 58, before);
+    assert.equal(leastWidth(after), leastWidth(before), after);
+  });
+}
+
+test("Connect is as wide with its spinner as without", (t) => {
+  const step = { provider: "claude", shown: { url: CLAUDE_URL } };
+  const idle = drawDialog(t, { state: preloaded(step) });
+  if (!idle) return;
+  const checking = drawDialog(t, {
+    state: preloaded({ ...step, checking: true }),
+  });
+  const before = withId(idle, "connect");
+  const after = withId(checking, "connect");
+  assert.notEqual(leastWidth(before), null, before);
+  assert.ok(leastWidth(before) >= 98, before);
+  assert.equal(leastWidth(after), leastWidth(before), after);
+});
+
+test("the back chevron reads Back on hover and keeps its spoken name", (t) => {
+  const lines = drawDialog(t, {
+    state: preloaded({ provider: "claude", shown: { url: CLAUDE_URL } }),
+  });
+  if (!lines) return;
+  const back = withId(lines, "back") ?? "";
+  assert.match(back, /:tooltip\[Str\("Back"\)\]/, back);
+  assert.match(
+    back,
+    /:accessibility_label\[Str\("Back to the providers"\)\]/,
+    back,
+  );
+});
+
 test("Sign in again for a Claude account starts at the Claude step", (t) => {
   const lines = drawDialog(t, {
     connect: { provider: "claude", account: "claude:acct-1" },
