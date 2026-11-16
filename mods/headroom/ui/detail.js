@@ -322,26 +322,34 @@ function nameField(reading, input, index, view) {
 // click reaches the account.
 function signInAgain(reading, index, view) {
   const t = view.theme;
-  return div()
-    .id(`account-${index}-sign-in`)
-    .role("button")
-    .accessibility_label(`Sign in again to ${reading.label}`)
-    .flex_none()
-    .text_size(12)
-    .text_color(t.accent)
-    .cursor_pointer()
-    .hover((s) => s.underline())
-    .active(pressedWord())
-    .on_mouse_down("left", (_event, cx) => cx.stop_propagation())
-    .on_click((_event, cx) => {
-      cx.stop_propagation();
-      closeSelf(view);
-      openConnect(view, {
-        provider: reading.provider,
-        account: reading.id,
-      });
-    })
-    .child("Sign in again");
+  return (
+    div()
+      .id(`account-${index}-sign-in`)
+      .role("button")
+      .accessibility_label(`Sign in again to ${reading.label}`)
+      .flex_none()
+      .text_size(12)
+      .text_color(t.accent)
+      // Room around the word, taken back so nothing else moves.
+      .px(6)
+      .py(5)
+      .mx(-6)
+      .my(-5)
+      .rounded(6)
+      .cursor_pointer()
+      .hover((s) => s.underline())
+      .active(pressedWord())
+      .on_mouse_down("left", (_event, cx) => cx.stop_propagation())
+      .on_click((_event, cx) => {
+        cx.stop_propagation();
+        closeSelf(view);
+        openConnect(view, {
+          provider: reading.provider,
+          account: reading.id,
+        });
+      })
+      .child("Sign in again")
+  );
 }
 
 // The up and down arrows, when there is more than one account, then the
@@ -601,9 +609,11 @@ function empty(t) {
     );
 }
 
-// A 30 by 18 px switch, `accent` when on and `input` when off, its knob
-// sliding across; `change(checked)` runs when it is turned.
-function toggle(id, on, label, change, t) {
+// A 30 by 18 px switch on `input`, its knob on `muted` sliding across. Over
+// each lies a layer, `accent` on the track and `accent_foreground` on the knob,
+// that fades in as the knob slides on and out as it slides off, so the colours
+// change in step with it. `turn(cx)` runs when it is turned.
+function toggle(id, on, label, turn, t) {
   return Switch.new(id)
     .checked(on)
     .accessibility_label(label)
@@ -612,12 +622,10 @@ function toggle(id, on, label, change, t) {
     .w(30)
     .h(18)
     .rounded(9)
-    .bg(on ? t.accent : t.input)
+    .bg(t.input)
     .cursor_pointer()
-    .on_change((checked, cx) => {
-      change(checked);
-      cx.notify();
-    })
+    .on_change((_checked, cx) => turn(cx))
+    .child(onLayer(`${id}-on`, on, t.accent).rounded(9))
     .child(
       div()
         .absolute()
@@ -625,13 +633,27 @@ function toggle(id, on, label, change, t) {
         .left(on ? 14 : 2)
         .size(14)
         .rounded_full()
-        .bg(on ? t.accent_foreground : t.muted)
-        .transition("left", SLIDE),
+        .bg(t.muted)
+        .transition("left", SLIDE)
+        .child(
+          onLayer(`${id}-knob-on`, on, t.accent_foreground).rounded_full(),
+        ),
     );
 }
 
-function notifySwitch(view) {
-  return toggle(
+// A layer of `colour` filling its parent, shown while the switch is on.
+function onLayer(id, on, colour) {
+  return div()
+    .id(id)
+    .absolute()
+    .inset_0()
+    .bg(colour)
+    .opacity(on ? 1 : 0)
+    .transition("opacity", SLIDE);
+}
+
+function notifyLine(view) {
+  return switchLine(
     "notify",
     view.notify,
     NOTIFY,
@@ -641,9 +663,9 @@ function notifySwitch(view) {
 }
 
 // On while the strip's block is shown; null when the layout has none.
-function stripSwitch(view, block) {
+function stripLine(view, block) {
   if (block === null) return null;
-  return toggle(
+  return switchLine(
     "strip",
     !block.hidden,
     STRIP,
@@ -652,13 +674,31 @@ function stripSwitch(view, block) {
   );
 }
 
-// A line of the footer's left column: a switch and its label.
-function switchLine(control, label, t) {
+// A line of the footer's left column: the switch and its label, one target
+// that turns the switch. Its room around them is taken back by its margins,
+// so the footer keeps its height. The line and the switch both set the value
+// opposite to the one drawn, so a press that reaches both turns it once. The
+// switch stays the one named control; the hover and pressed grounds are the
+// line's, as a `Switch` takes no state styles.
+function switchLine(id, on, label, set, t) {
+  const turn = (cx) => {
+    set(!on);
+    cx.notify();
+  };
   return h_flex()
-    .min_h(18)
+    .id(`${id}-line`)
+    .px(6)
+    .py(4)
+    .mx(-6)
+    .my(-4)
     .gap(10)
     .items_center()
-    .child(control)
+    .rounded(7)
+    .cursor_pointer()
+    .hover((s) => s.bg(t.hover))
+    .active(pressedGround(t))
+    .on_click((_event, cx) => turn(cx))
+    .child(toggle(id, on, label, turn, t))
     .child(
       div()
         .flex_1()
@@ -714,7 +754,7 @@ function connectButton(view) {
 // at the right, centred on them.
 function footer(view, block) {
   const t = view.theme;
-  const strip = stripSwitch(view, block);
+  const strip = stripLine(view, block);
   return h_flex()
     .flex_none()
     .px(16)
@@ -728,8 +768,8 @@ function footer(view, block) {
         .flex_1()
         .min_w(0)
         .gap(10)
-        .child(switchLine(notifySwitch(view), NOTIFY, t))
-        .when(strip !== null, (el) => el.child(switchLine(strip, STRIP, t))),
+        .child(notifyLine(view))
+        .when(strip !== null, (el) => el.child(strip)),
     )
     .child(connectButton(view));
 }

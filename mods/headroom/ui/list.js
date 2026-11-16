@@ -151,6 +151,12 @@ function labelLine(row, index, view) {
           .flex_none()
           .text_size(11)
           .text_color(t.accent)
+          // Room around the word, taken back so nothing else moves.
+          .px(6)
+          .py(5)
+          .mx(-6)
+          .my(-5)
+          .rounded(6)
           .cursor_pointer()
           .hover((s) => s.underline())
           .active(pressedWord())
