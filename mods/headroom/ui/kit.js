@@ -226,9 +226,9 @@ export function pair(
   return v_flex().w_full().gap(gap).children(bars);
 }
 
-/** Herdr's ring spinner, turning natively. */
-export function spinner(size, t) {
-  return svg(SPINNER).size(size).flex_none().text_color(t.muted).spin(900);
+/** Herdr's ring spinner, turning natively, in `colour` (`muted` by default). */
+export function spinner(size, t, colour = t.muted) {
+  return svg(SPINNER).size(size).flex_none().text_color(colour).spin(900);
 }
 
 /** The terminal font, for codes and addresses. */

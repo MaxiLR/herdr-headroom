@@ -13,6 +13,21 @@ export function removedOf(view) {
   return view.readings.find((reading) => reading.id === id) ?? null;
 }
 
+// What the dialog says of an account that has no email.
+const UNNAMED = { claude: "A Claude account", codex: "A Codex account" };
+
+/**
+ * The line under the question, telling apart accounts with one label: the
+ * email of the account `reading` is (from `view.store.accounts()`), or which
+ * provider's account it is.
+ */
+export function removedWho(view, reading) {
+  const account = view.store
+    .accounts()
+    .find((entry) => entry.id === reading.id);
+  return account?.email || UNNAMED[reading.provider];
+}
+
 /** Closes the dialog, once. */
 export function closeRemove(view) {
   const state = stateOf(view);
