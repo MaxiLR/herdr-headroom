@@ -636,13 +636,17 @@ test("inside a clickable account the arrows, dimmed ones too, and Sign in again 
   }
 });
 
-test("with no accounts only Connect account, the refresh control and the switch are clickable", (t) => {
+test("with no accounts only Connect account, the refresh control, the switch and its line are clickable", (t) => {
   const lines = draw(t, { readings: [], accounts: [] });
   if (!lines) return;
   const clickable = lines.filter((line) =>
     /:on_click\(fn\)|:on_change\(fn\)/.test(line),
   );
-  assert.equal(clickable.length, 3, show(clickable));
+  assert.equal(clickable.length, 4, show(clickable));
+  assert.ok(
+    clickable.some((line) => line.includes(':id[Str("notify-line")]')),
+    show(clickable),
+  );
   assert.ok(
     clickable.some((line) => line.includes(':id[Str("connect-account")]')),
     show(clickable),
@@ -666,5 +670,32 @@ test("a dimmed arrow keeps a press from reaching its account", (t) => {
     const control = withId(lines, id) ?? "";
     assert.match(control, /:disabled\[Bool\(true\)\]/, `${id}\n${show(lines)}`);
     assert.match(control, /:on_mouse_down_left\(fn\)/, `${id}\n${show(lines)}`);
+  }
+});
+
+test("Sign in again has room around it, taken back, and keeps its click, underline, pressed look and stop", (t) => {
+  const lines = draw(t, {
+    readings: [
+      maxi({
+        status: "signed-out",
+        loginEndsAt: new Date(2026, 10, 9, 15, 0).getTime(),
+        windows: [],
+      }),
+    ],
+  });
+  if (!lines) return;
+  const control = withId(lines, "account-0-sign-in") ?? "";
+  for (const part of [
+    ".px[Number(6.0)]",
+    ".py[Number(5.0)]",
+    ".mx[Number(-6.0)]",
+    ".my[Number(-5.0)]",
+    ".rounded[Number(6.0)]",
+    ":on_click(fn)",
+    ":hover(.underline)",
+    ":active(.opacity[Number(0.7)])",
+    ":on_mouse_down_left(fn)",
+  ]) {
+    assert.ok(control.includes(part), `${part}\n${show(lines)}`);
   }
 });

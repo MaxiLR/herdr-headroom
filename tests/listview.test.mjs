@@ -589,3 +589,30 @@ test("with the weekly window at its limit the words are not drawn", (t) => {
   assert.match(all, /At limit · 4d 6h/, lines.join("\n"));
   assert.doesNotMatch(all, /Fable/, lines.join("\n"));
 });
+
+test("Sign in again has room around it, taken back, and keeps its click, underline, pressed look and stop", (t) => {
+  const lines = drawForm(t, "list", {
+    size: SIZE,
+    readings: [
+      reading({
+        status: "signed-out",
+        loginEndsAt: new Date(2026, 10, 9, 15, 0).getTime(),
+      }),
+    ],
+  });
+  if (!lines) return;
+  const control = withId(lines, "account-0-sign-in") ?? "";
+  for (const part of [
+    ".px[Number(6.0)]",
+    ".py[Number(5.0)]",
+    ".mx[Number(-6.0)]",
+    ".my[Number(-5.0)]",
+    ".rounded[Number(6.0)]",
+    ":on_click(fn)",
+    ":hover(.underline)",
+    ":active(.opacity[Number(0.7)])",
+    ":on_mouse_down_left(fn)",
+  ]) {
+    assert.ok(control.includes(part), `${part}\n${lines.join("\n")}`);
+  }
+});
