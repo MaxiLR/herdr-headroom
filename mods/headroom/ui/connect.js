@@ -4,8 +4,10 @@
 import { div, svg } from "gpui-kit";
 import { h_flex, v_flex, Input, InputState } from "gpui-base";
 import {
+  backToProviders,
   dialogState,
   errorText,
+  markCopied,
   startSignIn,
   stopsIn,
 } from "../logic/connect.js";
@@ -116,7 +118,7 @@ function back(view) {
   const live = liveOf(view);
   live?.session?.stop();
   if (live) live.session = null;
-  view.ui.connect = dialogState();
+  if (view.ui.connect) backToProviders(view.ui.connect);
   live?.handle.focus();
 }
 
@@ -173,6 +175,7 @@ function header(view, title, withBack, t) {
           .id("back")
           .role("button")
           .accessibility_label("Back to the providers")
+          .tooltip("Back")
           .flex_none()
           .size(22)
           .ml(-5)
@@ -450,14 +453,21 @@ function mini(id, text, t) {
     .child(text);
 }
 
+// Copy: `Copied` for 2 s after a press. One least width holds both words.
 function copyButton(id, what, text, state, t) {
-  return mini(id, state.copied === what ? "Copied" : "Copy", t).on_click(
-    (_event, cx) => {
+  return mini(id, state.copied === what ? "Copied" : "Copy", t)
+    .min_w(58)
+    .justify_center()
+    .on_click((_event, cx) => {
       cx.write_to_clipboard(text);
-      state.copied = what;
+      cx.spawn(async (cx) => {
+        await markCopied(state, what, {
+          sleep: (ms) => cx.sleep(ms),
+          refresh: () => cx.notify(),
+        });
+      });
       cx.notify();
-    },
-  );
+    });
 }
 
 // Cancel, and the primary button when the step has one.
@@ -496,11 +506,14 @@ function button(id, text, primary, t, leading = null) {
     .child(text);
 }
 
+// Connect; one least width holds its spinner, the gap and the word.
 function connectButton(view, disabled, checking, t) {
   const working = checking
     ? spinner(12, t).text_color(t.solid_foreground)
     : null;
   return button("connect", "Connect", true, t, working)
+    .min_w(98)
+    .justify_center()
     .disabled(disabled)
     .when(disabled, (el) => el.opacity(0.45))
     .when(!disabled, (el) =>
