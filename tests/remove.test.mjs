@@ -88,3 +88,18 @@ test("Remove for an account no longer connected removes nothing and closes", asy
   await confirmRemove(view);
   assert.deepEqual(log, [["closeOverlay", "overlay-1"]]);
 });
+
+test("while Remove runs the dialog says removing, and Remove and Cancel change nothing", async () => {
+  const { view, log, answer } = dialog();
+  const first = confirmRemove(view);
+  assert.equal(view.ui.remove.removing, true);
+  const second = confirmRemove(view);
+  cancelRemove(view);
+  assert.deepEqual(log, [["remove", TERAC]]);
+  answer();
+  await Promise.all([first, second]);
+  assert.deepEqual(log, [
+    ["remove", TERAC],
+    ["closeOverlay", "overlay-1"],
+  ]);
+});
