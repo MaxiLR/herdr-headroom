@@ -39,10 +39,11 @@ logos, from the mod's own `mods/headroom/icons/`: the ChatGPT logo
   px from the top); on the right a 22 px control with three dots (14 px,
   `muted`), tooltip "Accounts and settings", `hover` ground, that opens the
   detail view.
-- Each account, 8 px in from the block and 8 px of its own padding, 9 px below:
-  a 26 px label line (14 px mark, 8 px gap, the label at 13 px in `foreground`,
-  and on the right a note at 11 px), then the pair of bars 6 px apart, then a
-  14 px numbers line 6 px below at 11 px in `muted`: the weekly window's
+- Each account, 8 px in from the block, with 8 px of its own padding at the
+  sides, 3 px above and 6 px below: a 26 px label line (14 px mark, 8 px gap,
+  the label at 13 px in `foreground`, and on the right a note at 11 px), then
+  the pair of bars 6 px apart, then a 14 px numbers line 6 px below at 11 px
+  in `muted`: the weekly window's
   numbers on the left (`41% · 4d 6h`), the 5-hour window's on the right
   (`5-hour 62% · 1h 48m`); the percent in its level's number colour, the `·`
   in `dim`. Below 220 px wide the 5-hour numbers drop the word "5-hour". A plan
@@ -62,7 +63,7 @@ logos, from the mod's own `mods/headroom/icons/`: the ChatGPT logo
   `muted`), and a 28 px "Connect account" button with Herdr's plus icon, a
   1 px `input` border and 8 px corners.
 - The list fills its block; the header stays and the accounts scroll under it.
-  When accounts are cut off below, a 34 px band on the bottom edge, `chrome`
+  When accounts are cut off below, a 31 px band on the bottom edge, `chrome`
   fading in from clear over its top 8 px, says how many: "3 more" at 11 px in
   `muted` and Herdr's 11 px chevron-down in `dim`, 5 px apart, centred 11 px
   above the edge. It is not a control and is gone once the last account is in

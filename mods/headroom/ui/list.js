@@ -257,7 +257,8 @@ function account(reading, index, view) {
       .accessibility_label(row.spoken)
       .flex_none()
       .px(8)
-      .pb(9)
+      .pt(3)
+      .pb(6)
       .rounded(8)
       .cursor_pointer()
       .hover((s) => s.bg(t.hover))
@@ -303,7 +304,7 @@ function account(reading, index, view) {
 // "3 more" and Herdr's chevron, centred 11 px above the bottom edge, on a band
 // over the accounts. It is not a control.
 function hint(count, t) {
-  return edgeBand({ id: "more-below", height: 34, fade: 8 }, t)
+  return edgeBand({ id: "more-below", height: 31, fade: 8 }, t)
     .role("label")
     .accessibility_label(`${moreWords(count)} below`)
     .child(

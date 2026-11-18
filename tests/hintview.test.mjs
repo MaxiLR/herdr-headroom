@@ -35,13 +35,13 @@ function subtree(lines, id) {
 const has = (line, key, value) =>
   line.includes(`:${key}[Str(${JSON.stringify(value)})]`);
 
-test("six accounts in a list for two say 4 more, with the chevron, on a 34 px band", (t) => {
+test("six accounts in a list for two say 4 more, with the chevron, on a 31 px band", (t) => {
   const lines = drawForm(t, "list", { size: LIST, readings: accounts(6) });
   if (!lines) return;
   const all = lines.join("\n");
   const band = subtree(lines, "more-below");
   assert.ok(band.length > 0, all);
-  assert.ok(band[0].includes(".h[Number(34.0)]"), band[0]);
+  assert.ok(band[0].includes(".h[Number(31.0)]"), band[0]);
   assert.ok(
     has(band[0], "accessibility_label", "4 more accounts below"),
     band[0],

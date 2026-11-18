@@ -480,7 +480,7 @@ test("a row draws two bars at most, and the rail and the strip show the fuller o
 
 test("DESIGN.md gives the line, the fitted list, the hint, the rail and the strip their measures", () => {
   const layout = section(read("DESIGN.md"), "Layout").replace(/\s+/g, " ");
-  for (const px of [1, 41, 70, 61, 49, 50, 25, 34, 11, 16, 10.5, 120, 720]) {
+  for (const px of [1, 41, 70, 61, 49, 50, 25, 31, 11, 16, 10.5, 120, 720]) {
     assert.match(layout, new RegExp(`(^|[^\\d.])${px} px\\b`), `${px} px`);
   }
   assert.match(layout, /"3 more"/);

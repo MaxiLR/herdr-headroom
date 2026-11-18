@@ -617,6 +617,22 @@ test("Sign in again has room around it, taken back, and keeps its click, underli
   }
 });
 
+// The mark's top sits as far from the highlight's top edge as the numbers'
+// baseline from its bottom edge: 3 px above the label line, 6 px under the
+// numbers. logic/fit.js counts the same padding (`LIST.pt`, `LIST.pb`).
+test("an account row pads 3 px above and 6 px below, 8 px at the sides", (t) => {
+  const lines = drawForm(t, "list", { size: SIZE, readings: [reading()] });
+  if (!lines) return;
+  const row = withId(lines, "account-0") ?? "";
+  for (const part of [
+    ".px[Number(8.0)]",
+    ".pt[Number(3.0)]",
+    ".pb[Number(6.0)]",
+  ]) {
+    assert.ok(row.includes(part), `${part}\n${row}`);
+  }
+});
+
 // A label of 54 letters: 421.2 px at 13 px, wider than any list.
 const LONG_LABEL = "Personal Claude account for weekends and side projects";
 

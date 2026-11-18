@@ -19,9 +19,18 @@ export const FIT_MIN = STRIP_BELOW;
 // How many accounts a fitted block holds; the rest scroll under them.
 const SHOWN = 2;
 
-// The list's row: the label line, `Login ended …`, the bars and their gap,
-// the line of numbers with its margin, the padding under the row.
-const LIST = { label: 26, ended: 14, bars: [6, 3], gap: 6, numbers: 20, pb: 9 };
+// The list's row: the padding above it, the label line, `Login ended …`, the
+// bars and their gap, the line of numbers with its margin, the padding under
+// the row.
+const LIST = {
+  pt: 3,
+  label: 26,
+  ended: 14,
+  bars: [6, 3],
+  gap: 6,
+  numbers: 20,
+  pb: 6,
+};
 /** Under the list's accounts. */
 export const LIST_BELOW = 8;
 // More under them when some are cut off: the hint's room.
@@ -49,6 +58,7 @@ function barsHeight(full, short, [fullPx, shortPx], gap) {
 export function listRowHeight(reading, now) {
   const row = listRowOf(reading, now, null);
   return (
+    LIST.pt +
     LIST.label +
     (row.ended !== null ? LIST.ended : 0) +
     (row.pair !== null
