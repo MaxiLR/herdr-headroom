@@ -409,3 +409,37 @@ test("the identity's plan reads as words", async () => {
   assert.equal(result.ok, true);
   assert.equal(result.credentials.identity.plan, "Self serve business prolite");
 });
+
+// Herdr's runtime has a Buffer whose base64 decoding answers "" (seen in
+// herdr-app 0.1.16 on Windows), and no TextDecoder: the claims must be read
+// without either.
+test("the identity is read where Buffer cannot decode base64 and TextDecoder is missing", async (t) => {
+  // Made with the real Buffer, before it is replaced.
+  const accented = jwt({
+    "https://api.openai.com/auth": {
+      chatgpt_account_id: "acct-ñ",
+      chatgpt_plan_type: "plus",
+    },
+    "https://api.openai.com/profile": { email: "josé@example.com" },
+  });
+  const { Buffer: realBuffer } = globalThis;
+  const { TextDecoder: realDecoder } = globalThis;
+  globalThis.Buffer = { from: () => ({ toString: () => "" }) };
+  delete globalThis.TextDecoder;
+  t.after(() => {
+    globalThis.Buffer = realBuffer;
+    globalThis.TextDecoder = realDecoder;
+  });
+  const { io } = signIn({
+    exchange: { status: 200, body: { ...TOKENS, access_token: accented } },
+  });
+  const result = await login(io);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.credentials.identity, {
+    accountId: "acct-ñ",
+    organizationId: "acct-ñ",
+    email: "josé@example.com",
+    organization: null,
+    plan: "Plus",
+  });
+});

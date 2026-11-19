@@ -105,6 +105,18 @@ function planWords(plan) {
   return words[0].toUpperCase() + words.slice(1);
 }
 
+// Base64 text as UTF-8, with atob alone: Herdr's runtime has a Buffer whose
+// base64 decoding answers "" and no TextDecoder. Each byte becomes a %XX
+// escape, which decodeURIComponent reads as UTF-8 (and throws on bad UTF-8).
+function utf8OfBase64(base64) {
+  const bytes = atob(base64);
+  let escaped = "";
+  for (let i = 0; i < bytes.length; i++) {
+    escaped += `%${bytes.charCodeAt(i).toString(16).padStart(2, "0")}`;
+  }
+  return decodeURIComponent(escaped);
+}
+
 // The payload of a JWT, unverified, or null.
 function claimsOf(token) {
   const part = typeof token === "string" ? token.split(".")[1] : undefined;
@@ -112,7 +124,7 @@ function claimsOf(token) {
   try {
     const base64 = part.replace(/-/g, "+").replace(/_/g, "/");
     const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
-    const claims = JSON.parse(Buffer.from(padded, "base64").toString("utf8"));
+    const claims = JSON.parse(utf8OfBase64(padded));
     return isObject(claims) ? claims : null;
   } catch {
     return null;
