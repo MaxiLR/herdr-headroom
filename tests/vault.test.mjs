@@ -549,6 +549,164 @@ test("a file that loses 0600 on a later save is left with no token", async () =>
   );
 });
 
+// Programs that cannot say what the file's mode is: a stat refusing its
+// arguments, as macOS's does Linux's `-c`, or one that cannot start. They say
+// nothing about who can read the file.
+const SILENT_STATS = {
+  "a stat that exits 1": () => ({
+    code: 1,
+    stdout: "",
+    stderr: "stat: illegal option -- c\n",
+  }),
+  "a stat that cannot start": () => {
+    throw new Error("stat: not installed");
+  },
+};
+
+// Answers `stat` with `silent()` while `blind.now` is set, 0600 otherwise.
+function blindExec(blind, silent) {
+  return (command, args) =>
+    command === "stat" && blind.now ? silent() : privateExec(command, args);
+}
+
+for (const [name, silent] of Object.entries(SILENT_STATS)) {
+  test(`${name} on a later save refuses it and keeps the vault as it was`, async () => {
+    const blind = { now: false };
+    const host = fakeHost({ exec: blindExec(blind, silent) });
+    const store = createStore(host, { providers: acme([signIn(1)]) });
+    await store.start();
+    await store.connect("acme", {});
+    const before = host.files[VAULT];
+    blind.now = true;
+    assert.deepEqual(await store.rename(MAXI_ID, "Home"), {
+      ok: false,
+      kind: "vault",
+    });
+    assert.equal(host.files[VAULT], before);
+  });
+
+  test(`${name} before a copy's first save leaves the stored accounts untouched`, async () => {
+    const host = fakeHost({ exec: blindExec({ now: true }, silent) });
+    const text = JSON.stringify({
+      version: 1,
+      accounts: [
+        {
+          id: MAXI_ID,
+          provider: "acme",
+          label: "maxi",
+          position: 0,
+          accessToken: "access-secret-1",
+          refreshToken: "refresh-secret-1",
+          expiresAt: NOW + 3600000,
+          signedInAt: NOW,
+          identity: MAXI,
+        },
+      ],
+    });
+    host.files[VAULT] = text;
+    const store = createStore(host, { providers: acme([]) });
+    await store.start();
+    assert.deepEqual(await store.rename(MAXI_ID, "Home"), {
+      ok: false,
+      kind: "vault",
+    });
+    assert.equal(host.files[VAULT], text);
+  });
+}
+
+test("a vault put back after a later save's check could not run is 0600 again", async (t) => {
+  const home = await temporaryHome(t);
+  const host = realHost(home);
+  const real = host.exec;
+  let blind = false;
+  host.exec = async (command, args) => {
+    if (!blind || command !== "stat") return real(command, args);
+    host.commands.push([command, args]);
+    return { code: 1, stdout: "", stderr: "stat: illegal option -- c\n" };
+  };
+  const store = createStore(host, { providers: acme([signIn(1)]) });
+  await store.start();
+  await store.connect("acme", {});
+  const file = join(home, "headroom", "vault.json");
+  const before = await readFile(file, "utf8");
+  blind = true;
+  assert.deepEqual(await store.rename(MAXI_ID, "Home"), {
+    ok: false,
+    kind: "vault",
+  });
+  assert.equal(await readFile(file, "utf8"), before);
+  assert.equal(await modeOf(file), 0o600);
+});
+
+test("a file stat reports as 0644 during a save keeps no token though a later stat cannot run", async () => {
+  let stage = "private";
+  const host = fakeHost({
+    exec: (command) => {
+      if (command === "chmod") {
+        return { code: stage === "private" ? 0 : 1, stdout: "", stderr: "" };
+      }
+      if (stage === "private") return { code: 0, stdout: "600\n", stderr: "" };
+      if (stage === "exposed") {
+        stage = "silent";
+        return { code: 0, stdout: "644\n", stderr: "" };
+      }
+      throw new Error("stat: not installed");
+    },
+  });
+  const store = createStore(host, { providers: acme([signIn(1)]) });
+  await store.start();
+  await store.connect("acme", {});
+  stage = "exposed";
+  assert.deepEqual(await store.rename(MAXI_ID, "Home"), {
+    ok: false,
+    kind: "vault",
+  });
+  assert.equal(hasToken(host.files[VAULT]), false);
+});
+
+test("a save refused while another copy saved keeps the other copy's vault", async () => {
+  const theirs = JSON.stringify({ version: 1, accounts: [] });
+  let blind = false;
+  const host = fakeHost({
+    exec: (command, args) => {
+      if (!blind || command !== "stat") return privateExec(command, args);
+      // Another copy saved between this one's write and its check.
+      host.files[VAULT] = theirs;
+      return { code: 1, stdout: "", stderr: "" };
+    },
+  });
+  const store = createStore(host, { providers: acme([signIn(1)]) });
+  await store.start();
+  await store.connect("acme", {});
+  blind = true;
+  assert.deepEqual(await store.rename(MAXI_ID, "Home"), {
+    ok: false,
+    kind: "vault",
+  });
+  assert.equal(host.files[VAULT], theirs);
+});
+
+test("a save refused after the vault file was deleted leaves no token", async () => {
+  let blind = false;
+  const host = fakeHost({
+    exec: (command, args) =>
+      blind && command === "stat"
+        ? { code: 1, stdout: "", stderr: "" }
+        : privateExec(command, args),
+  });
+  const store = createStore(host, { providers: acme([signIn(1)]) });
+  await store.start();
+  await store.connect("acme", {});
+  delete host.files[VAULT];
+  blind = true;
+  assert.deepEqual(await store.rename(MAXI_ID, "Home"), {
+    ok: false,
+    kind: "vault",
+  });
+  // Absent, as before the save, or empty: never another value.
+  assert.ok([undefined, ""].includes(host.files[VAULT]));
+});
+
 test("changes to the vault run one at a time", async () => {
   const host = fakeHost({ exec: privateExec });
   const store = createStore(host, {
