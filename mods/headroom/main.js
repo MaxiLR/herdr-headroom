@@ -1,26 +1,10 @@
 // Headroom: how close each connected Claude or Codex account is to its
 // usage limits, in whatever block a layout gives it.
 import { View, div } from "gpui-kit";
-import {
-  agents,
-  appHome,
-  closeOverlay,
-  exec,
-  layout,
-  notify,
-  openOverlay,
-  props,
-  readTextFile,
-  run,
-  setShared,
-  shared,
-  theme,
-  window,
-  writeTextFile,
-} from "herdr";
+import { props, theme } from "herdr";
 import { chooseForm } from "./logic/form.js";
 import { drawn } from "./logic/hint.js";
-import { createHost } from "./logic/host.js";
+import { herdrHost } from "./logic/herdr.js";
 import { PREFS_KEY, published } from "./logic/publish.js";
 import { sharedStore } from "./logic/store.js";
 import * as account from "./ui/account.js";
@@ -40,22 +24,7 @@ const TICK_MS = 60000;
 export default class Headroom extends View {
   init(initial, cx) {
     this.initial = initial ?? {};
-    this.host = createHost({
-      fetch: (url, options) => fetch(url, options),
-      exec,
-      appHome,
-      readTextFile,
-      writeTextFile,
-      shared,
-      setShared,
-      notify,
-      layout,
-      run,
-      openOverlay,
-      closeOverlay,
-      platform: () => window()?.platform,
-      agents,
-    });
+    this.host = herdrHost();
     this.store = sharedStore(this.host);
     this.ui = {};
     this.size = null;

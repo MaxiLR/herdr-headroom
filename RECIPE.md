@@ -343,10 +343,11 @@ a jump past both posts the limit toast only. Clicking one does nothing.
   unfolds to the list, once per height, from `on_size_change`; without it they
   never resize their block); `connect` (`{ provider?, account? }`, the connect
   dialog); `remove` (an account's id, the remove dialog); `overlay` (Herdr's).
-- `herdr`: `props`, `theme`, `settings`, `window` (its `platform`), `appHome`,
-  `readTextFile`, `writeTextFile(path, text, expected)`, `exec`, `shared`,
-  `setShared`, `notify`, `layout`, `run`, `openOverlay`, `closeOverlay`,
-  `agents` (whether one is working). The global `fetch`,
+- `herdr`: `props`, `theme`, `settings`, `appHome`, `readTextFile`,
+  `writeTextFile(path, text, expected)`, `exec`, `shared`, `setShared`,
+  `notify`, `layout`, `run`, `openOverlay`, `closeOverlay`, `agents` (whether
+  one is working). The global `fetch`, `process.platform` (`macos`, `linux`,
+  `windows`, known before a window opens, unlike `window()`'s),
   `crypto.getRandomValues`, `btoa`, `Buffer`, `URLSearchParams`.
 - gpui-kit `View`, `div`, `svg`, `Background`, `PathBuilder` (the hint's
   fade); gpui-base `h_flex`, `v_flex`, `Switch`, `Input`, `InputState`,

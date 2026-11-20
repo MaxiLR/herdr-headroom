@@ -33,8 +33,12 @@ when an account is connected, read or refreshed.
   `self_serve_business_prolite`).
   The folder is made 0700 and the file is created empty and set to 0600 before
   the first token is written; the file's mode is checked after every write and
-  set to 0600 again when it is not. When the folder or file cannot be made
-  private, the mod empties the file, stores nothing and says "Could not keep
+  set to 0600 again when it is not. When `stat` reports another mode during a
+  save, the mod empties the file. When the folder cannot be made 0700, or
+  `chmod` or `stat` fails or cannot run, nothing says the file is readable by
+  others, so the file is put back as it was before the save and set to 0600
+  again; a vault another copy of the mod saved meanwhile stays as that copy
+  left it. Either way the save stores nothing and the mod says "Could not keep
   the login private, so nothing was stored." in the connect dialog, or in an
   error toast when a refresh, rename, move or remove was refused. The vault
   lives outside `mods/`, so copying or sharing the mod folder never carries a
